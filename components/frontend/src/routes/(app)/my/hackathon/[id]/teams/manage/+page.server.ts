@@ -65,7 +65,7 @@ export const load: PageServerLoad = async (event) => {
   const numberByProjectId = new Map(rowProjects.map((p, i) => [p.id, i + 1]))
 
   // What people said about themselves on the way in, as codes short enough to
-  // sit beside a name. Fixed-list questions only — see `answerLegend`.
+  // sit beside a name — and free text whole. See `answerLegend`.
   //
   // Decoration, and fetched as such: the page assigns teams with or without it,
   // so a refusal leaves an empty legend and no ticks rather than a failed page.
@@ -107,7 +107,7 @@ export const load: PageServerLoad = async (event) => {
       id,
       name,
       // Keyed by question so the page can show the ticked ones and nothing
-      // else. Empty for anyone who answered no fixed-list question.
+      // else. Empty for anyone who answered nothing.
       codes: legend.codesByParticipant[id] ?? {},
       preferredTitles: preferred.map((p) => p.title),
       preferredProjectIds: preferred.map((p) => p.id),
@@ -151,7 +151,7 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
     unassigned,
     projectRows,
-    // Every fixed-list question, lettered — not only the ones an organizer has
+    // Every question, lettered — not only the ones an organizer has
     // chosen to show. Which of them to show is a preference of one person at
     // one screen, so it is kept in their browser and never reaches here.
     answerQuestions: legend.questions,

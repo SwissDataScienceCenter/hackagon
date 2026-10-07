@@ -25,6 +25,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   column and uploading it again.
 - Manage Teams explains the spreadsheet upload: "How the file works", next to
   Download and Upload, lists the steps and what each kind of edit does.
+- Manage Teams lists every registration question, not only the multiple-choice
+  ones: yes/no answers get codes like the others, and a free-text answer can be
+  shown as a line under each name. Question letters may shift as a result.
 
 ### Fixed
 

@@ -645,21 +645,28 @@ export function answeredParticipantIds(
   return new Set(answers.map((a) => a.participantId))
 }
 
-/** One fixed-list question, as the team-assignment legend spells it out. */
+/** One registration question, as the team-assignment legend spells it out. */
 export interface LegendQuestion {
   id: string
   label: string
   /** `A`, `B`, `C` … fixed by question order. */
   letter: string
-  /** The question's own options, in its own order, each with its code. */
+  kind: QuestionKind
+  /**
+   * Each possible answer with its code: the question's own options in its own
+   * order, `Yes` then `No` for a tick-box, and none for free text.
+   */
   options: AnswerCode[]
 }
 
 /** A code as it appears beside a name, and what it stands for. */
 export interface AnswerCode {
-  /** The letter of the question and the position of the option: `A2`. */
+  /**
+   * The letter of the question and the position of the option: `A2`. For a
+   * free-text answer, the letter alone — it names the question, not a choice.
+   */
   code: string
-  /** The option as it was written, for the tooltip. */
+  /** The option as it was written, or the free-text answer in full. */
   label: string
 }
 
@@ -691,13 +698,13 @@ function letterAt(index: number): string {
  * argument the page already makes for numbering the projects and printing the
  * numbers rather than the titles on every row.
  *
- * **Fixed-list questions only.** A code is a position in a list of options, so a
- * question without one has nothing to number: free text is a sentence, and a
- * tick-box would need a second code shape ("the letter alone means yes") for two
- * values. Questions the organizer cannot code are absent from the legend rather
- * than present and empty, and the page offers no tick for them.
+ * **Every kind of question is in it, each coded as far as it can be.** A code is
+ * a position in a list of options. A fixed list has its own; a tick-box is read
+ * as the two-option list `Yes`, `No`, so it codes like any other. Free text has
+ * nothing to number, so its answer is carried whole under the question's bare
+ * letter, and the page decides how much of it fits beside a name.
  *
- * Letters go to **every** enum question in question order, whether or not the
+ * Letters go to **every** question in question order, whether or not the
  * organizer has chosen to show it. Assigning them to the shown ones instead
  * would renumber the rest each time one is ticked, so a screenshot — or an
  * organizer's memory of what A meant — would stop being true. The cost is that
@@ -722,14 +729,17 @@ export function answerLegend(
     // An enum with no options is answerable by nobody — the builder refuses to
     // save one, but the backend will store it — so it would be a tick that can
     // never mark anything.
-    if (q.kind !== "enum" || q.options.length === 0) continue
+    if (q.kind === "enum" && q.options.length === 0) continue
 
     const letter = letterAt(legend.length)
+    const labels =
+      q.kind === "enum" ? q.options : q.kind === "bool" ? ["Yes", "No"] : []
     legend.push({
       id: q.id,
       label: q.label,
       letter,
-      options: q.options.map((label, i) => ({
+      kind: q.kind,
+      options: labels.map((label, i) => ({
         code: `${letter}${i + 1}`,
         label,
       })),
@@ -741,22 +751,33 @@ export function answerLegend(
 
   for (const a of answers) {
     const q = byId.get(a.questionId)
-    // Text and tick-box answers land here too — they have no legend entry, so
-    // they have no code.
+    // An answer to a question that is gone, or to an enum with no options.
     if (!q) continue
 
-    // `textValue` only: an enum answer stores the option's text, and reading a
-    // stray bool arm would be guessing at which option it meant.
-    const value = a.textValue
+    // One arm per kind, the one the backend files it under: a tick-box as
+    // `boolValue`, text and enum as `textValue`. Reading the other arm as well
+    // would be guessing at what a stray value meant.
+    let value: string | undefined
+    if (q.kind === "bool") {
+      if (a.boolValue !== undefined) value = a.boolValue ? "Yes" : "No"
+    } else if (q.kind === "text") {
+      value = a.textValue?.trim()
+    } else {
+      // Not trimmed: it is matched against the option exactly as stored.
+      value = a.textValue
+    }
     if (value === undefined || value === "") continue
 
     const person =
       codesByParticipant[a.participantId] ??
       (codesByParticipant[a.participantId] = {})
-    person[q.id] = q.options.find((o) => o.label === value) ?? {
-      code: `${q.letter}?`,
-      label: value,
-    }
+    person[q.id] =
+      q.kind === "text"
+        ? { code: q.letter, label: value }
+        : (q.options.find((o) => o.label === value) ?? {
+            code: `${q.letter}?`,
+            label: value,
+          })
   }
 
   return { questions: legend, codesByParticipant }

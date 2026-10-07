@@ -20,7 +20,7 @@
     type Person = {
         id: string;
         name: string;
-        /** Their fixed-list registration answers as codes, by question id. */
+        /** Their registration answers by question id: a code, or free text whole. */
         codes: Record<string, { code: string; label: string }>;
         preferredTitles: string[];
         preferredProjectIds: string[];
@@ -82,14 +82,26 @@
         }
     }
 
-    /** The ticked questions this person answered, in question order. */
-    function codesFor(person: Person): { code: string; title: string }[] {
-        return shownQuestions.flatMap((q) => {
+    /**
+     * The ticked questions this person answered, in question order: coded
+     * answers as badges, free text as lines of its own — a sentence does not
+     * fit in a badge.
+     */
+    function answersFor(person: Person) {
+        const coded: { code: string; title: string }[] = [];
+        const texts: { letter: string; text: string; title: string }[] = [];
+        for (const q of shownQuestions) {
             const answer = person.codes[q.id];
+            if (!answer) continue;
+            const title = `${q.label}: ${answer.label}`;
+            if (q.kind === 'text') texts.push({ letter: q.letter, text: answer.label, title });
+            else coded.push({ code: answer.code, title });
+        }
 
-            return answer ? [{ code: answer.code, title: `${q.label}: ${answer.label}` }] : [];
-        });
+        return { coded, texts };
     }
+
+    const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
 
     // Drop target id for the unassigned pool; team keys are used as-is.
     const POOL = 'pool';
@@ -412,7 +424,7 @@
     projectNumber: number | null
 )}
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
-    {@const answerCodes = codesFor(person)}
+    {@const answers = answersFor(person)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
@@ -446,13 +458,19 @@
                         : 'No preferences given'}
                 </span>
             {/if}
-            {#if answerCodes.length > 0}
+            {#if answers.coded.length > 0}
                 <span class="flex flex-wrap items-center gap-1 pt-0.5">
-                    {#each answerCodes as c (c.code)}
+                    {#each answers.coded as c (c.code)}
                         <span class="badge badge-neutral tnum" title={c.title}>{c.code}</span>
                     {/each}
                 </span>
             {/if}
+            {#each answers.texts as t (t.letter)}
+                <span class="min-w-0 truncate text-[0.65rem] text-ink-2" title={t.title}>
+                    <span class="font-semibold">{t.letter}</span>
+                    {t.text}
+                </span>
+            {/each}
         </div>
         {#if projectId !== null && !matches}
             <span
@@ -695,49 +713,52 @@
         </div>
     {/if}
 
-    <!-- Only the fixed-list questions reach here: a code is a position in a list
-         of options, so free text and tick-boxes have none. -->
+    <!-- Every question with its codes, always — the key to a badge belongs
+         beside the badge, whether or not that question is shown on cards yet. -->
     {#if answerQuestions.length > 0}
         <section class="card card-raised flex flex-col gap-3 p-3">
-            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-                <h3 class="m-0 meta">Registration answers</h3>
-                {#each answerQuestions as q (q.id)}
-                    <label class="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            class="checkbox"
-                            checked={shownIds.includes(q.id)}
-                            onchange={() => toggleQuestion(q.id)}
-                        />
-                        <span class="text-xs text-ink-2">
-                            <span class="font-semibold">{q.letter}</span>
-                            {q.label}
-                        </span>
-                    </label>
-                {/each}
-            </div>
-
-            {#if shownQuestions.length === 0}
+            <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <h3 class="m-0 meta">Registration questions</h3>
                 <p class="m-0 text-xs text-ink-3">
-                    Tick a question to mark everyone's answer beside their name.
+                    Tick "Show on cards" to see that answer beside every name.
                 </p>
-            {:else}
-                <dl class="m-0 flex flex-col gap-2 border-t border-line pt-3">
-                    {#each shownQuestions as q (q.id)}
-                        <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                            <dt class="text-xs font-semibold text-ink">{q.letter} · {q.label}</dt>
-                            <dd class="m-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+            </div>
+            <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
+                {#each answerQuestions as q (q.id)}
+                    <li class="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 last:pb-0">
+                        <span class="flex min-w-0 items-baseline gap-2">
+                            <span class="text-xs font-semibold text-ink">{q.letter}</span>
+                            <span class="text-xs text-ink">{q.label}</span>
+                            {#if KIND_NOTE[q.kind]}
+                                <span class="meta shrink-0">{KIND_NOTE[q.kind]}</span>
+                            {/if}
+                        </span>
+                        {#if q.options.length > 0}
+                            <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
                                 {#each q.options as o (o.code)}
                                     <span class="flex items-center gap-1.5">
                                         <span class="badge badge-neutral tnum">{o.code}</span>
                                         <span class="text-xs text-ink-2">{o.label}</span>
                                     </span>
                                 {/each}
-                            </dd>
-                        </div>
-                    {/each}
-                </dl>
-            {/if}
+                            </span>
+                        {:else}
+                            <span class="text-xs text-ink-3">
+                                Shown as a line under the name; hover for the full answer.
+                            </span>
+                        {/if}
+                        <label class="ml-auto flex shrink-0 items-center gap-2">
+                            <input
+                                type="checkbox"
+                                class="checkbox"
+                                checked={shownIds.includes(q.id)}
+                                onchange={() => toggleQuestion(q.id)}
+                            />
+                            <span class="text-xs text-ink-3">Show on cards</span>
+                        </label>
+                    </li>
+                {/each}
+            </ul>
         </section>
     {/if}
 

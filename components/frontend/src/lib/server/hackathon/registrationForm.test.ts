@@ -802,6 +802,7 @@ describe("answerLegend", () => {
         id: "q1",
         label: "Experience level",
         letter: "A",
+        kind: "enum",
         options: [
           { code: "A1", label: "Beginner" },
           { code: "A2", label: "Intermediate" },
@@ -812,6 +813,7 @@ describe("answerLegend", () => {
         id: "q2",
         label: "Track",
         letter: "B",
+        kind: "enum",
         options: [
           { code: "B1", label: "Data" },
           { code: "B2", label: "Web" },
@@ -820,19 +822,46 @@ describe("answerLegend", () => {
     ])
   })
 
-  it("leaves out anything that cannot be coded", () => {
+  it("letters every kind of question, in question order", () => {
     const { questions } = answerLegend(
       [
         row({ id: "text", kind: "text", options: [] }),
         row({ id: "coc", kind: "bool", options: [] }),
-        row({ id: "empty", options: [] }),
         row({ id: "q1" }),
       ],
       [],
     )
 
-    expect(questions.map((q) => q.id)).toEqual(["q1"])
-    expect(questions.map((q) => q.letter)).toEqual(["A"])
+    expect(questions.map((q) => [q.id, q.letter, q.kind])).toEqual([
+      ["text", "A", "text"],
+      ["coc", "B", "bool"],
+      ["q1", "C", "enum"],
+    ])
+  })
+
+  it("reads a tick-box as Yes and No, and free text as having no options", () => {
+    const { questions } = answerLegend(
+      [
+        row({ id: "coc", kind: "bool", options: [] }),
+        row({ id: "skills", kind: "text", options: [] }),
+      ],
+      [],
+    )
+
+    expect(questions[0]?.options).toEqual([
+      { code: "A1", label: "Yes" },
+      { code: "A2", label: "No" },
+    ])
+    expect(questions[1]?.options).toEqual([])
+  })
+
+  it("leaves out a fixed-list question nobody can answer", () => {
+    const { questions } = answerLegend(
+      [row({ id: "empty", options: [] }), row({ id: "q1" })],
+      [],
+    )
+
+    expect(questions.map((q) => [q.id, q.letter])).toEqual([["q1", "A"]])
   })
 
   it("keeps a letter with its question when an earlier one is not shown", () => {
@@ -868,16 +897,51 @@ describe("answerLegend", () => {
     expect(codesByParticipant).toEqual({})
   })
 
-  it("ignores answers to questions that carry no code", () => {
+  it("ignores answers to questions that are not in the legend", () => {
     const { codesByParticipant } = answerLegend(
-      [row(), row({ id: "coc", kind: "bool", options: [] })],
+      [row(), row({ id: "empty", options: [] })],
       [
-        { questionId: "coc", participantId: "alice", boolValue: true },
+        { questionId: "empty", participantId: "alice", textValue: "whatever" },
         { questionId: "gone", participantId: "alice", textValue: "whatever" },
       ],
     )
 
     expect(codesByParticipant).toEqual({})
+  })
+
+  it("codes a tick-box answer from its bool, either way", () => {
+    const { codesByParticipant } = answerLegend(
+      [row({ id: "coc", kind: "bool", options: [] })],
+      [
+        { questionId: "coc", participantId: "alice", boolValue: true },
+        { questionId: "coc", participantId: "bob", boolValue: false },
+        // The wrong arm for a tick-box: not guessed at.
+        { questionId: "coc", participantId: "carol", textValue: "Yes" },
+      ],
+    )
+
+    expect(codesByParticipant).toEqual({
+      alice: { coc: { code: "A1", label: "Yes" } },
+      bob: { coc: { code: "A2", label: "No" } },
+    })
+  })
+
+  it("carries a free-text answer whole, under the bare letter", () => {
+    const { codesByParticipant } = answerLegend(
+      [row({ id: "skills", kind: "text", options: [] })],
+      [
+        {
+          questionId: "skills",
+          participantId: "alice",
+          textValue: "  Python, some design  ",
+        },
+        { questionId: "skills", participantId: "bob", textValue: "   " },
+      ],
+    )
+
+    expect(codesByParticipant).toEqual({
+      alice: { skills: { code: "A", label: "Python, some design" } },
+    })
   })
 
   it("marks an answer that is no longer one of the options", () => {
