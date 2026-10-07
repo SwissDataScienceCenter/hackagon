@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import {
         Check,
+        CircleHelp,
         Download,
         Eraser,
         GripVertical,
@@ -136,6 +137,10 @@
 
     /** What the last uploaded file did, until it is dismissed or superseded. */
     let importResult: ImportResult | null = $state(null);
+
+    // Closed by default: the rules matter to whoever is about to upload, and
+    // everyone else should not have to read past them.
+    let fileHelpOpen = $state(false);
 
     // Only one team's name is editable at a time.
     let editingKey: string | null = $state(null);
@@ -476,8 +481,9 @@
         <ManageHubBackLink {hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
         <p class="m-0 text-xs text-ink-3">
-            Drag a participant onto a team to assign them. Everyone belongs to at most one team,
-            and no team holds more than {TEAM_MAX}. Nothing is written until you save.
+            Drag people from Unassigned onto a team, or plan in a spreadsheet and upload it.
+            Everyone is on at most one team, and no team holds more than {TEAM_MAX}. Nothing is
+            saved until you press Save.
         </p>
     </div>
 
@@ -502,37 +508,46 @@
             Clear all
         </button>
 
-        <!-- The escape hatch, for when a hundred people is more dragging than
-             anyone wants to do. The file is this page in a spreadsheet; what
-             comes back lands on the workspace and still waits for Save. -->
-        <a
-            href={resolve(`/my/hackathon/${hackathonId}/teams/manage/export`)}
-            class="btn btn-sm btn-ghost no-underline"
-            title="Everyone on this page, with the answers and preferences shown here"
-            download
-        >
-            <Download class="size-3" />
-            Download CSV
-        </a>
-        <!-- The rules, where somebody about to use it will meet them, rather
-             than as a paragraph everyone else has to read past. -->
-        <label
-            class="btn btn-sm btn-ghost cursor-pointer"
-            class:opacity-50={pending}
-            title={'Edit the project and team columns and upload the file back. ' +
-                'A blank team unassigns; anyone not in the file is left as they are; ' +
-                'nothing is deleted, and a renamed team reads as a new one.'}
-        >
-            <Upload class="size-3" />
-            Upload CSV
-            <input
-                type="file"
-                accept=".csv,text/csv"
-                class="hidden"
-                disabled={pending}
-                onchange={importFile}
-            />
-        </label>
+        <!-- For when a hundred people is more dragging than anyone wants to do.
+             The file is this page in a spreadsheet; what comes back lands on the
+             workspace and still waits for Save. -->
+        <div class="flex flex-wrap items-center gap-3 border-l border-line pl-3">
+            <span class="meta">Spreadsheet</span>
+            <a
+                href={resolve(`/my/hackathon/${hackathonId}/teams/manage/export`)}
+                class="btn btn-sm btn-ghost no-underline"
+                title="Everyone on this page, with their preferences and registration answers"
+                download
+            >
+                <Download class="size-3" />
+                Download CSV
+            </a>
+            <label
+                class="btn btn-sm btn-ghost cursor-pointer"
+                class:opacity-50={pending}
+                title="Upload an edited spreadsheet"
+            >
+                <Upload class="size-3" />
+                Upload CSV
+                <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    class="hidden"
+                    disabled={pending}
+                    onchange={importFile}
+                />
+            </label>
+            <button
+                type="button"
+                class="btn btn-sm btn-quiet"
+                aria-expanded={fileHelpOpen}
+                aria-controls="file-help"
+                onclick={() => (fileHelpOpen = !fileHelpOpen)}
+            >
+                <CircleHelp class="size-3" />
+                How the file works
+            </button>
+        </div>
 
         <div class="ml-auto flex items-center gap-3">
             {#if changes.total > 0}
@@ -558,6 +573,81 @@
             </button>
         </div>
     </div>
+
+    <!-- Every rule here is one `applyAssignmentCsv` enforces; change them
+         together. -->
+    {#if fileHelpOpen}
+        <section id="file-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">
+            <div class="flex items-start gap-3">
+                <h3 class="m-0 flex-1 meta">How the spreadsheet works</h3>
+                <button
+                    type="button"
+                    class="shrink-0 text-ink-3 hover:text-ink"
+                    aria-label="Close"
+                    onclick={() => (fileHelpOpen = false)}
+                >
+                    <X class="size-3" />
+                </button>
+            </div>
+
+            <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
+                <li>
+                    <strong class="text-ink">Download CSV.</strong> One row per participant: people on
+                    a team first, grouped by project and team, then everyone unassigned.
+                </li>
+                <li>
+                    <strong class="text-ink">Fill in the <code>project</code> and
+                        <code>team</code> columns</strong> in any spreadsheet. Leave
+                    <code>user_id</code> as it is — it is how each row is matched to a person.
+                </li>
+                <li>
+                    <strong class="text-ink">Upload CSV.</strong> The changes appear on this page as
+                    unsaved edits, with a summary of what was read. Check them, then Save.
+                </li>
+            </ol>
+
+            <dl
+                class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 border-t
+                       border-line pt-3 text-ink-3"
+            >
+                <dt class="text-ink-2"><code>team</code> left empty</dt>
+                <dd class="m-0">the person becomes unassigned</dd>
+
+                <dt class="text-ink-2"><code>team</code> not found</dt>
+                <dd class="m-0">
+                    a new team with that name is created under the row's project
+                </dd>
+
+                <dt class="text-ink-2"><code>project</code></dt>
+                <dd class="m-0">
+                    must be a project title shown on this page (capitals don't matter); needed
+                    whenever <code>team</code> is filled in
+                </dd>
+
+                <dt class="text-ink-2">a row removed</dt>
+                <dd class="m-0">that person stays where they are</dd>
+
+                <dt class="text-ink-2">renaming a team</dt>
+                <dd class="m-0">
+                    reads as a new team, so rename it on this page instead
+                </dd>
+
+                <dt class="text-ink-2">deleting</dt>
+                <dd class="m-0">
+                    never happens — a team everyone left stays, empty, until you delete it here
+                </dd>
+
+                <dt class="text-ink-2">more than {TEAM_MAX} on a team</dt>
+                <dd class="m-0">allowed by the upload, but flagged so you can fix it</dd>
+
+                <dt class="text-ink-2">every other column</dt>
+                <dd class="m-0">
+                    is there to read and is ignored on upload — reorder, add or delete columns
+                    freely
+                </dd>
+            </dl>
+        </section>
+    {/if}
 
     {#if importResult}
         {@const bad = importResult.problems.length > 0}
@@ -592,6 +682,15 @@
                         <li>and {importResult.problems.length - 5} more.</li>
                     {/if}
                 </ul>
+                {#if !fileHelpOpen}
+                    <button
+                        type="button"
+                        class="self-start text-ink-2 underline hover:text-ink"
+                        onclick={() => (fileHelpOpen = true)}
+                    >
+                        How the file works
+                    </button>
+                {/if}
             {/if}
         </div>
     {/if}

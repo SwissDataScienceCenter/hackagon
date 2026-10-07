@@ -23,6 +23,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
   people onto them, or by downloading the spreadsheet, filling in the team
   column and uploading it again.
+- Manage Teams explains the spreadsheet upload: "How the file works", next to
+  Download and Upload, lists the steps and what each kind of edit does.
 
 ### Fixed
 
