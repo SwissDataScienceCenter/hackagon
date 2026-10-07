@@ -25,6 +25,7 @@ up *args:
     just quitsh process-compose start \
         --flake-dir "{{flake_dir}}" \
         --wait-for "keycloak" \
+        --wait-for-ready "backend" \
         --socket-path-file "{{socket_file}}" \
         "$@" \
         "{{installable}}"
