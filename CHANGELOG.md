@@ -20,6 +20,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
+  people onto them, or by downloading the spreadsheet, filling in the team
+  column and uploading it again.
+
 ### Fixed
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28

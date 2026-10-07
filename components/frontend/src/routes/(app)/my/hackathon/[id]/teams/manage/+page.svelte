@@ -7,14 +7,13 @@
         Eraser,
         GripVertical,
         Pencil,
-        Sparkles,
         Trash2,
         Upload,
         X
     } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
-    import { initialsOf, suggestDistribution } from '$lib/utils/teamDistribution';
+    import { initialsOf } from '$lib/utils/teamDistribution';
     import type { ActionData, PageData } from './$types';
 
     type Person = {
@@ -291,28 +290,6 @@
         teams = teams.map((t) => ({ ...t, memberIds: [] }));
     }
 
-    function suggest() {
-        const plan = suggestDistribution(
-            projectRows.map((p) => ({
-                id: p.id,
-                title: p.title,
-                teams: p.teams.map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    memberIds: t.members.map((m) => m.id)
-                }))
-            })),
-            data.unassigned,
-            { max: TEAM_MAX }
-        );
-
-        // Keep inventing keys past the ones the plan handed out, so a team added
-        // afterwards cannot collide with one of them.
-        invented = plan.filter((t) => t.id === null).length;
-        editingKey = null;
-        teams = plan;
-    }
-
     function discard() {
         teams = fromServer(data.projectRows);
         editingKey = null;
@@ -515,15 +492,6 @@
     {/if}
 
     <div class="flex flex-wrap items-center gap-3">
-        <button
-            type="button"
-            class="btn btn-sm"
-            disabled={pending || unassigned.length === 0}
-            onclick={suggest}
-        >
-            <Sparkles class="size-3" />
-            Suggest teams
-        </button>
         <button
             type="button"
             class="btn btn-sm btn-ghost"
