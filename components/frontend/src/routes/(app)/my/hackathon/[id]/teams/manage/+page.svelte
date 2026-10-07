@@ -103,6 +103,124 @@
 
     const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
 
+    // Which answers narrow the Unassigned column. Answers to one question widen
+    // it (B1 or B2), different questions narrow it (B2 and "python").
+    //
+    // Kept in the browser like the ticks above, so a reload keeps the filter.
+    // That is only safe because the pool always says it is filtered and offers
+    // a reset — a forgotten filter must never read as people having vanished.
+    // Keyed by question id and answer text rather than by code, so a letter
+    // that shifts when a question is added cannot point a saved filter at a
+    // different question.
+    type Filters = {
+        /** Picked answers, by question id. */
+        answers: Record<string, string[]>;
+        /** "Contains" text for free-text questions, by question id. */
+        texts: Record<string, string>;
+    };
+    let filters: Filters = $state({ answers: {}, texts: {} });
+
+    const filterKey = $derived(`hackagon:team-filters:${hackathonId}`);
+
+    // Restored the way `shownIds` is, and for the same reason it only reads.
+    // Anything naming a question or an answer that no longer exists is dropped.
+    $effect(() => {
+        const byId = new Map(answerQuestions.map((q) => [q.id, q]));
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(filterKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. No filter.
+        }
+        const s = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<
+            string,
+            unknown
+        >;
+        const entries = (v: unknown) =>
+            typeof v === 'object' && v !== null ? Object.entries(v) : [];
+
+        const answers: Filters['answers'] = {};
+        for (const [id, labels] of entries(s.answers)) {
+            const q = byId.get(id);
+            if (!q || !Array.isArray(labels)) continue;
+            const known = labels.filter(
+                (l): l is string => typeof l === 'string' && q.options.some((o) => o.label === l)
+            );
+            if (known.length > 0) answers[id] = known;
+        }
+        const texts: Filters['texts'] = {};
+        for (const [id, text] of entries(s.texts)) {
+            if (byId.get(id)?.kind === 'text' && typeof text === 'string' && text.trim() !== '') {
+                texts[id] = text;
+            }
+        }
+        filters = { answers, texts };
+    });
+
+    function setFilters(next: Filters) {
+        filters = next;
+        try {
+            localStorage.setItem(filterKey, JSON.stringify(next));
+        } catch {
+            // Private browsing, or a full quota. The filter still holds for this visit.
+        }
+    }
+
+    function toggleAnswer(questionId: string, label: string) {
+        const picked = filters.answers[questionId] ?? [];
+        const rest = { ...filters.answers };
+        const next = picked.includes(label)
+            ? picked.filter((l) => l !== label)
+            : [...picked, label];
+        if (next.length > 0) rest[questionId] = next;
+        else delete rest[questionId];
+        setFilters({ ...filters, answers: rest });
+    }
+
+    function setText(questionId: string, text: string) {
+        const rest = { ...filters.texts };
+        if (text.trim() !== '') rest[questionId] = text;
+        else delete rest[questionId];
+        setFilters({ ...filters, texts: rest });
+    }
+
+    function resetFilters() {
+        setFilters({ answers: {}, texts: {} });
+    }
+
+    function matchesFilters(person: Person): boolean {
+        for (const [id, labels] of Object.entries(filters.answers)) {
+            const answer = person.codes[id];
+            if (!answer || !labels.includes(answer.label)) return false;
+        }
+        for (const [id, text] of Object.entries(filters.texts)) {
+            const needle = text.trim().toLowerCase();
+            if (!person.codes[id]?.label.toLowerCase().includes(needle)) return false;
+        }
+
+        return true;
+    }
+
+    /** The filters as removable tags, in question order. */
+    const activeFilters = $derived(
+        answerQuestions.flatMap((q) => [
+            ...(filters.answers[q.id] ?? []).map((label) => ({
+                key: `${q.id}:${label}`,
+                text: `${q.options.find((o) => o.label === label)?.code ?? q.letter} ${label}`,
+                remove: () => toggleAnswer(q.id, label)
+            })),
+            ...(filters.texts[q.id] !== undefined
+                ? [
+                      {
+                          key: `${q.id}:text`,
+                          text: `${q.letter} "${filters.texts[q.id]?.trim()}"`,
+                          remove: () => setText(q.id, '')
+                      }
+                  ]
+                : [])
+        ])
+    );
+
     // Drop target id for the unassigned pool; team keys are used as-is.
     const POOL = 'pool';
 
@@ -184,6 +302,28 @@
 
         return [...peopleById.values()].filter((p) => !placed.has(p.id));
     });
+
+    /** The part of the pool the filters let through. */
+    const shownPool = $derived(unassigned.filter(matchesFilters));
+
+    // How many unassigned people gave each answer, by question id then answer.
+    // Counted over the whole pool, not the filtered part, so a number beside an
+    // answer does not change as other answers are picked.
+    const poolCounts = $derived.by(() => {
+        const counts: Record<string, Record<string, number>> = {};
+        for (const p of unassigned) {
+            for (const [id, answer] of Object.entries(p.codes)) {
+                const byAnswer = (counts[id] ??= {});
+                byAnswer[answer.label] = (byAnswer[answer.label] ?? 0) + 1;
+            }
+        }
+
+        return counts;
+    });
+
+    function answeredInPool(questionId: string): number {
+        return Object.values(poolCounts[questionId] ?? {}).reduce((n, c) => n + c, 0);
+    }
 
     const assignedCount = $derived(teams.reduce((n, t) => n + t.memberIds.length, 0));
 
@@ -720,7 +860,8 @@
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <h3 class="m-0 meta">Registration questions</h3>
                 <p class="m-0 text-xs text-ink-3">
-                    Tick "Show on cards" to see that answer beside every name.
+                    Click an answer to filter Unassigned; the number is how many unassigned people
+                    gave it. Tick "Show on cards" to see that answer beside every name.
                 </p>
             </div>
             <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
@@ -733,18 +874,43 @@
                                 <span class="meta shrink-0">{KIND_NOTE[q.kind]}</span>
                             {/if}
                         </span>
-                        {#if q.options.length > 0}
-                            <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                {#each q.options as o (o.code)}
-                                    <span class="flex items-center gap-1.5">
-                                        <span class="badge badge-neutral tnum">{o.code}</span>
-                                        <span class="text-xs text-ink-2">{o.label}</span>
-                                    </span>
-                                {/each}
+                        {#if q.kind === 'text'}
+                            <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <input
+                                    type="search"
+                                    class="field h-7 w-52 px-2 text-xs"
+                                    placeholder="Filter: answer contains…"
+                                    aria-label={`Filter Unassigned by ${q.label}`}
+                                    value={filters.texts[q.id] ?? ''}
+                                    oninput={(e) => setText(q.id, e.currentTarget.value)}
+                                />
+                                <span class="meta tnum">
+                                    {answeredInPool(q.id)} of {unassigned.length} answered
+                                </span>
                             </span>
                         {:else}
-                            <span class="text-xs text-ink-3">
-                                Shown as a line under the name; hover for the full answer.
+                            <span class="flex flex-wrap items-center gap-1.5">
+                                {#each q.options as o (o.code)}
+                                    {@const picked =
+                                        filters.answers[q.id]?.includes(o.label) ?? false}
+                                    <button
+                                        type="button"
+                                        class="tally {picked
+                                            ? 'bg-accent/20 text-accent-ink'
+                                            : 'hover:text-ink'}"
+                                        aria-pressed={picked}
+                                        title={picked
+                                            ? 'Stop filtering by this answer'
+                                            : 'Show only unassigned people who gave this answer'}
+                                        onclick={() => toggleAnswer(q.id, o.label)}
+                                    >
+                                        <span class="font-semibold">{o.code}</span>
+                                        {o.label}
+                                        <span class="tnum text-ink-3">
+                                            {poolCounts[q.id]?.[o.label] ?? 0}
+                                        </span>
+                                    </button>
+                                {/each}
                             </span>
                         {/if}
                         <label class="ml-auto flex shrink-0 items-center gap-2">
@@ -909,7 +1075,29 @@
                    lg:top-4"
             class:border-accent={dropTarget === POOL}
         >
-            <h3 class="m-0 meta">Unassigned ({unassigned.length})</h3>
+            <h3 class="m-0 meta tnum">
+                Unassigned ({activeFilters.length > 0
+                    ? `${shownPool.length} of ${unassigned.length}`
+                    : unassigned.length})
+            </h3>
+            {#if activeFilters.length > 0}
+                <div class="flex flex-wrap items-center gap-1.5">
+                    {#each activeFilters as f (f.key)}
+                        <button
+                            type="button"
+                            class="tally bg-accent/20 text-accent-ink"
+                            title="Remove this filter"
+                            onclick={f.remove}
+                        >
+                            {f.text}
+                            <X class="size-3" />
+                        </button>
+                    {/each}
+                    <button type="button" class="btn btn-sm btn-quiet" onclick={resetFilters}>
+                        Reset filters
+                    </button>
+                </div>
+            {/if}
             <!-- The organiser is not in this list unless they joined like anybody
                  else, and an absence explains nothing on its own. No link out:
                  owning a hackathon is not a way into it, and there is no control
@@ -921,9 +1109,11 @@
             {/if}
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
+            {:else if shownPool.length === 0}
+                <p class="m-0 text-xs text-ink-3">Nobody unassigned matches these filters.</p>
             {:else}
                 <div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
-                    {#each unassigned as person (person.id)}
+                    {#each shownPool as person (person.id)}
                         {@render personRow(person, POOL, null, null)}
                     {/each}
                 </div>

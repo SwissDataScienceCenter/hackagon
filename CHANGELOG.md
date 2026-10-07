@@ -18,6 +18,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Teams can filter the Unassigned column by registration answers: click
+  an answer (or type into a free-text question's box) to see only the people who
+  gave it. Each answer shows how many unassigned people gave it. Filters are
+  remembered in your browser and cleared with "Reset filters".
+
 ### Changed
 
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
