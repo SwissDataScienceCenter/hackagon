@@ -18,6 +18,7 @@ dev_domain := "hackagon-dev.dscompute.ch"
 
 backup_dir := env("HOME") + "/hackagon-backups"
 local_pg_port := "15432"
+postgres_svc := "svc/{{postgres_sts}}"
 
 # Runs inside the postgres pod: finds the superuser password the bitnami image
 # was started with (env var or mounted file) so it never leaves the pod.
@@ -69,8 +70,6 @@ backup context:
     mkdir -p "{{backup_dir}}"
     out="{{backup_dir}}/{{context}}-$(date +%Y%m%d-%H%M%S).sql"
 
-    # Dump to a .partial file and rename it only once the dump succeeded, so a
-    # failed run never leaves behind something that looks like a backup.
     discard_partial() { rm -f "$out.partial"; }
     trap discard_partial EXIT
 
@@ -93,6 +92,9 @@ wipe context:
     [ "${replicas:-0}" -gt 0 ] || replicas=1
 
     restore_backend() {
+        # A backend found at 0 (e.g. left there by an interrupted run)
+        # comes back at 1: both recipes promise a running dev,
+        # and wipe needs it to recreate the schema."
         echo "==> Scaling backend back to $replicas (it recreates the schema on startup)"
         "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
     }
@@ -152,7 +154,7 @@ reseed context:
     just -f "{{source_file()}}" _wipe-db "{{context}}"
 
     echo "==> Port-forwarding postgres to localhost:{{local_pg_port}}"
-    "${kc[@]}" port-forward "svc/{{postgres_sts}}" "{{local_pg_port}}:5432" >/dev/null &
+    "${kc[@]}" port-forward "{{postgres_svc}}" "{{local_pg_port}}:5432" >/dev/null &
     pf_pid=$!
 
     # Wait up to 10s for the tunnel to open.
