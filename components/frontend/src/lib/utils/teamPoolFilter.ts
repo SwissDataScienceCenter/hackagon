@@ -1,0 +1,147 @@
+import type { QuestionKind } from "./question"
+
+/**
+ * Narrowing the team-assignment pool by what people answered at registration.
+ *
+ * Kept out of the page so it can be tested directly: the page only renders
+ * what this decides.
+ *
+ * **One rule for combining:** answers to one question widen (B1 or B2),
+ * different questions narrow (B2 and "python"). That is what "people who said
+ * Beginner or Intermediate, and who are remote" means when said aloud.
+ */
+
+export type PoolFilters = {
+  /** Picked answers, by question id. A question with none picked is absent. */
+  answers: Record<string, string[]>
+  /** "Contains" text for free-text questions, by question id. Never blank. */
+  texts: Record<string, string>
+}
+
+export const NO_FILTERS: PoolFilters = { answers: {}, texts: {} }
+
+/** A question as far as filtering needs it. */
+export interface FilterQuestion {
+  id: string
+  kind: QuestionKind
+  options: readonly { label: string }[]
+}
+
+/** A person as far as filtering needs it: their answers by question id. */
+export interface FilterablePerson {
+  codes: Record<string, { label: string }>
+}
+
+/**
+ * Filters as read back from storage, keeping only what still means something.
+ *
+ * Keyed by question id and answer text rather than by code, so a letter that
+ * shifts when a question is added cannot point a saved filter at a different
+ * question. Anything naming a question or an answer that no longer exists is
+ * dropped, and anything that is not ours at all reads as no filter.
+ */
+export function restoreFilters(
+  stored: unknown,
+  questions: readonly FilterQuestion[],
+): PoolFilters {
+  const byId = new Map(questions.map((q) => [q.id, q]))
+  const record = (v: unknown): Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : {}
+  const s = record(stored)
+
+  const answers: PoolFilters["answers"] = {}
+  for (const [id, labels] of Object.entries(record(s.answers))) {
+    const q = byId.get(id)
+    if (!q || q.kind === "text" || !Array.isArray(labels)) continue
+    const known = labels.filter(
+      (l): l is string =>
+        typeof l === "string" && q.options.some((o) => o.label === l),
+    )
+    if (known.length > 0) answers[id] = [...new Set(known)]
+  }
+
+  const texts: PoolFilters["texts"] = {}
+  for (const [id, text] of Object.entries(record(s.texts))) {
+    if (
+      byId.get(id)?.kind === "text" &&
+      typeof text === "string" &&
+      text.trim() !== ""
+    ) {
+      texts[id] = text
+    }
+  }
+
+  return { answers, texts }
+}
+
+/** Picks an answer if it is not picked, and unpicks it if it is. */
+export function toggleAnswer(
+  filters: PoolFilters,
+  questionId: string,
+  label: string,
+): PoolFilters {
+  const picked = filters.answers[questionId] ?? []
+  const next = picked.includes(label)
+    ? picked.filter((l) => l !== label)
+    : [...picked, label]
+  const answers = { ...filters.answers, [questionId]: next }
+  if (next.length === 0) delete answers[questionId]
+
+  return { ...filters, answers }
+}
+
+/** Sets a free-text question's "contains" text; blank removes it. */
+export function setText(
+  filters: PoolFilters,
+  questionId: string,
+  text: string,
+): PoolFilters {
+  const texts = { ...filters.texts, [questionId]: text }
+  if (text.trim() === "") delete texts[questionId]
+
+  return { ...filters, texts }
+}
+
+export function isFiltering(filters: PoolFilters): boolean {
+  return (
+    Object.keys(filters.answers).length > 0 ||
+    Object.keys(filters.texts).length > 0
+  )
+}
+
+/**
+ * Whether a person passes every filter. Free text matches ignoring case and
+ * the spaces around what was typed.
+ */
+export function matches(
+  person: FilterablePerson,
+  filters: PoolFilters,
+): boolean {
+  for (const [id, labels] of Object.entries(filters.answers)) {
+    const answer = person.codes[id]
+    if (!answer || !labels.includes(answer.label)) return false
+  }
+  for (const [id, text] of Object.entries(filters.texts)) {
+    const needle = text.trim().toLowerCase()
+    if (!person.codes[id]?.label.toLowerCase().includes(needle)) return false
+  }
+
+  return true
+}
+
+/** How many people gave each answer, by question id then answer text. */
+export function countAnswers(
+  people: readonly FilterablePerson[],
+): Record<string, Record<string, number>> {
+  const counts: Record<string, Record<string, number>> = {}
+  for (const p of people) {
+    for (const [id, answer] of Object.entries(p.codes)) {
+      const byAnswer = (counts[id] ??= {})
+      byAnswer[answer.label] = (byAnswer[answer.label] ?? 0) + 1
+    }
+  }
+
+  return counts
+}

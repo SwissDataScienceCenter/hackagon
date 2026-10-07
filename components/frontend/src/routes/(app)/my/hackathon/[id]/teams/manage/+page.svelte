@@ -15,6 +15,16 @@
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { initialsOf } from '$lib/utils/teamDistribution';
+    import {
+        NO_FILTERS,
+        countAnswers,
+        isFiltering,
+        matches,
+        restoreFilters,
+        setText,
+        toggleAnswer,
+        type PoolFilters
+    } from '$lib/utils/teamPoolFilter';
     import type { ActionData, PageData } from './$types';
 
     type Person = {
@@ -103,61 +113,28 @@
 
     const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
 
-    // Which answers narrow the Unassigned column. Answers to one question widen
-    // it (B1 or B2), different questions narrow it (B2 and "python").
+    // Which answers narrow the Unassigned column. The rules live in
+    // `teamPoolFilter`; this keeps them, stores them and draws them.
     //
     // Kept in the browser like the ticks above, so a reload keeps the filter.
     // That is only safe because the pool always says it is filtered and offers
     // a reset — a forgotten filter must never read as people having vanished.
-    // Keyed by question id and answer text rather than by code, so a letter
-    // that shifts when a question is added cannot point a saved filter at a
-    // different question.
-    type Filters = {
-        /** Picked answers, by question id. */
-        answers: Record<string, string[]>;
-        /** "Contains" text for free-text questions, by question id. */
-        texts: Record<string, string>;
-    };
-    let filters: Filters = $state({ answers: {}, texts: {} });
+    let filters: PoolFilters = $state(NO_FILTERS);
 
     const filterKey = $derived(`hackagon:team-filters:${hackathonId}`);
 
     // Restored the way `shownIds` is, and for the same reason it only reads.
-    // Anything naming a question or an answer that no longer exists is dropped.
     $effect(() => {
-        const byId = new Map(answerQuestions.map((q) => [q.id, q]));
         let stored: unknown = null;
         try {
             stored = JSON.parse(localStorage.getItem(filterKey) ?? 'null');
         } catch {
             // No storage, or something in it that is not ours. No filter.
         }
-        const s = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<
-            string,
-            unknown
-        >;
-        const entries = (v: unknown) =>
-            typeof v === 'object' && v !== null ? Object.entries(v) : [];
-
-        const answers: Filters['answers'] = {};
-        for (const [id, labels] of entries(s.answers)) {
-            const q = byId.get(id);
-            if (!q || !Array.isArray(labels)) continue;
-            const known = labels.filter(
-                (l): l is string => typeof l === 'string' && q.options.some((o) => o.label === l)
-            );
-            if (known.length > 0) answers[id] = known;
-        }
-        const texts: Filters['texts'] = {};
-        for (const [id, text] of entries(s.texts)) {
-            if (byId.get(id)?.kind === 'text' && typeof text === 'string' && text.trim() !== '') {
-                texts[id] = text;
-            }
-        }
-        filters = { answers, texts };
+        filters = restoreFilters(stored, answerQuestions);
     });
 
-    function setFilters(next: Filters) {
+    function setFilters(next: PoolFilters) {
         filters = next;
         try {
             localStorage.setItem(filterKey, JSON.stringify(next));
@@ -166,55 +143,20 @@
         }
     }
 
-    function toggleAnswer(questionId: string, label: string) {
-        const picked = filters.answers[questionId] ?? [];
-        const rest = { ...filters.answers };
-        const next = picked.includes(label)
-            ? picked.filter((l) => l !== label)
-            : [...picked, label];
-        if (next.length > 0) rest[questionId] = next;
-        else delete rest[questionId];
-        setFilters({ ...filters, answers: rest });
-    }
-
-    function setText(questionId: string, text: string) {
-        const rest = { ...filters.texts };
-        if (text.trim() !== '') rest[questionId] = text;
-        else delete rest[questionId];
-        setFilters({ ...filters, texts: rest });
-    }
-
-    function resetFilters() {
-        setFilters({ answers: {}, texts: {} });
-    }
-
-    function matchesFilters(person: Person): boolean {
-        for (const [id, labels] of Object.entries(filters.answers)) {
-            const answer = person.codes[id];
-            if (!answer || !labels.includes(answer.label)) return false;
-        }
-        for (const [id, text] of Object.entries(filters.texts)) {
-            const needle = text.trim().toLowerCase();
-            if (!person.codes[id]?.label.toLowerCase().includes(needle)) return false;
-        }
-
-        return true;
-    }
-
     /** The filters as removable tags, in question order. */
     const activeFilters = $derived(
         answerQuestions.flatMap((q) => [
             ...(filters.answers[q.id] ?? []).map((label) => ({
                 key: `${q.id}:${label}`,
                 text: `${q.options.find((o) => o.label === label)?.code ?? q.letter} ${label}`,
-                remove: () => toggleAnswer(q.id, label)
+                remove: () => setFilters(toggleAnswer(filters, q.id, label))
             })),
             ...(filters.texts[q.id] !== undefined
                 ? [
                       {
                           key: `${q.id}:text`,
                           text: `${q.letter} "${filters.texts[q.id]?.trim()}"`,
-                          remove: () => setText(q.id, '')
+                          remove: () => setFilters(setText(filters, q.id, ''))
                       }
                   ]
                 : [])
@@ -304,22 +246,13 @@
     });
 
     /** The part of the pool the filters let through. */
-    const shownPool = $derived(unassigned.filter(matchesFilters));
+    const shownPool = $derived(unassigned.filter((p) => matches(p, filters)));
+    const filtering = $derived(isFiltering(filters));
 
-    // How many unassigned people gave each answer, by question id then answer.
-    // Counted over the whole pool, not the filtered part, so a number beside an
-    // answer does not change as other answers are picked.
-    const poolCounts = $derived.by(() => {
-        const counts: Record<string, Record<string, number>> = {};
-        for (const p of unassigned) {
-            for (const [id, answer] of Object.entries(p.codes)) {
-                const byAnswer = (counts[id] ??= {});
-                byAnswer[answer.label] = (byAnswer[answer.label] ?? 0) + 1;
-            }
-        }
-
-        return counts;
-    });
+    // How many unassigned people gave each answer, over the whole pool rather
+    // than the matching part, so a number beside an answer does not change as
+    // other answers are picked.
+    const poolCounts = $derived(countAnswers(unassigned));
 
     function answeredInPool(questionId: string): number {
         return Object.values(poolCounts[questionId] ?? {}).reduce((n, c) => n + c, 0);
@@ -882,7 +815,8 @@
                                     placeholder="Filter: answer contains…"
                                     aria-label={`Filter Unassigned by ${q.label}`}
                                     value={filters.texts[q.id] ?? ''}
-                                    oninput={(e) => setText(q.id, e.currentTarget.value)}
+                                    oninput={(e) =>
+                                        setFilters(setText(filters, q.id, e.currentTarget.value))}
                                 />
                                 <span class="meta tnum">
                                     {answeredInPool(q.id)} of {unassigned.length} answered
@@ -905,7 +839,7 @@
                                         title={picked
                                             ? 'Stop filtering by this answer'
                                             : 'Show only unassigned people who gave this answer'}
-                                        onclick={() => toggleAnswer(q.id, o.label)}
+                                        onclick={() => setFilters(toggleAnswer(filters, q.id, o.label))}
                                     >
                                         <span class="font-semibold">{o.code}</span>
                                         {o.label}
@@ -1079,11 +1013,11 @@
             class:border-accent={dropTarget === POOL}
         >
             <h3 class="m-0 meta tnum">
-                Unassigned ({activeFilters.length > 0
+                Unassigned ({filtering
                     ? `${shownPool.length} of ${unassigned.length}`
                     : unassigned.length})
             </h3>
-            {#if activeFilters.length > 0}
+            {#if filtering}
                 <div class="flex flex-wrap items-center gap-1.5">
                     {#each activeFilters as f (f.key)}
                         <button
@@ -1096,7 +1030,11 @@
                             <X class="size-3" />
                         </button>
                     {/each}
-                    <button type="button" class="btn btn-sm btn-quiet" onclick={resetFilters}>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-quiet"
+                        onclick={() => setFilters(NO_FILTERS)}
+                    >
                         Reset filters
                     </button>
                 </div>
