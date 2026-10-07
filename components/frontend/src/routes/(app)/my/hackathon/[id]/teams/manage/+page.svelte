@@ -19,7 +19,7 @@
         NO_FILTERS,
         countAnswers,
         isFiltering,
-        matches,
+        matchesFirst,
         restoreFilters,
         setText,
         toggleAnswer,
@@ -113,12 +113,12 @@
 
     const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
 
-    // Which answers narrow the Unassigned column. The rules live in
-    // `teamPoolFilter`; this keeps them, stores them and draws them.
+    // Which answers bring people to the top of the Unassigned column. The rules
+    // live in `teamPoolFilter`; this keeps them, stores them and draws them.
     //
     // Kept in the browser like the ticks above, so a reload keeps the filter.
-    // That is only safe because the pool always says it is filtered and offers
-    // a reset — a forgotten filter must never read as people having vanished.
+    // That is safe because a filter only reorders, the pool says how many
+    // match, and a reset is one click away.
     let filters: PoolFilters = $state(NO_FILTERS);
 
     const filterKey = $derived(`hackagon:team-filters:${hackathonId}`);
@@ -245,8 +245,8 @@
         return [...peopleById.values()].filter((p) => !placed.has(p.id));
     });
 
-    /** The part of the pool the filters let through. */
-    const shownPool = $derived(unassigned.filter((p) => matches(p, filters)));
+    /** The pool with whoever matches the filters on top. */
+    const pool = $derived(matchesFirst(unassigned, filters));
     const filtering = $derived(isFiltering(filters));
 
     // How many unassigned people gave each answer, over the whole pool rather
@@ -793,8 +793,8 @@
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <h3 class="m-0 meta">Registration questions</h3>
                 <p class="m-0 text-xs text-ink-3">
-                    Click an answer to filter Unassigned (the number is how many unassigned people
-                    gave it).
+                    Click an answer to bring the people who gave it to the top of Unassigned (the
+                    number is how many unassigned people gave it).
                 </p>
             </div>
             <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
@@ -838,7 +838,7 @@
                                         aria-pressed={picked}
                                         title={picked
                                             ? 'Stop filtering by this answer'
-                                            : 'Show only unassigned people who gave this answer'}
+                                            : 'Bring unassigned people who gave this answer to the top'}
                                         onclick={() => setFilters(toggleAnswer(filters, q.id, o.label))}
                                     >
                                         <span class="font-semibold">{o.code}</span>
@@ -1013,9 +1013,9 @@
             class:border-accent={dropTarget === POOL}
         >
             <h3 class="m-0 meta tnum">
-                Unassigned ({filtering
-                    ? `${shownPool.length} of ${unassigned.length}`
-                    : unassigned.length})
+                Unassigned ({unassigned.length}){filtering
+                    ? ` · ${pool.matching.length} match`
+                    : ''}
             </h3>
             {#if filtering}
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -1050,13 +1050,26 @@
             {/if}
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
-            {:else if shownPool.length === 0}
-                <p class="m-0 text-xs text-ink-3">Nobody unassigned matches these filters.</p>
             {:else}
                 <div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
-                    {#each shownPool as person (person.id)}
+                    {#if filtering && pool.matching.length === 0}
+                        <p class="m-0 text-xs text-ink-3">
+                            Nobody unassigned matches these filters.
+                        </p>
+                    {/if}
+                    {#each pool.matching as person (person.id)}
                         {@render personRow(person, POOL, null, null)}
                     {/each}
+                    <!-- Greyed rather than hidden: see `matchesFirst`. Still
+                         draggable, and full strength under the pointer. -->
+                    {#if pool.rest.length > 0}
+                        <p class="m-0 meta tnum pt-2">Not matching ({pool.rest.length})</p>
+                        {#each pool.rest as person (person.id)}
+                            <div class="opacity-50 transition-opacity hover:opacity-100">
+                                {@render personRow(person, POOL, null, null)}
+                            </div>
+                        {/each}
+                    {/if}
                 </div>
             {/if}
         </section>

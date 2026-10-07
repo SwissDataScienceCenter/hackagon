@@ -4,6 +4,7 @@ import {
   countAnswers,
   isFiltering,
   matches,
+  matchesFirst,
   restoreFilters,
   setText,
   toggleAnswer,
@@ -67,6 +68,24 @@ describe("matches", () => {
     expect(matches(person("a", { skills: "Python, design" }), f)).toBe(true)
     expect(matches(person("b", { skills: "Design" }), f)).toBe(false)
     expect(matches(person("c"), f)).toBe(false)
+  })
+})
+
+describe("matchesFirst", () => {
+  it("splits the pool and keeps each part in its order", () => {
+    const pool = [
+      person("a", { exp: "Many" }),
+      person("b", { exp: "First time" }),
+      person("c", { exp: "Many" }),
+      person("d"),
+    ]
+    const { matching, rest } = matchesFirst(
+      pool,
+      filters({ answers: { exp: ["Many"] } }),
+    )
+
+    expect(matching.map((p) => p.id)).toEqual(["a", "c"])
+    expect(rest.map((p) => p.id)).toEqual(["b", "d"])
   })
 })
 

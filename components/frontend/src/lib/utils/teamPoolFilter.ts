@@ -9,6 +9,8 @@ import type { QuestionKind } from "./question"
  * **One rule for combining:** answers to one question widen (B1 or B2),
  * different questions narrow (B2 and "python"). That is what "people who said
  * Beginner or Intermediate, and who are remote" means when said aloud.
+ *
+ * A filter reorders rather than hides — see `matchesFirst`.
  */
 
 export type PoolFilters = {
@@ -129,6 +131,26 @@ export function matches(
   }
 
   return true
+}
+
+/**
+ * The pool split into who matches and who does not, each in its original
+ * order.
+ *
+ * Reordering rather than hiding is deliberate. A hidden person is one that
+ * dragging back into the pool appears to lose, and a filter left on from
+ * yesterday reads as people having vanished. Everyone stays in reach; the
+ * filter only decides who is on top.
+ */
+export function matchesFirst<T extends FilterablePerson>(
+  people: readonly T[],
+  filters: PoolFilters,
+): { matching: T[]; rest: T[] } {
+  const matching: T[] = []
+  const rest: T[] = []
+  for (const p of people) (matches(p, filters) ? matching : rest).push(p)
+
+  return { matching, rest }
 }
 
 /** How many people gave each answer, by question id then answer text. */

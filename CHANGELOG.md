@@ -19,9 +19,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 ### Added
 
 - Manage Teams can filter the Unassigned column by registration answers: click
-  an answer (or type into a free-text question's box) to see only the people who
-  gave it. Each answer shows how many unassigned people gave it. Filters are
-  remembered in your browser and cleared with "Reset filters".
+  an answer (or type into a free-text question's box) to bring the people who
+  gave it to the top; everyone else stays below, greyed out. Each answer shows
+  how many unassigned people gave it. Filters are remembered in your browser and
+  cleared with "Reset filters".
 
 ### Changed
 
