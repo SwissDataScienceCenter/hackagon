@@ -4,6 +4,7 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { listAnswers } from "$lib/server/hackathon/questions"
+import { assignmentLockReasons } from "$lib/server/hackathon/teamAssignmentLock"
 import {
   answerLegend,
   questionRows,
@@ -33,6 +34,14 @@ export const load: PageServerLoad = async (event) => {
   }
 
   const { teams } = await team.list({ hackathonId: event.params.id })
+
+  // Every team, not only those on approved projects: a submission anywhere in
+  // the hackathon is one a save could take with it.
+  const lockReasons = await assignmentLockReasons(
+    team,
+    teams.map((t) => t.id),
+    hackathon.state,
+  )
 
   // Who prefers what, per project — same `Project:Write` permission this page
   // is already gated on, so no separate check is needed here.
@@ -154,6 +163,8 @@ export const load: PageServerLoad = async (event) => {
     // chosen to show. Which of them to show is a preference of one person at
     // one screen, so it is kept in their browser and never reaches here.
     answerQuestions: legend.questions,
+    // Why the assignment can no longer be changed; empty while it can.
+    lockReasons,
   }
 }
 
@@ -172,7 +183,11 @@ export const actions: Actions = {
   // Distributing a hundred people is a few hundred sequential calls and takes a
   // noticeable moment; that is a backend gap, not a client one.
   save: async (event) => {
-    const { team, project } = requireGrpc(event.locals.grpc)
+    const {
+      team,
+      project,
+      hackathon: hackathonClient,
+    } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
     const raw = form.get("teams")
@@ -199,6 +214,23 @@ export const actions: Actions = {
       const { teams: all } = await team.list({
         hackathonId: event.params.id,
       })
+
+      // Checked again here, not only on load: a page opened before the first
+      // submission or before teams were published still offers Save.
+      const { hackathon: latest } = await hackathonClient.get({
+        hackathonId: event.params.id,
+      })
+      const locked = await assignmentLockReasons(
+        team,
+        all.map((t) => t.id),
+        latest?.state,
+      )
+      if (locked.length > 0) {
+        return fail(409, {
+          message: `Team assignment is locked: ${locked.join(" and ")}.`,
+        })
+      }
+
       const keep = new Set(
         plan.map((t) => t.id).filter((id): id is string => id !== null),
       )

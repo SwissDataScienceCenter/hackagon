@@ -7,6 +7,7 @@
         Download,
         Eraser,
         GripVertical,
+        Lock as LockIcon,
         Pencil,
         Trash2,
         Upload,
@@ -433,7 +434,16 @@
         dropTarget = null;
     }
 
+    // Once a submission exists or teams are published the assignment is read
+    // only: every control that changes it is disabled or gone, and the reason
+    // is said once at the top and again on hover. Download and the filters
+    // still work — looking is not changing. See `assignmentLockReasons`.
+    const lockReasons = $derived(data.lockReasons);
+    const locked = $derived(lockReasons.length > 0);
+    const lockedTitle = $derived(locked ? `Locked: ${lockReasons.join(' and ')}` : undefined);
+
     function canDrop(target: string) {
+        if (locked) return false;
         return draggedId !== null && draggedFrom !== target;
     }
 
@@ -582,14 +592,17 @@
     {@const answers = answersFor(person)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-        draggable="true"
+        draggable={!locked}
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
-        class="flex cursor-grab items-center gap-1.5 rounded-card border border-line bg-raised
-               px-2 py-1 active:cursor-grabbing"
+        class="flex items-center gap-1.5 rounded-card border border-line bg-raised px-2 py-1"
+        class:cursor-grab={!locked}
+        class:active:cursor-grabbing={!locked}
         class:opacity-40={draggedId === person.id}
     >
-        <GripVertical class="size-3 shrink-0 text-ink-3" />
+        {#if !locked}
+            <GripVertical class="size-3 shrink-0 text-ink-3" />
+        {/if}
         <div class="flex min-w-0 flex-1 flex-col">
             <span class="min-w-0 truncate text-xs text-ink">{person.name}</span>
             {#if !showPreferences}
@@ -644,7 +657,7 @@
                 ?
             </span>
         {/if}
-        {#if from !== POOL}
+        {#if from !== POOL && !locked}
             <button
                 type="button"
                 class="shrink-0 text-ink-3 hover:text-danger-ink"
@@ -664,6 +677,21 @@
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
     </div>
 
+    {#if locked}
+        <div
+            class="flex items-start gap-2 rounded-card border border-warning bg-warning/10 px-3 py-2
+                   text-xs text-warning-ink"
+            role="status"
+        >
+            <LockIcon class="mt-0.5 size-3 shrink-0" />
+            <p class="m-0">
+                <strong>Team assignment is locked:</strong>
+                {lockReasons.join(' and ')}. You can still download the spreadsheet and filter
+                participants.
+            </p>
+        </div>
+    {/if}
+
     {#if form?.message}
         <p
             class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
@@ -678,7 +706,8 @@
         <button
             type="button"
             class="btn btn-sm btn-ghost"
-            disabled={pending || assignedCount === 0}
+            disabled={locked || pending || assignedCount === 0}
+            title={lockedTitle}
             onclick={clearAll}
         >
             <Eraser class="size-3" />
@@ -699,10 +728,14 @@
                 <Download class="size-3" />
                 Download CSV
             </a>
+            <!-- A label, so it cannot take `disabled` itself: the input does,
+                 and the label is dimmed and stops looking clickable. -->
             <label
-                class="btn btn-sm btn-ghost cursor-pointer"
-                class:opacity-50={pending}
-                title="Upload an edited spreadsheet"
+                class="btn btn-sm btn-ghost"
+                class:cursor-pointer={!locked}
+                class:cursor-not-allowed={locked}
+                class:opacity-50={locked || pending}
+                title={lockedTitle ?? 'Upload an edited spreadsheet'}
             >
                 <Upload class="size-3" />
                 Upload CSV
@@ -710,7 +743,7 @@
                     type="file"
                     accept=".csv,text/csv"
                     class="hidden"
-                    disabled={pending}
+                    disabled={locked || pending}
                     onchange={importFile}
                 />
             </label>
@@ -735,7 +768,8 @@
             <button
                 type="button"
                 class="btn btn-sm btn-ghost"
-                disabled={pending || changes.total === 0}
+                disabled={locked || pending || changes.total === 0}
+                title={lockedTitle}
                 onclick={discard}
             >
                 Discard
@@ -743,7 +777,8 @@
             <button
                 type="button"
                 class="btn btn-sm"
-                disabled={pending || changes.total === 0}
+                disabled={locked || pending || changes.total === 0}
+                title={lockedTitle}
                 onclick={save}
             >
                 Save
@@ -1134,30 +1169,32 @@
                                                 </span>
                                                 <span class="meta shrink-0">{t.memberIds.length}</span
                                                 >
-                                                <button
-                                                    type="button"
-                                                    class="shrink-0 text-ink-3 hover:text-accent-ink"
-                                                    aria-label={`Rename ${t.name}`}
-                                                    title="Rename"
-                                                    onclick={() => startEdit(t.key, t.name)}
-                                                >
-                                                    <Pencil class="size-3" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="shrink-0 text-ink-3 hover:text-danger-ink"
-                                                    aria-label={`Delete ${t.name}`}
-                                                    title="Delete"
-                                                    onclick={() => removeTeam(t.key, t.name)}
-                                                >
-                                                    <Trash2 class="size-3" />
-                                                </button>
+                                                {#if !locked}
+                                                    <button
+                                                        type="button"
+                                                        class="shrink-0 text-ink-3 hover:text-accent-ink"
+                                                        aria-label={`Rename ${t.name}`}
+                                                        title="Rename"
+                                                        onclick={() => startEdit(t.key, t.name)}
+                                                    >
+                                                        <Pencil class="size-3" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="shrink-0 text-ink-3 hover:text-danger-ink"
+                                                        aria-label={`Delete ${t.name}`}
+                                                        title="Delete"
+                                                        onclick={() => removeTeam(t.key, t.name)}
+                                                    >
+                                                        <Trash2 class="size-3" />
+                                                    </button>
+                                                {/if}
                                             {/if}
                                         </header>
                                         <div class="flex min-h-16 flex-1 flex-col gap-1 p-2">
                                             {#if t.memberIds.length === 0}
                                                 <p class="m-0 text-xs text-ink-3">
-                                                    Drop a participant here.
+                                                    {locked ? 'Nobody on this team.' : 'Drop a participant here.'}
                                                 </p>
                                             {:else}
                                                 {#each t.memberIds as id (id)}
@@ -1182,16 +1219,18 @@
                                     </p>
                                 {/if}
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-ghost h-full"
-                                    title={projectTeams.length === 0
-                                        ? 'Add the first team for this project'
-                                        : 'Add another team for this project'}
-                                    onclick={() => addTeam(p.id)}
-                                >
-                                    {projectTeams.length === 0 ? '+ Add Team' : '+'}
-                                </button>
+                                {#if !locked}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-ghost h-full"
+                                        title={projectTeams.length === 0
+                                            ? 'Add the first team for this project'
+                                            : 'Add another team for this project'}
+                                        onclick={() => addTeam(p.id)}
+                                    >
+                                        {projectTeams.length === 0 ? '+ Add Team' : '+'}
+                                    </button>
+                                {/if}
                             </div>
                         </div>
                     {/each}

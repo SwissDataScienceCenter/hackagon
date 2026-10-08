@@ -18,6 +18,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Teams locks the team assignment once a team has a submission or teams
+  are published: a notice says why, and uploading, saving and editing teams are
+  disabled, while downloading the spreadsheet and filtering participants still
+  work.
 - Manage Teams can filter the Unassigned column by registration answers: click
   an answer (or type into a free-text question's box) to bring the people who
   gave it to the top; everyone else stays below, greyed out. Each answer shows
