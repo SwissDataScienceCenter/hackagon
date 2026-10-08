@@ -22,7 +22,6 @@ export const COLUMNS = {
   userId: "user_id",
   name: "name",
   project: "project",
-  projectTitle: "project_title",
   team: "team",
   prefers: "prefers",
 } as const
@@ -44,8 +43,6 @@ export interface AssignmentRow {
    * empty when they are unassigned.
    */
   project: string
-  /** That project's title, for reading and for catching a stale number. */
-  projectTitle: string
   /** Their team's name; empty when they are unassigned. */
   team: string
   /** The projects they said they wanted, as the page's numbers. */
@@ -64,8 +61,7 @@ export interface AssignmentRow {
  *
  * Projects go out as the numbers the page shows — in `project` and in
  * `prefers` alike — because that is what an organizer types and compares
- * against the screen. `project_title` rides beside the number so the file
- * reads on its own, and so an upload can tell when the numbering has moved.
+ * against the screen.
  *
  * `prefers` joins with `; ` rather than `, ` so the cell stays legible in a
  * spreadsheet that has just been told the file is comma-separated.
@@ -78,7 +74,6 @@ export function assignmentCsv(
     COLUMNS.userId,
     COLUMNS.name,
     COLUMNS.project,
-    COLUMNS.projectTitle,
     COLUMNS.team,
     COLUMNS.prefers,
     ...questions.map((q) => q.label),
@@ -92,7 +87,6 @@ export function assignmentCsv(
           r.userId,
           r.name,
           r.project,
-          r.projectTitle,
           r.team,
           r.prefers.join("; "),
           ...questions.map((q) => r.answers[q.key] ?? ""),
@@ -140,9 +134,8 @@ export interface ImportResult {
  * saved. An organizer who wants a name changed renames the team on the page.
  *
  * **An assignment is a person, a project and a team.** The project is the
- * number the page shows (a title still works, matched ignoring case); the
- * team is any name at all, even one character, and the same name on the same
- * project is the same team.
+ * number the page shows — nothing else counts; the team is any name at all,
+ * even one character, and the same name on the same project is the same team.
  *
  * Anything short of that is not an assignment, and the person **ends up
  * unassigned** — never left wherever they were, because the file replaces
@@ -150,9 +143,9 @@ export interface ImportResult {
  *
  * - a row with neither project nor team: that is simply how the download writes
  *   somebody without a team, so it is not worth a warning;
- * - a row with a mistake in it — one of the two missing, an unknown project, a
- *   number whose `project_title` no longer matches, a second row for the same
- *   person — is warned about;
+ * - a row with a mistake in it — one of the two missing, a project that is not
+ *   one of the page's numbers, a second row for the same person — is warned
+ *   about;
  * - somebody with no row at all is warned about too: most likely they joined
  *   after the download, but a trimmed file looks the same.
  *
@@ -191,8 +184,6 @@ export function applyAssignmentCsv(
   const projectAt = columnAt(COLUMNS.project)
   const teamAt = columnAt(COLUMNS.team)
   const nameAt = columnAt(COLUMNS.name)
-  // Optional: only a downloaded file has it, and it is only a check.
-  const titleAt = columnAt(COLUMNS.projectTitle)
   if (idAt === -1 || projectAt === -1 || teamAt === -1) {
     problems.push(
       `That file needs a ${COLUMNS.userId}, a ${COLUMNS.project} and a ` +
@@ -207,11 +198,6 @@ export function applyAssignmentCsv(
   const projectByNumber = new Map(
     world.projects.map((p) => [String(p.number), p]),
   )
-  const projectByTitle = new Map(
-    world.projects.map((p) => [p.title.trim().toLowerCase(), p]),
-  )
-  const sameTitle = (a: string, b: string) =>
-    a.trim().toLowerCase() === b.trim().toLowerCase()
 
   const warnings: string[] = []
   /** Who goes where, by user id, for every row that is a usable assignment. */
@@ -268,34 +254,14 @@ export function applyAssignmentCsv(
       continue
     }
 
-    // A number, as the page shows it — or a title, which is what a file from
-    // before the numbers carries, and is never ambiguous.
-    const isNumber = /^\d+$/.test(named)
-    const project = isNumber
+    // A project number as the page shows it, and nothing else: a title, a
+    // typo or a number no project has is not an assignment.
+    const project = /^\d+$/.test(named)
       ? projectByNumber.get(String(Number(named)))
-      : projectByTitle.get(named.toLowerCase())
+      : undefined
     if (project === undefined) {
       warnings.push(
-        isNumber
-          ? `Row ${line}: no project on this page has number ${named}, so ${who} is left unassigned.`
-          : `Row ${line}: no project on this page is called "${named}", so ${who} is left unassigned.`,
-      )
-      continue
-    }
-
-    // Numbers follow the order of the approved projects, so approving or
-    // rejecting one after the download shifts every number after it. The title
-    // the download wrote beside the number catches that: a mismatch means the
-    // number no longer names what the organizer saw.
-    const writtenTitle = titleAt === -1 ? "" : cell(titleAt)
-    if (
-      isNumber &&
-      writtenTitle !== "" &&
-      !sameTitle(writtenTitle, project.title)
-    ) {
-      warnings.push(
-        `Row ${line}: project ${named} is now "${project.title}", not "${writtenTitle}" — ` +
-          `the file may be out of date, so ${who} is left unassigned.`,
+        `Row ${line}: "${named}" is not a project number on this page, so ${who} is left unassigned.`,
       )
       continue
     }

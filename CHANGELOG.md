@@ -49,8 +49,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   anyone else ends up unassigned, with a warning for a row that has a mistake in
   it or is missing from the file.
 - The team assignment spreadsheet uses the project numbers shown on the page, in
-  both the project and the prefers columns, with each project's title beside its
-  number. Team names can be anything, even a single character.
+  both the project and the prefers columns; an uploaded row whose project is not
+  one of those numbers is not an assignment. Team names can be anything, even a
+  single character.
 - Saving on Manage Teams now deletes every team with nobody in it.
 - Manage Teams lists every registration question, not only the multiple-choice
   ones, and "Show on cards" puts the question's letter and the answer itself

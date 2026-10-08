@@ -842,15 +842,13 @@
 
             <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-ink-3">
                 <dt class="text-ink-2"><code>project</code></dt>
-                <dd class="m-0">the project number as shown here and in the prefers column</dd>
+                <dd class="m-0">
+                    a project number as shown here and in the prefers column; anything else is
+                    an incomplete assignment
+                </dd>
 
                 <dt class="text-ink-2"><code>team</code></dt>
                 <dd class="m-0">any name, even a single character; can be renamed after upload</dd>
-
-                <dt class="text-ink-2"><code>project_title</code></dt>
-                <dd class="m-0">
-                    for reading; if it no longer matches the number, that row gets a warning
-                </dd>
 
                 <dt class="text-ink-2">both empty</dt>
                 <dd class="m-0">the person ends up unassigned</dd>

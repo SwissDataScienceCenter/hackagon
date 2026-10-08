@@ -125,7 +125,6 @@ export const GET: RequestHandler = async (event) => {
     userId: id,
     name,
     project: project ? String(project.number) : "",
-    projectTitle: project?.title ?? "",
     team: teamName,
     prefers: prefersByUser.get(id) ?? [],
     answers: answersFor(id),

@@ -16,7 +16,6 @@ const row = (over: Partial<AssignmentRow> = {}): AssignmentRow => ({
   userId: "u1",
   name: "Alice Doe",
   project: "1",
-  projectTitle: "Vision Pipeline",
   team: "Team VP",
   prefers: ["1"],
   answers: { experience: "Many", tshirt: "M" },
@@ -50,7 +49,7 @@ describe("assignmentCsv", () => {
     const [header] = assignmentCsv([], QUESTIONS).split("\r\n")
 
     expect(header).toBe(
-      "user_id,name,project,project_title,team,prefers,How much have you hacked before?,T-shirt size",
+      "user_id,name,project,team,prefers,How much have you hacked before?,T-shirt size",
     )
   })
 
@@ -62,7 +61,7 @@ describe("assignmentCsv", () => {
 
     // Unquoted: a semicolon is an ordinary character in a comma-separated
     // file, and the header is what a reader sniffs the delimiter from.
-    expect(first).toBe("u1,Alice Doe,1,Vision Pipeline,Team VP,1; 2,Many,M")
+    expect(first).toBe("u1,Alice Doe,1,Team VP,1; 2,Many,M")
   })
 
   it("leaves an unanswered question's cell empty", () => {
@@ -74,12 +73,11 @@ describe("assignmentCsv", () => {
   })
 
   it("writes an unassigned person with no project and no team", () => {
-    const [, first] = assignmentCsv(
-      [row({ project: "", projectTitle: "", team: "" })],
-      [],
-    ).split("\r\n")
+    const [, first] = assignmentCsv([row({ project: "", team: "" })], []).split(
+      "\r\n",
+    )
 
-    expect(first).toBe("u1,Alice Doe,,,,1")
+    expect(first).toBe("u1,Alice Doe,,,1")
   })
 })
 
@@ -96,9 +94,7 @@ describe("applyAssignmentCsv", () => {
 
   it("reads the project as the number the page shows", () => {
     const result = applyAssignmentCsv(
-      "user_id,name,project,project_title,team\r\n" +
-        "u1,Alice Doe,2,Chat Agent,Team CA\r\n" +
-        "u2,Bob Smith,02,,Team CA\r\n",
+      file("u1,Alice Doe,2,Team CA", "u2,Bob Smith,02,Team CA"),
       world(),
       opts,
     )
@@ -123,7 +119,7 @@ describe("applyAssignmentCsv", () => {
 
   it("rebuilds the download, unedited, without a warning", () => {
     const result = applyAssignmentCsv(
-      file("u1,Alice Doe,Vision Pipeline,Team VP", BOB_FREE),
+      file("u1,Alice Doe,1,Team VP", BOB_FREE),
       world(),
       opts,
     )
@@ -137,7 +133,7 @@ describe("applyAssignmentCsv", () => {
 
   it("replaces every team with a new one, even under the same name", () => {
     const result = applyAssignmentCsv(
-      file("u1,Alice Doe,Vision Pipeline,Team VP", BOB_FREE),
+      file("u1,Alice Doe,1,Team VP", BOB_FREE),
       world(),
       opts,
     )
@@ -155,10 +151,7 @@ describe("applyAssignmentCsv", () => {
 
   it("puts people with the same project and team together, however cased", () => {
     const result = applyAssignmentCsv(
-      file(
-        "u1,Alice Doe,Vision Pipeline,Team VP",
-        "u2,Bob Smith,vision pipeline,TEAM VP",
-      ),
+      file("u1,Alice Doe,1,Team VP", "u2,Bob Smith,1,TEAM VP"),
       world(),
       opts,
     )
@@ -168,7 +161,7 @@ describe("applyAssignmentCsv", () => {
 
   it("keeps one name on two projects as two teams", () => {
     const result = applyAssignmentCsv(
-      file("u1,Alice Doe,Vision Pipeline,Blue", "u2,Bob Smith,Chat Agent,Blue"),
+      file("u1,Alice Doe,1,Blue", "u2,Bob Smith,2,Blue"),
       world(),
       opts,
     )
@@ -194,8 +187,8 @@ describe("applyAssignmentCsv", () => {
   it("reads the columns by name, not by position", () => {
     const result = applyAssignmentCsv(
       "team,notes,USER_ID,project\r\n" +
-        "Team VP,anything,u1,Vision Pipeline\r\n" +
-        "Team VP,,u2,Vision Pipeline\r\n",
+        "Team VP,anything,u1,1\r\n" +
+        "Team VP,,u2,1\r\n",
       world(),
       opts,
     )
@@ -211,7 +204,7 @@ describe("applyAssignmentCsv", () => {
     }))
     const result = applyAssignmentCsv(
       ["user_id,name,project,team"]
-        .concat(crowd.map((p) => `${p.id},${p.name},Vision Pipeline,Team VP`))
+        .concat(crowd.map((p) => `${p.id},${p.name},1,Team VP`))
         .join("\r\n"),
       world({ people: crowd, teams: [] }),
       opts,
@@ -233,7 +226,7 @@ describe("applyAssignmentCsv", () => {
     }
 
     it("a project with no team", () => {
-      expect(warned("u1,Alice Doe,Vision Pipeline,", BOB_FREE)).toEqual([
+      expect(warned("u1,Alice Doe,1,", BOB_FREE)).toEqual([
         "Row 2: Alice Doe has a project but no team, and is left unassigned.",
       ])
     })
@@ -244,43 +237,21 @@ describe("applyAssignmentCsv", () => {
       ])
     })
 
-    it("a project that is not on this page", () => {
-      expect(warned("u1,Alice Doe,Weather Bot,Team WB", BOB_FREE)).toEqual([
-        'Row 2: no project on this page is called "Weather Bot", so Alice Doe is left unassigned.',
-      ])
-    })
-
     it("a project number that is not on this page", () => {
       expect(warned("u1,Alice Doe,7,Team X", BOB_FREE)).toEqual([
-        "Row 2: no project on this page has number 7, so Alice Doe is left unassigned.",
+        'Row 2: "7" is not a project number on this page, so Alice Doe is left unassigned.',
       ])
     })
 
-    it("a number whose project_title no longer matches it", () => {
-      // Downloaded when project 1 was still "Old Name": the numbering has
-      // moved since, so the number cannot be trusted.
-      const result = applyAssignmentCsv(
-        "user_id,name,project,project_title,team\r\n" +
-          "u1,Alice Doe,1,Old Name,Team VP\r\n" +
-          "u2,Bob Smith,,,\r\n",
-        world(),
-        opts,
-      )
-
-      expect(result.warnings).toEqual([
-        'Row 2: project 1 is now "Vision Pipeline", not "Old Name" — the file ' +
-          "may be out of date, so Alice Doe is left unassigned.",
+    it("a project title instead of its number", () => {
+      expect(warned("u1,Alice Doe,Vision Pipeline,Team VP", BOB_FREE)).toEqual([
+        'Row 2: "Vision Pipeline" is not a project number on this page, so Alice Doe is left unassigned.',
       ])
-      expect(result.teams).toEqual([])
     })
 
     it("a second row for the same person, using neither", () => {
       expect(
-        warned(
-          "u1,Alice Doe,Vision Pipeline,Team VP",
-          BOB_FREE,
-          "u1,Alice Doe,Chat Agent,Team CA",
-        ),
+        warned("u1,Alice Doe,1,Team VP", BOB_FREE, "u1,Alice Doe,2,Team CA"),
       ).toEqual([
         "Row 4: Alice Doe appears more than once, and is left unassigned.",
       ])
@@ -302,11 +273,7 @@ describe("applyAssignmentCsv", () => {
 
   it("names a row for somebody it cannot place, and applies the rest", () => {
     const result = applyAssignmentCsv(
-      file(
-        "u1,Alice Doe,Vision Pipeline,Team VP",
-        BOB_FREE,
-        "u9,Carol Jones,Vision Pipeline,Team VP",
-      ),
+      file("u1,Alice Doe,1,Team VP", BOB_FREE, "u9,Carol Jones,1,Team VP"),
       world(),
       opts,
     )
