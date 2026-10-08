@@ -364,12 +364,24 @@ func init() {
 	userDescEmail := userFields[3].Descriptor()
 	// user.DefaultEmail holds the default value on creation for the email field.
 	user.DefaultEmail = userDescEmail.Default.(string)
+	// userDescGithubURL is the schema descriptor for github_url field.
+	userDescGithubURL := userFields[4].Descriptor()
+	// user.DefaultGithubURL holds the default value on creation for the github_url field.
+	user.DefaultGithubURL = userDescGithubURL.Default.(string)
+	// userDescRenkuURL is the schema descriptor for renku_url field.
+	userDescRenkuURL := userFields[5].Descriptor()
+	// user.DefaultRenkuURL holds the default value on creation for the renku_url field.
+	user.DefaultRenkuURL = userDescRenkuURL.Default.(string)
+	// userDescLinkedinURL is the schema descriptor for linkedin_url field.
+	userDescLinkedinURL := userFields[6].Descriptor()
+	// user.DefaultLinkedinURL holds the default value on creation for the linkedin_url field.
+	user.DefaultLinkedinURL = userDescLinkedinURL.Default.(string)
 	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userFields[4].Descriptor()
+	userDescCreatedAt := userFields[7].Descriptor()
 	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
 	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
 	// userDescModifiedAt is the schema descriptor for modified_at field.
-	userDescModifiedAt := userFields[5].Descriptor()
+	userDescModifiedAt := userFields[8].Descriptor()
 	// user.DefaultModifiedAt holds the default value on creation for the modified_at field.
 	user.DefaultModifiedAt = userDescModifiedAt.Default.(func() time.Time)
 	// user.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.

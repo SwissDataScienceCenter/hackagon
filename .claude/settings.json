@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just nix::develop default bash -c 'just codegen::proto >/dev/null && just codegen::db-schema >/dev/null && echo CODEGEN-OK && just check::test -c backend 2>&1 | tail -40 && just check::lint -c backend 2>&1 | tail -30')",
+      "Bash(just nix::develop default bash -c 'just check::lint -c backend 2>&1')",
+      "Bash(just nix::develop default bash -c 'just check::lint -c backend 2>&1 | grep -E \"\\\\.go:[0-9]+|successful|not successful\" ; just check::test -c backend 2>&1 | grep -E \"Ran [0-9]+|Passed|FAIL\"')",
+      "Bash(nix run *)",
+      "Bash(git add *)"
+    ]
+  }
+}

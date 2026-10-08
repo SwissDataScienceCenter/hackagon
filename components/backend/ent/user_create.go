@@ -78,6 +78,48 @@ func (_c *UserCreate) SetNillableEmail(v *string) *UserCreate {
 	return _c
 }
 
+// SetGithubURL sets the "github_url" field.
+func (_c *UserCreate) SetGithubURL(v string) *UserCreate {
+	_c.mutation.SetGithubURL(v)
+	return _c
+}
+
+// SetNillableGithubURL sets the "github_url" field if the given value is not nil.
+func (_c *UserCreate) SetNillableGithubURL(v *string) *UserCreate {
+	if v != nil {
+		_c.SetGithubURL(*v)
+	}
+	return _c
+}
+
+// SetRenkuURL sets the "renku_url" field.
+func (_c *UserCreate) SetRenkuURL(v string) *UserCreate {
+	_c.mutation.SetRenkuURL(v)
+	return _c
+}
+
+// SetNillableRenkuURL sets the "renku_url" field if the given value is not nil.
+func (_c *UserCreate) SetNillableRenkuURL(v *string) *UserCreate {
+	if v != nil {
+		_c.SetRenkuURL(*v)
+	}
+	return _c
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (_c *UserCreate) SetLinkedinURL(v string) *UserCreate {
+	_c.mutation.SetLinkedinURL(v)
+	return _c
+}
+
+// SetNillableLinkedinURL sets the "linkedin_url" field if the given value is not nil.
+func (_c *UserCreate) SetNillableLinkedinURL(v *string) *UserCreate {
+	if v != nil {
+		_c.SetLinkedinURL(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserCreate) SetCreatedAt(v time.Time) *UserCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -553,6 +595,18 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultEmail
 		_c.mutation.SetEmail(v)
 	}
+	if _, ok := _c.mutation.GithubURL(); !ok {
+		v := user.DefaultGithubURL
+		_c.mutation.SetGithubURL(v)
+	}
+	if _, ok := _c.mutation.RenkuURL(); !ok {
+		v := user.DefaultRenkuURL
+		_c.mutation.SetRenkuURL(v)
+	}
+	if _, ok := _c.mutation.LinkedinURL(); !ok {
+		v := user.DefaultLinkedinURL
+		_c.mutation.SetLinkedinURL(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := user.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -637,6 +691,18 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Email(); ok {
 		_spec.SetField(user.FieldEmail, field.TypeString, value)
 		_node.Email = value
+	}
+	if value, ok := _c.mutation.GithubURL(); ok {
+		_spec.SetField(user.FieldGithubURL, field.TypeString, value)
+		_node.GithubURL = value
+	}
+	if value, ok := _c.mutation.RenkuURL(); ok {
+		_spec.SetField(user.FieldRenkuURL, field.TypeString, value)
+		_node.RenkuURL = value
+	}
+	if value, ok := _c.mutation.LinkedinURL(); ok {
+		_spec.SetField(user.FieldLinkedinURL, field.TypeString, value)
+		_node.LinkedinURL = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)
@@ -1182,6 +1248,60 @@ func (u *UserUpsert) ClearEmail() *UserUpsert {
 	return u
 }
 
+// SetGithubURL sets the "github_url" field.
+func (u *UserUpsert) SetGithubURL(v string) *UserUpsert {
+	u.Set(user.FieldGithubURL, v)
+	return u
+}
+
+// UpdateGithubURL sets the "github_url" field to the value that was provided on create.
+func (u *UserUpsert) UpdateGithubURL() *UserUpsert {
+	u.SetExcluded(user.FieldGithubURL)
+	return u
+}
+
+// ClearGithubURL clears the value of the "github_url" field.
+func (u *UserUpsert) ClearGithubURL() *UserUpsert {
+	u.SetNull(user.FieldGithubURL)
+	return u
+}
+
+// SetRenkuURL sets the "renku_url" field.
+func (u *UserUpsert) SetRenkuURL(v string) *UserUpsert {
+	u.Set(user.FieldRenkuURL, v)
+	return u
+}
+
+// UpdateRenkuURL sets the "renku_url" field to the value that was provided on create.
+func (u *UserUpsert) UpdateRenkuURL() *UserUpsert {
+	u.SetExcluded(user.FieldRenkuURL)
+	return u
+}
+
+// ClearRenkuURL clears the value of the "renku_url" field.
+func (u *UserUpsert) ClearRenkuURL() *UserUpsert {
+	u.SetNull(user.FieldRenkuURL)
+	return u
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (u *UserUpsert) SetLinkedinURL(v string) *UserUpsert {
+	u.Set(user.FieldLinkedinURL, v)
+	return u
+}
+
+// UpdateLinkedinURL sets the "linkedin_url" field to the value that was provided on create.
+func (u *UserUpsert) UpdateLinkedinURL() *UserUpsert {
+	u.SetExcluded(user.FieldLinkedinURL)
+	return u
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (u *UserUpsert) ClearLinkedinURL() *UserUpsert {
+	u.SetNull(user.FieldLinkedinURL)
+	return u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (u *UserUpsert) SetModifiedAt(v time.Time) *UserUpsert {
 	u.Set(user.FieldModifiedAt, v)
@@ -1312,6 +1432,69 @@ func (u *UserUpsertOne) UpdateEmail() *UserUpsertOne {
 func (u *UserUpsertOne) ClearEmail() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearEmail()
+	})
+}
+
+// SetGithubURL sets the "github_url" field.
+func (u *UserUpsertOne) SetGithubURL(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetGithubURL(v)
+	})
+}
+
+// UpdateGithubURL sets the "github_url" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateGithubURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateGithubURL()
+	})
+}
+
+// ClearGithubURL clears the value of the "github_url" field.
+func (u *UserUpsertOne) ClearGithubURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearGithubURL()
+	})
+}
+
+// SetRenkuURL sets the "renku_url" field.
+func (u *UserUpsertOne) SetRenkuURL(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetRenkuURL(v)
+	})
+}
+
+// UpdateRenkuURL sets the "renku_url" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateRenkuURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateRenkuURL()
+	})
+}
+
+// ClearRenkuURL clears the value of the "renku_url" field.
+func (u *UserUpsertOne) ClearRenkuURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearRenkuURL()
+	})
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (u *UserUpsertOne) SetLinkedinURL(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLinkedinURL(v)
+	})
+}
+
+// UpdateLinkedinURL sets the "linkedin_url" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateLinkedinURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLinkedinURL()
+	})
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (u *UserUpsertOne) ClearLinkedinURL() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLinkedinURL()
 	})
 }
 
@@ -1614,6 +1797,69 @@ func (u *UserUpsertBulk) UpdateEmail() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearEmail() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearEmail()
+	})
+}
+
+// SetGithubURL sets the "github_url" field.
+func (u *UserUpsertBulk) SetGithubURL(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetGithubURL(v)
+	})
+}
+
+// UpdateGithubURL sets the "github_url" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateGithubURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateGithubURL()
+	})
+}
+
+// ClearGithubURL clears the value of the "github_url" field.
+func (u *UserUpsertBulk) ClearGithubURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearGithubURL()
+	})
+}
+
+// SetRenkuURL sets the "renku_url" field.
+func (u *UserUpsertBulk) SetRenkuURL(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetRenkuURL(v)
+	})
+}
+
+// UpdateRenkuURL sets the "renku_url" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateRenkuURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateRenkuURL()
+	})
+}
+
+// ClearRenkuURL clears the value of the "renku_url" field.
+func (u *UserUpsertBulk) ClearRenkuURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearRenkuURL()
+	})
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (u *UserUpsertBulk) SetLinkedinURL(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLinkedinURL(v)
+	})
+}
+
+// UpdateLinkedinURL sets the "linkedin_url" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateLinkedinURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLinkedinURL()
+	})
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (u *UserUpsertBulk) ClearLinkedinURL() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLinkedinURL()
 	})
 }
 

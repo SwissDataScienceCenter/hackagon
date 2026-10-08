@@ -12483,6 +12483,9 @@ type UserMutation struct {
 	keycloak_id                       *string
 	display_name                      *string
 	email                             *string
+	github_url                        *string
+	renku_url                         *string
+	linkedin_url                      *string
 	created_at                        *time.Time
 	modified_at                       *time.Time
 	clearedFields                     map[string]struct{}
@@ -12841,6 +12844,153 @@ func (m *UserMutation) EmailCleared() bool {
 func (m *UserMutation) ResetEmail() {
 	m.email = nil
 	delete(m.clearedFields, user.FieldEmail)
+}
+
+// SetGithubURL sets the "github_url" field.
+func (m *UserMutation) SetGithubURL(s string) {
+	m.github_url = &s
+}
+
+// GithubURL returns the value of the "github_url" field in the mutation.
+func (m *UserMutation) GithubURL() (r string, exists bool) {
+	v := m.github_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGithubURL returns the old "github_url" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldGithubURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGithubURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGithubURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGithubURL: %w", err)
+	}
+	return oldValue.GithubURL, nil
+}
+
+// ClearGithubURL clears the value of the "github_url" field.
+func (m *UserMutation) ClearGithubURL() {
+	m.github_url = nil
+	m.clearedFields[user.FieldGithubURL] = struct{}{}
+}
+
+// GithubURLCleared returns if the "github_url" field was cleared in this mutation.
+func (m *UserMutation) GithubURLCleared() bool {
+	_, ok := m.clearedFields[user.FieldGithubURL]
+	return ok
+}
+
+// ResetGithubURL resets all changes to the "github_url" field.
+func (m *UserMutation) ResetGithubURL() {
+	m.github_url = nil
+	delete(m.clearedFields, user.FieldGithubURL)
+}
+
+// SetRenkuURL sets the "renku_url" field.
+func (m *UserMutation) SetRenkuURL(s string) {
+	m.renku_url = &s
+}
+
+// RenkuURL returns the value of the "renku_url" field in the mutation.
+func (m *UserMutation) RenkuURL() (r string, exists bool) {
+	v := m.renku_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRenkuURL returns the old "renku_url" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldRenkuURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRenkuURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRenkuURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRenkuURL: %w", err)
+	}
+	return oldValue.RenkuURL, nil
+}
+
+// ClearRenkuURL clears the value of the "renku_url" field.
+func (m *UserMutation) ClearRenkuURL() {
+	m.renku_url = nil
+	m.clearedFields[user.FieldRenkuURL] = struct{}{}
+}
+
+// RenkuURLCleared returns if the "renku_url" field was cleared in this mutation.
+func (m *UserMutation) RenkuURLCleared() bool {
+	_, ok := m.clearedFields[user.FieldRenkuURL]
+	return ok
+}
+
+// ResetRenkuURL resets all changes to the "renku_url" field.
+func (m *UserMutation) ResetRenkuURL() {
+	m.renku_url = nil
+	delete(m.clearedFields, user.FieldRenkuURL)
+}
+
+// SetLinkedinURL sets the "linkedin_url" field.
+func (m *UserMutation) SetLinkedinURL(s string) {
+	m.linkedin_url = &s
+}
+
+// LinkedinURL returns the value of the "linkedin_url" field in the mutation.
+func (m *UserMutation) LinkedinURL() (r string, exists bool) {
+	v := m.linkedin_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLinkedinURL returns the old "linkedin_url" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldLinkedinURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLinkedinURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLinkedinURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLinkedinURL: %w", err)
+	}
+	return oldValue.LinkedinURL, nil
+}
+
+// ClearLinkedinURL clears the value of the "linkedin_url" field.
+func (m *UserMutation) ClearLinkedinURL() {
+	m.linkedin_url = nil
+	m.clearedFields[user.FieldLinkedinURL] = struct{}{}
+}
+
+// LinkedinURLCleared returns if the "linkedin_url" field was cleared in this mutation.
+func (m *UserMutation) LinkedinURLCleared() bool {
+	_, ok := m.clearedFields[user.FieldLinkedinURL]
+	return ok
+}
+
+// ResetLinkedinURL resets all changes to the "linkedin_url" field.
+func (m *UserMutation) ResetLinkedinURL() {
+	m.linkedin_url = nil
+	delete(m.clearedFields, user.FieldLinkedinURL)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -14353,7 +14503,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.username != nil {
 		fields = append(fields, user.FieldUsername)
 	}
@@ -14365,6 +14515,15 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
+	}
+	if m.github_url != nil {
+		fields = append(fields, user.FieldGithubURL)
+	}
+	if m.renku_url != nil {
+		fields = append(fields, user.FieldRenkuURL)
+	}
+	if m.linkedin_url != nil {
+		fields = append(fields, user.FieldLinkedinURL)
 	}
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
@@ -14388,6 +14547,12 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.DisplayName()
 	case user.FieldEmail:
 		return m.Email()
+	case user.FieldGithubURL:
+		return m.GithubURL()
+	case user.FieldRenkuURL:
+		return m.RenkuURL()
+	case user.FieldLinkedinURL:
+		return m.LinkedinURL()
 	case user.FieldCreatedAt:
 		return m.CreatedAt()
 	case user.FieldModifiedAt:
@@ -14409,6 +14574,12 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldDisplayName(ctx)
 	case user.FieldEmail:
 		return m.OldEmail(ctx)
+	case user.FieldGithubURL:
+		return m.OldGithubURL(ctx)
+	case user.FieldRenkuURL:
+		return m.OldRenkuURL(ctx)
+	case user.FieldLinkedinURL:
+		return m.OldLinkedinURL(ctx)
 	case user.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case user.FieldModifiedAt:
@@ -14449,6 +14620,27 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEmail(v)
+		return nil
+	case user.FieldGithubURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGithubURL(v)
+		return nil
+	case user.FieldRenkuURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRenkuURL(v)
+		return nil
+	case user.FieldLinkedinURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLinkedinURL(v)
 		return nil
 	case user.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -14500,6 +14692,15 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldEmail) {
 		fields = append(fields, user.FieldEmail)
 	}
+	if m.FieldCleared(user.FieldGithubURL) {
+		fields = append(fields, user.FieldGithubURL)
+	}
+	if m.FieldCleared(user.FieldRenkuURL) {
+		fields = append(fields, user.FieldRenkuURL)
+	}
+	if m.FieldCleared(user.FieldLinkedinURL) {
+		fields = append(fields, user.FieldLinkedinURL)
+	}
 	return fields
 }
 
@@ -14520,6 +14721,15 @@ func (m *UserMutation) ClearField(name string) error {
 	case user.FieldEmail:
 		m.ClearEmail()
 		return nil
+	case user.FieldGithubURL:
+		m.ClearGithubURL()
+		return nil
+	case user.FieldRenkuURL:
+		m.ClearRenkuURL()
+		return nil
+	case user.FieldLinkedinURL:
+		m.ClearLinkedinURL()
+		return nil
 	}
 	return fmt.Errorf("unknown User nullable field %s", name)
 }
@@ -14539,6 +14749,15 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldEmail:
 		m.ResetEmail()
+		return nil
+	case user.FieldGithubURL:
+		m.ResetGithubURL()
+		return nil
+	case user.FieldRenkuURL:
+		m.ResetRenkuURL()
+		return nil
+	case user.FieldLinkedinURL:
+		m.ResetLinkedinURL()
 		return nil
 	case user.FieldCreatedAt:
 		m.ResetCreatedAt()

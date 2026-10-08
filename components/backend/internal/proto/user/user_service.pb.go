@@ -25,7 +25,7 @@ var File_user_user_service_proto protoreflect.FileDescriptor
 
 const file_user_user_service_proto_rawDesc = "" +
 	"\n" +
-	"\x17user/user_service.proto\x12\x04user\x1a-user/messages/user_svc/add_role_request.proto\x1a.user/messages/user_svc/add_role_response.proto\x1a(user/messages/user_svc/get_request.proto\x1a)user/messages/user_svc/get_response.proto\x1a)user/messages/user_svc/list_request.proto\x1a*user/messages/user_svc/list_response.proto\x1a-user/messages/user_svc/register_request.proto\x1a.user/messages/user_svc/register_response.proto\x1a0user/messages/user_svc/remove_role_request.proto\x1a1user/messages/user_svc/remove_role_response.proto\x1a-user/messages/user_svc/who_am_i_request.proto\x1a.user/messages/user_svc/who_am_i_response.proto2\xa9\x04\n" +
+	"\x17user/user_service.proto\x12\x04user\x1a-user/messages/user_svc/add_role_request.proto\x1a.user/messages/user_svc/add_role_response.proto\x1a1user/messages/user_svc/edit_profile_request.proto\x1a2user/messages/user_svc/edit_profile_response.proto\x1a(user/messages/user_svc/get_request.proto\x1a)user/messages/user_svc/get_response.proto\x1a)user/messages/user_svc/list_request.proto\x1a*user/messages/user_svc/list_response.proto\x1a-user/messages/user_svc/register_request.proto\x1a.user/messages/user_svc/register_response.proto\x1a0user/messages/user_svc/remove_role_request.proto\x1a1user/messages/user_svc/remove_role_response.proto\x1a-user/messages/user_svc/who_am_i_request.proto\x1a.user/messages/user_svc/who_am_i_response.proto2\x91\x05\n" +
 	"\vUserService\x12Q\n" +
 	"\x04List\x12#.user.messages.user_svc.ListRequest\x1a$.user.messages.user_svc.ListResponse\x12N\n" +
 	"\x03Get\x12\".user.messages.user_svc.GetRequest\x1a#.user.messages.user_svc.GetResponse\x12W\n" +
@@ -33,21 +33,24 @@ const file_user_user_service_proto_rawDesc = "" +
 	"\bRegister\x12'.user.messages.user_svc.RegisterRequest\x1a(.user.messages.user_svc.RegisterResponse\x12Z\n" +
 	"\aAddRole\x12&.user.messages.user_svc.AddRoleRequest\x1a'.user.messages.user_svc.AddRoleResponse\x12c\n" +
 	"\n" +
-	"RemoveRole\x12).user.messages.user_svc.RemoveRoleRequest\x1a*.user.messages.user_svc.RemoveRoleResponseBSZQgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/userb\x06proto3"
+	"RemoveRole\x12).user.messages.user_svc.RemoveRoleRequest\x1a*.user.messages.user_svc.RemoveRoleResponse\x12f\n" +
+	"\vEditProfile\x12*.user.messages.user_svc.EditProfileRequest\x1a+.user.messages.user_svc.EditProfileResponseBSZQgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/userb\x06proto3"
 
 var file_user_user_service_proto_goTypes = []any{
-	(*user_svc.ListRequest)(nil),        // 0: user.messages.user_svc.ListRequest
-	(*user_svc.GetRequest)(nil),         // 1: user.messages.user_svc.GetRequest
-	(*user_svc.WhoAmIRequest)(nil),      // 2: user.messages.user_svc.WhoAmIRequest
-	(*user_svc.RegisterRequest)(nil),    // 3: user.messages.user_svc.RegisterRequest
-	(*user_svc.AddRoleRequest)(nil),     // 4: user.messages.user_svc.AddRoleRequest
-	(*user_svc.RemoveRoleRequest)(nil),  // 5: user.messages.user_svc.RemoveRoleRequest
-	(*user_svc.ListResponse)(nil),       // 6: user.messages.user_svc.ListResponse
-	(*user_svc.GetResponse)(nil),        // 7: user.messages.user_svc.GetResponse
-	(*user_svc.WhoAmIResponse)(nil),     // 8: user.messages.user_svc.WhoAmIResponse
-	(*user_svc.RegisterResponse)(nil),   // 9: user.messages.user_svc.RegisterResponse
-	(*user_svc.AddRoleResponse)(nil),    // 10: user.messages.user_svc.AddRoleResponse
-	(*user_svc.RemoveRoleResponse)(nil), // 11: user.messages.user_svc.RemoveRoleResponse
+	(*user_svc.ListRequest)(nil),         // 0: user.messages.user_svc.ListRequest
+	(*user_svc.GetRequest)(nil),          // 1: user.messages.user_svc.GetRequest
+	(*user_svc.WhoAmIRequest)(nil),       // 2: user.messages.user_svc.WhoAmIRequest
+	(*user_svc.RegisterRequest)(nil),     // 3: user.messages.user_svc.RegisterRequest
+	(*user_svc.AddRoleRequest)(nil),      // 4: user.messages.user_svc.AddRoleRequest
+	(*user_svc.RemoveRoleRequest)(nil),   // 5: user.messages.user_svc.RemoveRoleRequest
+	(*user_svc.EditProfileRequest)(nil),  // 6: user.messages.user_svc.EditProfileRequest
+	(*user_svc.ListResponse)(nil),        // 7: user.messages.user_svc.ListResponse
+	(*user_svc.GetResponse)(nil),         // 8: user.messages.user_svc.GetResponse
+	(*user_svc.WhoAmIResponse)(nil),      // 9: user.messages.user_svc.WhoAmIResponse
+	(*user_svc.RegisterResponse)(nil),    // 10: user.messages.user_svc.RegisterResponse
+	(*user_svc.AddRoleResponse)(nil),     // 11: user.messages.user_svc.AddRoleResponse
+	(*user_svc.RemoveRoleResponse)(nil),  // 12: user.messages.user_svc.RemoveRoleResponse
+	(*user_svc.EditProfileResponse)(nil), // 13: user.messages.user_svc.EditProfileResponse
 }
 var file_user_user_service_proto_depIdxs = []int32{
 	0,  // 0: user.UserService.List:input_type -> user.messages.user_svc.ListRequest
@@ -56,14 +59,16 @@ var file_user_user_service_proto_depIdxs = []int32{
 	3,  // 3: user.UserService.Register:input_type -> user.messages.user_svc.RegisterRequest
 	4,  // 4: user.UserService.AddRole:input_type -> user.messages.user_svc.AddRoleRequest
 	5,  // 5: user.UserService.RemoveRole:input_type -> user.messages.user_svc.RemoveRoleRequest
-	6,  // 6: user.UserService.List:output_type -> user.messages.user_svc.ListResponse
-	7,  // 7: user.UserService.Get:output_type -> user.messages.user_svc.GetResponse
-	8,  // 8: user.UserService.WhoAmI:output_type -> user.messages.user_svc.WhoAmIResponse
-	9,  // 9: user.UserService.Register:output_type -> user.messages.user_svc.RegisterResponse
-	10, // 10: user.UserService.AddRole:output_type -> user.messages.user_svc.AddRoleResponse
-	11, // 11: user.UserService.RemoveRole:output_type -> user.messages.user_svc.RemoveRoleResponse
-	6,  // [6:12] is the sub-list for method output_type
-	0,  // [0:6] is the sub-list for method input_type
+	6,  // 6: user.UserService.EditProfile:input_type -> user.messages.user_svc.EditProfileRequest
+	7,  // 7: user.UserService.List:output_type -> user.messages.user_svc.ListResponse
+	8,  // 8: user.UserService.Get:output_type -> user.messages.user_svc.GetResponse
+	9,  // 9: user.UserService.WhoAmI:output_type -> user.messages.user_svc.WhoAmIResponse
+	10, // 10: user.UserService.Register:output_type -> user.messages.user_svc.RegisterResponse
+	11, // 11: user.UserService.AddRole:output_type -> user.messages.user_svc.AddRoleResponse
+	12, // 12: user.UserService.RemoveRole:output_type -> user.messages.user_svc.RemoveRoleResponse
+	13, // 13: user.UserService.EditProfile:output_type -> user.messages.user_svc.EditProfileResponse
+	7,  // [7:14] is the sub-list for method output_type
+	0,  // [0:7] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

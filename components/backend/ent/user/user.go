@@ -23,6 +23,12 @@ const (
 	FieldDisplayName = "display_name"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
+	// FieldGithubURL holds the string denoting the github_url field in the database.
+	FieldGithubURL = "github_url"
+	// FieldRenkuURL holds the string denoting the renku_url field in the database.
+	FieldRenkuURL = "renku_url"
+	// FieldLinkedinURL holds the string denoting the linkedin_url field in the database.
+	FieldLinkedinURL = "linkedin_url"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldModifiedAt holds the string denoting the modified_at field in the database.
@@ -280,6 +286,9 @@ var Columns = []string{
 	FieldKeycloakID,
 	FieldDisplayName,
 	FieldEmail,
+	FieldGithubURL,
+	FieldRenkuURL,
+	FieldLinkedinURL,
 	FieldCreatedAt,
 	FieldModifiedAt,
 }
@@ -319,6 +328,12 @@ var (
 	DefaultDisplayName string
 	// DefaultEmail holds the default value on creation for the "email" field.
 	DefaultEmail string
+	// DefaultGithubURL holds the default value on creation for the "github_url" field.
+	DefaultGithubURL string
+	// DefaultRenkuURL holds the default value on creation for the "renku_url" field.
+	DefaultRenkuURL string
+	// DefaultLinkedinURL holds the default value on creation for the "linkedin_url" field.
+	DefaultLinkedinURL string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the "modified_at" field.
@@ -355,6 +370,21 @@ func ByDisplayName(opts ...sql.OrderTermOption) OrderOption {
 // ByEmail orders the results by the email field.
 func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByGithubURL orders the results by the github_url field.
+func ByGithubURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGithubURL, opts...).ToFunc()
+}
+
+// ByRenkuURL orders the results by the renku_url field.
+func ByRenkuURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRenkuURL, opts...).ToFunc()
+}
+
+// ByLinkedinURL orders the results by the linkedin_url field.
+func ByLinkedinURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinkedinURL, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

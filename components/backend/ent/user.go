@@ -26,6 +26,12 @@ type User struct {
 	DisplayName string `json:"display_name,omitempty"`
 	// Email of the user, same as in Keycloak
 	Email string `json:"email,omitempty"`
+	// Link to the user's GitHub profile, set by the user.
+	GithubURL string `json:"github_url,omitempty"`
+	// Link to the user's Renku profile, set by the user.
+	RenkuURL string `json:"renku_url,omitempty"`
+	// Link to the user's LinkedIn profile, set by the user.
+	LinkedinURL string `json:"linkedin_url,omitempty"`
 	// Timestamp when the user was first seen.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last profile update.
@@ -356,7 +362,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldUsername, user.FieldKeycloakID, user.FieldDisplayName, user.FieldEmail:
+		case user.FieldUsername, user.FieldKeycloakID, user.FieldDisplayName, user.FieldEmail, user.FieldGithubURL, user.FieldRenkuURL, user.FieldLinkedinURL:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
@@ -406,6 +412,24 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
 			} else if value.Valid {
 				_m.Email = value.String
+			}
+		case user.FieldGithubURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field github_url", values[i])
+			} else if value.Valid {
+				_m.GithubURL = value.String
+			}
+		case user.FieldRenkuURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field renku_url", values[i])
+			} else if value.Valid {
+				_m.RenkuURL = value.String
+			}
+		case user.FieldLinkedinURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field linkedin_url", values[i])
+			} else if value.Valid {
+				_m.LinkedinURL = value.String
 			}
 		case user.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -606,6 +630,15 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("email=")
 	builder.WriteString(_m.Email)
+	builder.WriteString(", ")
+	builder.WriteString("github_url=")
+	builder.WriteString(_m.GithubURL)
+	builder.WriteString(", ")
+	builder.WriteString("renku_url=")
+	builder.WriteString(_m.RenkuURL)
+	builder.WriteString(", ")
+	builder.WriteString("linkedin_url=")
+	builder.WriteString(_m.LinkedinURL)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

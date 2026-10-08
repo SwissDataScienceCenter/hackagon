@@ -853,4 +853,141 @@ var _ = Describe("UserService", func() {
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 	})
+
+	// ---- EditProfile ----
+
+	Describe("EditProfile", func() {
+
+		var (
+			me  *ent.User
+			ctx context.Context
+		)
+
+		BeforeEach(func() {
+			var err error
+			me, err = dbClient.User.Create().
+				SetKeycloakID("edit-profile-me").
+				SetUsername("edit-profile-me").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			ctx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(me.KeycloakID),
+				),
+			)
+		})
+
+		It("sets the caller's links, trimmed, and persists them", func() {
+			resp, err := userClient.EditProfile(ctx, &msgs.EditProfileRequest{
+				GithubUrl:   testutils.StringPtr("  https://github.com/alice-dev  "),
+				RenkuUrl:    testutils.StringPtr("https://renkulab.io/u/alice"),
+				LinkedinUrl: testutils.StringPtr("https://ch.linkedin.com/in/alice/"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetUser().GetGithubUrl()).To(Equal("https://github.com/alice-dev"))
+			Expect(resp.GetUser().GetRenkuUrl()).To(Equal("https://renkulab.io/u/alice"))
+			Expect(resp.GetUser().GetLinkedinUrl()).To(Equal("https://ch.linkedin.com/in/alice/"))
+
+			stored := dbClient.User.GetX(context.Background(), me.ID)
+			Expect(stored.GithubURL).To(Equal("https://github.com/alice-dev"))
+			Expect(stored.RenkuURL).To(Equal("https://renkulab.io/u/alice"))
+			Expect(stored.LinkedinURL).To(Equal("https://ch.linkedin.com/in/alice/"))
+		})
+
+		It("leaves absent fields alone and clears empty ones", func() {
+			me = me.Update().
+				SetGithubURL("https://github.com/keep").
+				SetRenkuURL("https://renkulab.io/u/clear").
+				SaveX(context.Background())
+
+			resp, err := userClient.EditProfile(ctx, &msgs.EditProfileRequest{
+				RenkuUrl: testutils.StringPtr(""),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetUser().GetGithubUrl()).To(Equal("https://github.com/keep"))
+			Expect(resp.GetUser().GetRenkuUrl()).To(BeEmpty())
+		})
+
+		It("edits only the caller's profile", func() {
+			other, err := dbClient.User.Create().
+				SetKeycloakID("edit-profile-other").
+				SetUsername("edit-profile-other").
+				SetGithubURL("https://github.com/other").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = userClient.EditProfile(ctx, &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("https://github.com/me"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dbClient.User.GetX(context.Background(), other.ID).GithubURL).
+				To(Equal("https://github.com/other"))
+		})
+
+		It("keeps the links when Register re-syncs from Keycloak", func() {
+			_, err := userClient.EditProfile(ctx, &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("https://github.com/me"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// The test token carries no username claim, so Register rewrites
+			// the Keycloak-owned fields; the profile links must survive it.
+			resp, err := userClient.Register(ctx, &msgs.RegisterRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetUser().GetGithubUrl()).To(Equal("https://github.com/me"))
+		})
+
+		DescribeTable("rejects a link that is not a profile on the expected site",
+			func(req *msgs.EditProfileRequest) {
+				_, err := userClient.EditProfile(ctx, req)
+				Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+			},
+			Entry("plain http", &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("http://github.com/me")}),
+			Entry("javascript scheme", &msgs.EditProfileRequest{
+				RenkuUrl: testutils.StringPtr("javascript:alert(1)")}),
+			Entry("no host", &msgs.EditProfileRequest{
+				RenkuUrl: testutils.StringPtr("https:///nohost")}),
+			Entry("credentials in the URL", &msgs.EditProfileRequest{
+				RenkuUrl: testutils.StringPtr("https://user:pw@renkulab.io/u/me")}),
+			Entry("GitHub lookalike host", &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("https://github.com.evil.example/me")}),
+			Entry("GitHub repository, not a profile", &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("https://github.com/me/repo")}),
+			Entry("LinkedIn company page", &msgs.EditProfileRequest{
+				LinkedinUrl: testutils.StringPtr("https://www.linkedin.com/company/sdsc")}),
+			Entry("LinkedIn lookalike host", &msgs.EditProfileRequest{
+				LinkedinUrl: testutils.StringPtr("https://notlinkedin.com/in/me")}),
+		)
+
+		It("rejects the whole request when one link is invalid", func() {
+			_, err := userClient.EditProfile(ctx, &msgs.EditProfileRequest{
+				GithubUrl:   testutils.StringPtr("https://github.com/me"),
+				LinkedinUrl: testutils.StringPtr("https://example.com"),
+			})
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+			Expect(dbClient.User.GetX(context.Background(), me.ID).GithubURL).To(BeEmpty())
+		})
+
+		It("returns NOT_FOUND when the caller is not registered", func() {
+			unregistered := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken("edit-profile-nobody"),
+				),
+			)
+			_, err := userClient.EditProfile(unregistered, &msgs.EditProfileRequest{})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("denies anonymous requests", func() {
+			_, err := userClient.EditProfile(context.Background(), &msgs.EditProfileRequest{
+				GithubUrl: testutils.StringPtr("https://github.com/me"),
+			})
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+		})
+	})
 })

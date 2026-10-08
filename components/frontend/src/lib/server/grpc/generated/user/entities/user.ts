@@ -20,7 +20,13 @@ export interface User {
   email: string;
   /** Populated from casbin on fetch; not persisted in ent DB. */
   roles: GlobalRole[];
-  modifiedAt: Date | undefined;
+  modifiedAt:
+    | Date
+    | undefined;
+  /** Profile links the user maintains via EditProfile; empty when unset. */
+  githubUrl: string;
+  renkuUrl: string;
+  linkedinUrl: string;
 }
 
 function createBaseUser(): User {
@@ -33,6 +39,9 @@ function createBaseUser(): User {
     email: "",
     roles: [],
     modifiedAt: undefined,
+    githubUrl: "",
+    renkuUrl: "",
+    linkedinUrl: "",
   };
 }
 
@@ -63,6 +72,15 @@ export const User: MessageFns<User> = {
     writer.join();
     if (message.modifiedAt !== undefined) {
       Timestamp.encode(toTimestamp(message.modifiedAt), writer.uint32(66).fork()).join();
+    }
+    if (message.githubUrl !== "") {
+      writer.uint32(74).string(message.githubUrl);
+    }
+    if (message.renkuUrl !== "") {
+      writer.uint32(82).string(message.renkuUrl);
+    }
+    if (message.linkedinUrl !== "") {
+      writer.uint32(90).string(message.linkedinUrl);
     }
     return writer;
   },
@@ -148,6 +166,30 @@ export const User: MessageFns<User> = {
           message.modifiedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.githubUrl = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.renkuUrl = reader.string();
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.linkedinUrl = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -183,6 +225,21 @@ export const User: MessageFns<User> = {
         : isSet(object.modified_at)
         ? fromJsonTimestamp(object.modified_at)
         : undefined,
+      githubUrl: isSet(object.githubUrl)
+        ? globalThis.String(object.githubUrl)
+        : isSet(object.github_url)
+        ? globalThis.String(object.github_url)
+        : "",
+      renkuUrl: isSet(object.renkuUrl)
+        ? globalThis.String(object.renkuUrl)
+        : isSet(object.renku_url)
+        ? globalThis.String(object.renku_url)
+        : "",
+      linkedinUrl: isSet(object.linkedinUrl)
+        ? globalThis.String(object.linkedinUrl)
+        : isSet(object.linkedin_url)
+        ? globalThis.String(object.linkedin_url)
+        : "",
     };
   },
 
@@ -212,6 +269,15 @@ export const User: MessageFns<User> = {
     if (message.modifiedAt !== undefined) {
       obj.modifiedAt = message.modifiedAt.toISOString();
     }
+    if (message.githubUrl !== "") {
+      obj.githubUrl = message.githubUrl;
+    }
+    if (message.renkuUrl !== "") {
+      obj.renkuUrl = message.renkuUrl;
+    }
+    if (message.linkedinUrl !== "") {
+      obj.linkedinUrl = message.linkedinUrl;
+    }
     return obj;
   },
 
@@ -228,6 +294,9 @@ export const User: MessageFns<User> = {
     message.email = object.email ?? "";
     message.roles = object.roles?.map((e) => e) || [];
     message.modifiedAt = object.modifiedAt ?? undefined;
+    message.githubUrl = object.githubUrl ?? "";
+    message.renkuUrl = object.renkuUrl ?? "";
+    message.linkedinUrl = object.linkedinUrl ?? "";
     return message;
   },
 };

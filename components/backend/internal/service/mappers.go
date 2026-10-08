@@ -24,6 +24,9 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 		Email:       u.Email,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
 		ModifiedAt:  timestamppb.New(u.ModifiedAt),
+		GithubUrl:   u.GithubURL,
+		RenkuUrl:    u.RenkuURL,
+		LinkedinUrl: u.LinkedinURL,
 	}
 }
 

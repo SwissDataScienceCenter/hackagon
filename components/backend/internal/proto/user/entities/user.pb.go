@@ -31,8 +31,12 @@ type User struct {
 	DisplayName string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Email       string                 `protobuf:"bytes,6,opt,name=email,proto3" json:"email,omitempty"`
 	// Populated from casbin on fetch; not persisted in ent DB.
-	Roles         []GlobalRole           `protobuf:"varint,7,rep,packed,name=roles,proto3,enum=user.entities.GlobalRole" json:"roles,omitempty"`
-	ModifiedAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
+	Roles      []GlobalRole           `protobuf:"varint,7,rep,packed,name=roles,proto3,enum=user.entities.GlobalRole" json:"roles,omitempty"`
+	ModifiedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
+	// Profile links the user maintains via EditProfile; empty when unset.
+	GithubUrl     string `protobuf:"bytes,9,opt,name=github_url,json=githubUrl,proto3" json:"github_url,omitempty"`
+	RenkuUrl      string `protobuf:"bytes,10,opt,name=renku_url,json=renkuUrl,proto3" json:"renku_url,omitempty"`
+	LinkedinUrl   string `protobuf:"bytes,11,opt,name=linkedin_url,json=linkedinUrl,proto3" json:"linkedin_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -123,11 +127,32 @@ func (x *User) GetModifiedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *User) GetGithubUrl() string {
+	if x != nil {
+		return x.GithubUrl
+	}
+	return ""
+}
+
+func (x *User) GetRenkuUrl() string {
+	if x != nil {
+		return x.RenkuUrl
+	}
+	return ""
+}
+
+func (x *User) GetLinkedinUrl() string {
+	if x != nil {
+		return x.LinkedinUrl
+	}
+	return ""
+}
+
 var File_user_entities_user_proto protoreflect.FileDescriptor
 
 const file_user_entities_user_proto_rawDesc = "" +
 	"\n" +
-	"\x18user/entities/user.proto\x12\ruser.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1fuser/entities/global_role.proto\"\xb5\x02\n" +
+	"\x18user/entities/user.proto\x12\ruser.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1fuser/entities/global_role.proto\"\x94\x03\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1f\n" +
@@ -139,7 +164,12 @@ const file_user_entities_user_proto_rawDesc = "" +
 	"\x05email\x18\x06 \x01(\tR\x05email\x12/\n" +
 	"\x05roles\x18\a \x03(\x0e2\x19.user.entities.GlobalRoleR\x05roles\x12;\n" +
 	"\vmodified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"modifiedAtB\\ZZgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entitiesb\x06proto3"
+	"modifiedAt\x12\x1d\n" +
+	"\n" +
+	"github_url\x18\t \x01(\tR\tgithubUrl\x12\x1b\n" +
+	"\trenku_url\x18\n" +
+	" \x01(\tR\brenkuUrl\x12!\n" +
+	"\flinkedin_url\x18\v \x01(\tR\vlinkedinUrlB\\ZZgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entitiesb\x06proto3"
 
 var (
 	file_user_entities_user_proto_rawDescOnce sync.Once

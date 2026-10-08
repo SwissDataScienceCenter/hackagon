@@ -8,6 +8,8 @@
 import type { CallContext, CallOptions } from "nice-grpc-common";
 import { AddRoleRequest } from "./messages/user_svc/add_role_request";
 import { AddRoleResponse } from "./messages/user_svc/add_role_response";
+import { EditProfileRequest } from "./messages/user_svc/edit_profile_request";
+import { EditProfileResponse } from "./messages/user_svc/edit_profile_response";
 import { GetRequest } from "./messages/user_svc/get_request";
 import { GetResponse } from "./messages/user_svc/get_response";
 import { ListRequest } from "./messages/user_svc/list_request";
@@ -74,6 +76,14 @@ export const UserServiceDefinition = {
       responseStream: false,
       options: {},
     },
+    editProfile: {
+      name: "EditProfile",
+      requestType: EditProfileRequest as typeof EditProfileRequest,
+      requestStream: false,
+      responseType: EditProfileResponse as typeof EditProfileResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
 
@@ -87,6 +97,10 @@ export interface UserServiceImplementation<CallContextExt = {}> {
     request: RemoveRoleRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<RemoveRoleResponse>>;
+  editProfile(
+    request: EditProfileRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<EditProfileResponse>>;
 }
 
 export interface UserServiceClient<CallOptionsExt = {}> {
@@ -99,6 +113,10 @@ export interface UserServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<RemoveRoleRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<RemoveRoleResponse>;
+  editProfile(
+    request: DeepPartial<EditProfileRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<EditProfileResponse>;
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;

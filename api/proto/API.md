@@ -483,6 +483,12 @@
 - [user/messages/user_svc/add_role_response.proto](#user_messages_user_svc_add_role_response-proto)
     - [AddRoleResponse](#user-messages-user_svc-AddRoleResponse)
   
+- [user/messages/user_svc/edit_profile_request.proto](#user_messages_user_svc_edit_profile_request-proto)
+    - [EditProfileRequest](#user-messages-user_svc-EditProfileRequest)
+  
+- [user/messages/user_svc/edit_profile_response.proto](#user_messages_user_svc_edit_profile_response-proto)
+    - [EditProfileResponse](#user-messages-user_svc-EditProfileResponse)
+  
 - [user/messages/user_svc/get_request.proto](#user_messages_user_svc_get_request-proto)
     - [GetRequest](#user-messages-user_svc-GetRequest)
   
@@ -789,6 +795,9 @@ See components/backend/internal/middleware/rbac.go.
 | email | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| github_url | [string](#string) |  | Profile links the user maintains via EditProfile; empty when unset. |
+| renku_url | [string](#string) |  |  |
+| linkedin_url | [string](#string) |  |  |
 
 
 
@@ -5746,6 +5755,72 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="user_messages_user_svc_edit_profile_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_profile_request.proto
+
+
+
+<a name="user-messages-user_svc-EditProfileRequest"></a>
+
+### EditProfileRequest
+Edits the caller&#39;s own profile. There is no user id: the target is always
+the user the token belongs to. An absent field is left as is; an empty
+string clears the link.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| github_url | [string](#string) | optional |  |
+| renku_url | [string](#string) | optional |  |
+| linkedin_url | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_messages_user_svc_edit_profile_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_profile_response.proto
+
+
+
+<a name="user-messages-user_svc-EditProfileResponse"></a>
+
+### EditProfileResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [user.entities.User](#user-entities-User) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="user_messages_user_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -6068,6 +6143,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
 | AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |
 | RemoveRole | [messages.user_svc.RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest) | [messages.user_svc.RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse) |  |
+| EditProfile | [messages.user_svc.EditProfileRequest](#user-messages-user_svc-EditProfileRequest) | [messages.user_svc.EditProfileResponse](#user-messages-user_svc-EditProfileResponse) |  |
 
  
 

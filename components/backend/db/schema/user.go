@@ -32,6 +32,14 @@ func (User) Fields() []ent.Field {
 			Comment("Preferred display name of the user."),
 		field.String("email").Optional().Default("").
 			Comment("Email of the user, same as in Keycloak"),
+		// The profile links below are owned by the platform, not Keycloak: the
+		// user edits them here, and the claim sync on login never touches them.
+		field.String("github_url").Optional().Default("").
+			Comment("Link to the user's GitHub profile, set by the user."),
+		field.String("renku_url").Optional().Default("").
+			Comment("Link to the user's Renku profile, set by the user."),
+		field.String("linkedin_url").Optional().Default("").
+			Comment("Link to the user's LinkedIn profile, set by the user."),
 		field.Time("created_at").Immutable().Default(time.Now).
 			Comment("Timestamp when the user was first seen."),
 		field.Time("modified_at").

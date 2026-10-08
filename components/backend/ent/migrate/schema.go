@@ -635,6 +635,9 @@ var (
 		{Name: "keycloak_id", Type: field.TypeString, Unique: true},
 		{Name: "display_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "email", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "github_url", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "renku_url", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "linkedin_url", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
 	}

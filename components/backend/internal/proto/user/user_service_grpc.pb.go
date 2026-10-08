@@ -20,12 +20,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_List_FullMethodName       = "/user.UserService/List"
-	UserService_Get_FullMethodName        = "/user.UserService/Get"
-	UserService_WhoAmI_FullMethodName     = "/user.UserService/WhoAmI"
-	UserService_Register_FullMethodName   = "/user.UserService/Register"
-	UserService_AddRole_FullMethodName    = "/user.UserService/AddRole"
-	UserService_RemoveRole_FullMethodName = "/user.UserService/RemoveRole"
+	UserService_List_FullMethodName        = "/user.UserService/List"
+	UserService_Get_FullMethodName         = "/user.UserService/Get"
+	UserService_WhoAmI_FullMethodName      = "/user.UserService/WhoAmI"
+	UserService_Register_FullMethodName    = "/user.UserService/Register"
+	UserService_AddRole_FullMethodName     = "/user.UserService/AddRole"
+	UserService_RemoveRole_FullMethodName  = "/user.UserService/RemoveRole"
+	UserService_EditProfile_FullMethodName = "/user.UserService/EditProfile"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -38,6 +39,7 @@ type UserServiceClient interface {
 	Register(ctx context.Context, in *user_svc.RegisterRequest, opts ...grpc.CallOption) (*user_svc.RegisterResponse, error)
 	AddRole(ctx context.Context, in *user_svc.AddRoleRequest, opts ...grpc.CallOption) (*user_svc.AddRoleResponse, error)
 	RemoveRole(ctx context.Context, in *user_svc.RemoveRoleRequest, opts ...grpc.CallOption) (*user_svc.RemoveRoleResponse, error)
+	EditProfile(ctx context.Context, in *user_svc.EditProfileRequest, opts ...grpc.CallOption) (*user_svc.EditProfileResponse, error)
 }
 
 type userServiceClient struct {
@@ -108,6 +110,16 @@ func (c *userServiceClient) RemoveRole(ctx context.Context, in *user_svc.RemoveR
 	return out, nil
 }
 
+func (c *userServiceClient) EditProfile(ctx context.Context, in *user_svc.EditProfileRequest, opts ...grpc.CallOption) (*user_svc.EditProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(user_svc.EditProfileResponse)
+	err := c.cc.Invoke(ctx, UserService_EditProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -118,6 +130,7 @@ type UserServiceServer interface {
 	Register(context.Context, *user_svc.RegisterRequest) (*user_svc.RegisterResponse, error)
 	AddRole(context.Context, *user_svc.AddRoleRequest) (*user_svc.AddRoleResponse, error)
 	RemoveRole(context.Context, *user_svc.RemoveRoleRequest) (*user_svc.RemoveRoleResponse, error)
+	EditProfile(context.Context, *user_svc.EditProfileRequest) (*user_svc.EditProfileResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -145,6 +158,9 @@ func (UnimplementedUserServiceServer) AddRole(context.Context, *user_svc.AddRole
 }
 func (UnimplementedUserServiceServer) RemoveRole(context.Context, *user_svc.RemoveRoleRequest) (*user_svc.RemoveRoleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveRole not implemented")
+}
+func (UnimplementedUserServiceServer) EditProfile(context.Context, *user_svc.EditProfileRequest) (*user_svc.EditProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EditProfile not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -275,6 +291,24 @@ func _UserService_RemoveRole_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_EditProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(user_svc.EditProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).EditProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_EditProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).EditProfile(ctx, req.(*user_svc.EditProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -305,6 +339,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveRole",
 			Handler:    _UserService_RemoveRole_Handler,
+		},
+		{
+			MethodName: "EditProfile",
+			Handler:    _UserService_EditProfile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

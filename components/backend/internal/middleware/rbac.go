@@ -65,8 +65,9 @@ const (
 	Vote
 	VoteCategory
 	VoteResult
-	// Note: this is a dummy entry, there are no rules for users, since we only use admin checks with users.
-	// This is just here so we have something we can query on when checking admin permissions for the user table.
+	// Reading and listing users is admin-only, which needs no rule of its own.
+	// The one rule naming users lets anyone write their own profile: see
+	// WithUser.
 	User
 )
 
@@ -178,6 +179,7 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 const (
 	anyHackathonPath = "/hackathon/*"
 	anyTeamPath      = "/hackathon/*/team/*"
+	anyUserPath      = "/user/*"
 )
 
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
@@ -245,6 +247,9 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), anyHackathonPath, VoteResult.String(), Read.String()},
 		{Owner.String(), anyHackathonPath, VoteResult.String(), Write.String()},
 		{Owner.String(), anyHackathonPath, Vote.String(), Read.String()},
+		// Anyone can edit a user profile. Which profile is decided by the
+		// handler, which only ever passes the caller's own WithUser domain.
+		{"*", anyUserPath, User.String(), Write.String()},
 	}
 
 	// AddPoliciesEx adds what is missing and skips the rest.
@@ -272,6 +277,12 @@ func teamDomainPath(domain, teamId string) string {
 	return fmt.Sprintf("%s/team/%s", domain, teamId)
 }
 
+// userDomainPath returns the domain path for one user's own resources,
+// e.g. /user/<keycloakId>. It is not nested under a hackathon.
+func userDomainPath(keycloakID string) string {
+	return fmt.Sprintf("/user/%s", keycloakID)
+}
+
 // projectDomainPath returns the full domain path for a project resource,
 // e.g. /hackathon/<id>/project/<id>.
 func projectDomainPath(domain, projectId string) string {
@@ -283,6 +294,10 @@ func enforceOptsToPath(hackathonId string, opts ...EnforceOption) string {
 	options := &enforceOptions{}
 	for _, opt := range opts {
 		opt(options)
+	}
+
+	if options.userID != "" {
+		return userDomainPath(options.userID)
 	}
 
 	domain := hackathonIdToPath(hackathonId)
@@ -497,6 +512,7 @@ func (e *Enforcer) GetHackathonRole(
 type enforceOptions struct {
 	teamID    string
 	projectID string
+	userID    string
 }
 
 type EnforceOption func(*enforceOptions)
@@ -516,6 +532,15 @@ func WithTeam(teamID string) EnforceOption {
 func WithProject(projectID string) EnforceOption {
 	return func(o *enforceOptions) {
 		o.projectID = projectID
+	}
+}
+
+// WithUser replaces the /hackathon/<id> domain path with
+// /user/<keycloakId>, for operations on a user's own data rather than on
+// anything inside a hackathon. The hackathon id is ignored.
+func WithUser(keycloakID string) EnforceOption {
+	return func(o *enforceOptions) {
+		o.userID = keycloakID
 	}
 }
 
