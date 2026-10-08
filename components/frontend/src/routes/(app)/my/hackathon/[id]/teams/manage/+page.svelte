@@ -122,22 +122,26 @@
     }
 
     /**
-     * The ticked questions this person answered, in question order: coded
-     * answers as badges, free text as lines of its own — a sentence does not
-     * fit in a badge.
+     * The ticked questions this person answered, in question order, as the
+     * question's letter and the answer itself — `A: XL` — with the question in
+     * full on hover. Fixed answers as tags, free text as lines of its own: a
+     * sentence does not fit in a tag.
      */
     function answersFor(person: Person) {
-        const coded: { code: string; title: string }[] = [];
-        const texts: { letter: string; text: string; title: string }[] = [];
+        const tags: { key: string; text: string; title: string }[] = [];
+        const texts: { key: string; text: string; title: string }[] = [];
         for (const q of shownQuestions) {
             const answer = person.codes[q.id];
             if (!answer) continue;
-            const title = `${q.label}: ${answer.label}`;
-            if (q.kind === 'text') texts.push({ letter: q.letter, text: answer.label, title });
-            else coded.push({ code: answer.code, title });
+            const entry = {
+                key: q.id,
+                text: `${q.letter}: ${answer.label}`,
+                title: `${q.label}: ${answer.label}`
+            };
+            (q.kind === 'text' ? texts : tags).push(entry);
         }
 
-        return { coded, texts };
+        return { tags, texts };
     }
 
     const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
@@ -183,19 +187,22 @@
             .map((p) => ({
                 key: `project:${p.id}`,
                 text: `Prefers ${p.number}`,
+                title: `Prefers ${p.title}`,
                 remove: () => setFilters(toggleProject(filters, p.id))
             })),
         ...answerQuestions.flatMap((q) => [
             ...(filters.answers[q.id] ?? []).map((label) => ({
                 key: `${q.id}:${label}`,
-                text: `${q.options.find((o) => o.label === label)?.code ?? q.letter} ${label}`,
+                text: `${q.letter}: ${label}`,
+                title: `${q.label}: ${label}`,
                 remove: () => setFilters(toggleAnswer(filters, q.id, label))
             })),
             ...(filters.texts[q.id] !== undefined
                 ? [
                       {
                           key: `${q.id}:text`,
-                          text: `${q.letter} "${filters.texts[q.id]?.trim()}"`,
+                          text: `${q.letter}: "${filters.texts[q.id]?.trim()}"`,
+                          title: `${q.label} contains "${filters.texts[q.id]?.trim()}"`,
                           remove: () => setFilters(setText(filters, q.id, ''))
                       }
                   ]
@@ -574,16 +581,23 @@
                         : 'No preferences given'}
                 </span>
             {/if}
-            {#if answers.coded.length > 0}
+            {#if answers.tags.length > 0}
+                <!-- Not `.badge`: badges uppercase, and these are whatever the
+                     organizer typed as an option. -->
                 <span class="flex flex-wrap items-center gap-1 pt-0.5">
-                    {#each answers.coded as c (c.code)}
-                        <span class="badge badge-neutral tnum" title={c.title}>{c.code}</span>
+                    {#each answers.tags as a (a.key)}
+                        <span
+                            class="max-w-full truncate rounded-field border border-line px-1.5
+                                   text-[0.65rem] leading-4 text-ink-2"
+                            title={a.title}
+                        >
+                            {a.text}
+                        </span>
                     {/each}
                 </span>
             {/if}
-            {#each answers.texts as t (t.letter)}
+            {#each answers.texts as t (t.key)}
                 <span class="min-w-0 truncate text-[0.65rem] text-ink-2" title={t.title}>
-                    <span class="font-semibold">{t.letter}</span>
                     {t.text}
                 </span>
             {/each}
@@ -873,7 +887,6 @@
                                             : 'Bring unassigned people who gave this answer to the top'}
                                         onclick={() => setFilters(toggleAnswer(filters, q.id, o.label))}
                                     >
-                                        <span class="font-semibold">{o.code}</span>
                                         {o.label}
                                         <span class="tnum text-ink-3">
                                             {poolCounts[q.id]?.[o.label] ?? 0}
@@ -1094,7 +1107,7 @@
                         <button
                             type="button"
                             class="btn btn-sm btn-outline-accent bg-accent/20"
-                            title="Remove this filter"
+                            title={`Remove filter: ${f.title}`}
                             onclick={f.remove}
                         >
                             {f.text}

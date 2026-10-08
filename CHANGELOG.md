@@ -36,8 +36,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Teams explains the spreadsheet upload: "How the file works", next to
   Download and Upload, lists the steps and what each kind of edit does.
 - Manage Teams lists every registration question, not only the multiple-choice
-  ones: yes/no answers get codes like the others, and a free-text answer can be
-  shown as a line under each name. Question letters may shift as a result.
+  ones, and "Show on cards" puts the question's letter and the answer itself
+  under each name — "A: XL", "B: No" — instead of a code like "A5". A free-text
+  answer shows as a line of its own.
 - The team assignment spreadsheet now includes free-text registration answers,
   one column per question, alongside the multiple-choice and yes/no ones.
 
