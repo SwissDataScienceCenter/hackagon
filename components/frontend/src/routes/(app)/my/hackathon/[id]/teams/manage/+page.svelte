@@ -3,24 +3,46 @@
     import { resolve } from '$app/paths';
     import {
         Check,
+        CircleHelp,
         Download,
         Eraser,
         GripVertical,
+        Lock as LockIcon,
         Pencil,
-        Sparkles,
         Trash2,
         Upload,
         X
     } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
-    import { initialsOf, suggestDistribution } from '$lib/utils/teamDistribution';
+    import { initialsOf } from '$lib/utils/teamDistribution';
+    import {
+        LABEL_MAX,
+        answerText,
+        optionText,
+        restoreLabels,
+        setLabels,
+        shortName,
+        type AnswerLabels
+    } from '$lib/utils/teamAnswerLabels';
+    import {
+        NO_FILTERS,
+        countAnswers,
+        countPreferences,
+        isFiltering,
+        matchesFirst,
+        restoreFilters,
+        setText,
+        toggleAnswer,
+        toggleProject,
+        type PoolFilters
+    } from '$lib/utils/teamPoolFilter';
     import type { ActionData, PageData } from './$types';
 
     type Person = {
         id: string;
         name: string;
-        /** Their fixed-list registration answers as codes, by question id. */
+        /** Their registration answers by question id: a code, or free text whole. */
         codes: Record<string, { code: string; label: string }>;
         preferredTitles: string[];
         preferredProjectIds: string[];
@@ -82,14 +104,164 @@
         }
     }
 
-    /** The ticked questions this person answered, in question order. */
-    function codesFor(person: Person): { code: string; title: string }[] {
-        return shownQuestions.flatMap((q) => {
-            const answer = person.codes[q.id];
+    // Whether the "Prefers 3, 7" line rides along beside a name, kept like the
+    // question ticks. Shown unless turned off, which is how the page always
+    // looked; the "?" for a team off someone's preferences stays regardless —
+    // that is a warning about the assignment, not a preference on display.
+    let showPreferences = $state(true);
 
-            return answer ? [{ code: answer.code, title: `${q.label}: ${answer.label}` }] : [];
-        });
+    const preferencesKey = $derived(`hackagon:team-show-preferences:${hackathonId}`);
+
+    $effect(() => {
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(preferencesKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. Shown.
+        }
+        showPreferences = stored !== false;
+    });
+
+    function toggleShowPreferences() {
+        showPreferences = !showPreferences;
+        try {
+            localStorage.setItem(preferencesKey, JSON.stringify(showPreferences));
+        } catch {
+            // Private browsing, or a full quota. The tick still holds for this visit.
+        }
     }
+
+    /**
+     * The ticked questions this person answered, in question order, as the
+     * question's letter and the answer itself — `A: XL` — with the question in
+     * full on hover. Fixed answers as tags, free text as lines of its own: a
+     * sentence does not fit in a tag.
+     */
+    function answersFor(person: Person) {
+        const tags: { key: string; text: string; title: string }[] = [];
+        const texts: { key: string; text: string; title: string }[] = [];
+        for (const q of shownQuestions) {
+            const answer = person.codes[q.id];
+            if (!answer) continue;
+            const entry = {
+                key: q.id,
+                text: answerText(q, answer.label, labels),
+                title: `${q.label}: ${answer.label}`
+            };
+            (q.kind === 'text' ? texts : tags).push(entry);
+        }
+
+        return { tags, texts };
+    }
+
+    const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
+
+    // What the organizer has named each question — `size` for B, `remote` and
+    // `on site` for a tick-box's Yes and No. Kept in the browser like the
+    // ticks; see `teamAnswerLabels`.
+    let labels: AnswerLabels = $state({});
+
+    const labelsKey = $derived(`hackagon:team-answer-labels:${hackathonId}`);
+
+    // Restored the way `shownIds` is, and for the same reason it only reads.
+    $effect(() => {
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(labelsKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. Letters it is.
+        }
+        labels = restoreLabels(stored, answerQuestions);
+    });
+
+    // One question's names are editable at a time, like a team's name.
+    let namingId: string | null = $state(null);
+    let draft = $state({ short: '', yes: '', no: '' });
+
+    function startNaming(q: (typeof answerQuestions)[number]) {
+        const named = labels[q.id];
+        namingId = q.id;
+        draft = { short: named?.short ?? '', yes: named?.yes ?? '', no: named?.no ?? '' };
+    }
+
+    function commitNaming(q: (typeof answerQuestions)[number]) {
+        labels = setLabels(labels, q, draft);
+        namingId = null;
+        try {
+            localStorage.setItem(labelsKey, JSON.stringify(labels));
+        } catch {
+            // Private browsing, or a full quota. The names still hold for this visit.
+        }
+    }
+
+    function namingKeys(e: KeyboardEvent, q: (typeof answerQuestions)[number]) {
+        if (e.key === 'Enter') commitNaming(q);
+        if (e.key === 'Escape') namingId = null;
+    }
+
+    // Which answers bring people to the top of the Unassigned column. The rules
+    // live in `teamPoolFilter`; this keeps them, stores them and draws them.
+    //
+    // Kept in the browser like the ticks above, so a reload keeps the filter.
+    // That is safe because a filter only reorders, the pool says how many
+    // match, and a reset is one click away.
+    let filters: PoolFilters = $state(NO_FILTERS);
+
+    const filterKey = $derived(`hackagon:team-filters:${hackathonId}`);
+
+    // Restored the way `shownIds` is, and for the same reason it only reads.
+    $effect(() => {
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(filterKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. No filter.
+        }
+        filters = restoreFilters(
+            stored,
+            answerQuestions,
+            projectRows.map((p) => p.id)
+        );
+    });
+
+    function setFilters(next: PoolFilters) {
+        filters = next;
+        try {
+            localStorage.setItem(filterKey, JSON.stringify(next));
+        } catch {
+            // Private browsing, or a full quota. The filter still holds for this visit.
+        }
+    }
+
+    /** The filters as removable tags: projects in row order, then questions. */
+    const activeFilters = $derived([
+        ...projectRows
+            .filter((p) => filters.projects.includes(p.id))
+            .map((p) => ({
+                key: `project:${p.id}`,
+                text: `Prefers ${p.number}`,
+                title: `Prefers ${p.title}`,
+                remove: () => setFilters(toggleProject(filters, p.id))
+            })),
+        ...answerQuestions.flatMap((q) => [
+            ...(filters.answers[q.id] ?? []).map((label) => ({
+                key: `${q.id}:${label}`,
+                text: answerText(q, label, labels),
+                title: `${q.label}: ${label}`,
+                remove: () => setFilters(toggleAnswer(filters, q.id, label))
+            })),
+            ...(filters.texts[q.id] !== undefined
+                ? [
+                      {
+                          key: `${q.id}:text`,
+                          text: `${shortName(q, labels)}: "${filters.texts[q.id]?.trim()}"`,
+                          title: `${q.label} contains "${filters.texts[q.id]?.trim()}"`,
+                          remove: () => setFilters(setText(filters, q.id, ''))
+                      }
+                  ]
+                : [])
+        ])
+    ]);
 
     // Drop target id for the unassigned pool; team keys are used as-is.
     const POOL = 'pool';
@@ -138,6 +310,10 @@
     /** What the last uploaded file did, until it is dismissed or superseded. */
     let importResult: ImportResult | null = $state(null);
 
+    // "How assignment works". Closed by default: whoever needs the rules asks
+    // for them, and everyone else should not have to read past them.
+    let helpOpen = $state(false);
+
     // Only one team's name is editable at a time.
     let editingKey: string | null = $state(null);
     let editName = $state('');
@@ -169,17 +345,35 @@
         return [...peopleById.values()].filter((p) => !placed.has(p.id));
     });
 
+    /** The pool with whoever matches the filters on top. */
+    const pool = $derived(matchesFirst(unassigned, filters));
+    const filtering = $derived(isFiltering(filters));
+
+    // How many unassigned people gave each answer, over the whole pool rather
+    // than the matching part, so a number beside an answer does not change as
+    // other answers are picked.
+    const poolCounts = $derived(countAnswers(unassigned));
+    const poolPreferenceCounts = $derived(countPreferences(unassigned));
+
+    function answeredInPool(questionId: string): number {
+        return Object.values(poolCounts[questionId] ?? {}).reduce((n, c) => n + c, 0);
+    }
+
     const assignedCount = $derived(teams.reduce((n, t) => n + t.memberIds.length, 0));
 
     /** What Save would write, compared against what the server last reported. */
     const changes = $derived.by(() => {
         const base = fromServer(data.projectRows);
         const nameBefore = new Map(base.map((t) => [t.key, t.name]));
-        const alive = new Set(teams.map((t) => t.key));
+        // Save drops a team with nobody in it, so an empty one counts as
+        // deleted, or as not added — the summary says what Save will do. Not
+        // while the teams are fixed: then an emptied team is kept.
+        const kept = locked ? teams : teams.filter((t) => t.memberIds.length > 0);
+        const alive = new Set(kept.map((t) => t.key));
 
-        const added = teams.filter((t) => t.id === null).length;
+        const added = kept.filter((t) => t.id === null).length;
         const removed = base.filter((t) => !alive.has(t.key)).length;
-        const renamed = teams.filter(
+        const renamed = kept.filter(
             (t) => t.id !== null && nameBefore.get(t.key) !== t.name
         ).length;
 
@@ -208,7 +402,7 @@
 
     function commitEdit(key: string) {
         const name = editName.trim();
-        if (name.length < 3) return;
+        if (name === '') return;
         const team = teams.find((t) => t.key === key);
         if (team) team.name = name;
         editingKey = null;
@@ -243,6 +437,16 @@
         draggedFrom = null;
         dropTarget = null;
     }
+
+    // Once a submission exists or teams are published, the teams themselves
+    // stand: no upload (it replaces every team), no adding, deleting or Clear
+    // all. People can still be moved by hand — between teams or to Unassigned —
+    // and teams renamed, and the save action enforces the same line. The
+    // reason is said once at the top and again on hover over what is off. See
+    // `assignmentLockReasons`.
+    const lockReasons = $derived(data.lockReasons);
+    const locked = $derived(lockReasons.length > 0);
+    const lockedTitle = $derived(locked ? `Locked: ${lockReasons.join(' and ')}` : undefined);
 
     function canDrop(target: string) {
         return draggedId !== null && draggedFrom !== target;
@@ -291,28 +495,6 @@
         teams = teams.map((t) => ({ ...t, memberIds: [] }));
     }
 
-    function suggest() {
-        const plan = suggestDistribution(
-            projectRows.map((p) => ({
-                id: p.id,
-                title: p.title,
-                teams: p.teams.map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    memberIds: t.members.map((m) => m.id)
-                }))
-            })),
-            data.unassigned,
-            { max: TEAM_MAX }
-        );
-
-        // Keep inventing keys past the ones the plan handed out, so a team added
-        // afterwards cannot collide with one of them.
-        invented = plan.filter((t) => t.id === null).length;
-        editingKey = null;
-        teams = plan;
-    }
-
     function discard() {
         teams = fromServer(data.projectRows);
         editingKey = null;
@@ -320,12 +502,9 @@
     }
 
     /**
-     * Read an edited assignment back in.
-     *
-     * It lands on the workspace like any other edit — nothing is written until
-     * Save, so the change summary and Discard both still apply to it. The file
-     * is applied to the workspace **as it stands**, not to the state it was
-     * downloaded from, which is what the confirmation is about.
+     * Read an edited assignment back in. The file replaces every team — see
+     * `applyAssignmentCsv` — and lands on the workspace like any other edit:
+     * nothing is written until Save, and Discard undoes it.
      */
     async function importFile(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
@@ -334,10 +513,7 @@
         input.value = '';
         if (file === undefined || pending) return;
 
-        if (
-            changes.total > 0 &&
-            !confirm('Apply this file on top of your unsaved changes?')
-        ) {
+        if (teams.length > 0 && !confirm('Uploading replaces all current teams. Continue?')) {
             return;
         }
 
@@ -345,14 +521,18 @@
             await file.text(),
             {
                 people: [...peopleById.values()],
-                projects: projectRows.map((p) => ({ id: p.id, title: p.title })),
+                projects: projectRows.map((p) => ({
+                    id: p.id,
+                    title: p.title,
+                    number: p.number
+                })),
                 teams
             },
             { max: TEAM_MAX }
         );
 
         importResult = result;
-        if (result.read > 0 || result.created.length > 0) {
+        if (!result.refused) {
             teams = result.teams;
             editingKey = null;
         }
@@ -362,27 +542,15 @@
     const importSummary = $derived.by(() => {
         const r = importResult;
         if (r === null) return [];
+        if (r.refused) return ['Nothing was applied.'];
 
-        const lines: string[] = [];
-        if (r.read === 0) {
-            lines.push('Nothing was applied.');
-        } else {
-            const did: string[] = [];
-            if (r.moved > 0) did.push(`${r.moved} ${r.moved === 1 ? 'move' : 'moves'}`);
-            if (r.created.length > 0) did.push(`${r.created.length} new`);
-            lines.push(
-                `Read ${r.read} ${r.read === 1 ? 'row' : 'rows'}` +
-                    (did.length > 0 ? `: ${did.join(', ')}.` : ', changing nothing.')
-            );
-        }
-        if (r.absent > 0) {
-            lines.push(
-                `${r.absent} ${r.absent === 1 ? 'person was' : 'people were'} not in the file, ` +
-                    'and were left as they are.'
-            );
-        }
+        const lines = [
+            `${r.teams.length} ${r.teams.length === 1 ? 'team' : 'teams'} with ` +
+                `${r.assigned} ${r.assigned === 1 ? 'person' : 'people'}; ` +
+                `${r.unassigned} unassigned.`
+        ];
         if (r.oversized.length > 0) {
-            lines.push(`Now over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
+            lines.push(`Over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
         }
 
         return lines;
@@ -430,7 +598,7 @@
     projectNumber: number | null
 )}
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
-    {@const answerCodes = codesFor(person)}
+    {@const answers = answersFor(person)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
@@ -443,7 +611,9 @@
         <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
             <span class="min-w-0 truncate text-xs text-ink">{person.name}</span>
-            {#if person.preferredNumbers.length > 0}
+            {#if !showPreferences}
+                <!-- Nothing: turned off in the Project preferences box. -->
+            {:else if person.preferredNumbers.length > 0}
                 <span
                     class="tnum min-w-0 truncate text-[0.65rem] text-ink-3"
                     title={person.preferredTitles.join(', ')}
@@ -464,13 +634,26 @@
                         : 'No preferences given'}
                 </span>
             {/if}
-            {#if answerCodes.length > 0}
+            {#if answers.tags.length > 0}
+                <!-- Not `.badge`: badges uppercase, and these are whatever the
+                     organizer typed as an option. -->
                 <span class="flex flex-wrap items-center gap-1 pt-0.5">
-                    {#each answerCodes as c (c.code)}
-                        <span class="badge badge-neutral tnum" title={c.title}>{c.code}</span>
+                    {#each answers.tags as a (a.key)}
+                        <span
+                            class="max-w-full truncate rounded-field border border-line px-1.5
+                                   text-[0.65rem] leading-4 text-ink-2"
+                            title={a.title}
+                        >
+                            {a.text}
+                        </span>
                     {/each}
                 </span>
             {/if}
+            {#each answers.texts as t (t.key)}
+                <span class="min-w-0 truncate text-[0.65rem] text-ink-2" title={t.title}>
+                    {t.text}
+                </span>
+            {/each}
         </div>
         {#if projectId !== null && !matches}
             <span
@@ -498,11 +681,22 @@
     <div class="flex flex-col gap-1">
         <ManageHubBackLink {hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
-        <p class="m-0 text-xs text-ink-3">
-            Drag a participant onto a team to assign them. Everyone belongs to at most one team,
-            and no team holds more than {TEAM_MAX}. Nothing is written until you save.
-        </p>
     </div>
+
+    {#if locked}
+        <div
+            class="flex items-start gap-2 rounded-card border border-warning bg-warning/10 px-3 py-2
+                   text-xs text-warning-ink"
+            role="status"
+        >
+            <LockIcon class="mt-0.5 size-3 shrink-0" />
+            <p class="m-0">
+                <strong>Teams are fixed:</strong>
+                {lockReasons.join(' and ')}. Upload and adding or deleting teams are off; you can
+                still move people between teams or to Unassigned, and rename teams.
+            </p>
+        </div>
+    {/if}
 
     {#if form?.message}
         <p
@@ -517,54 +711,62 @@
     <div class="flex flex-wrap items-center gap-3">
         <button
             type="button"
-            class="btn btn-sm"
-            disabled={pending || unassigned.length === 0}
-            onclick={suggest}
-        >
-            <Sparkles class="size-3" />
-            Suggest teams
-        </button>
-        <button
-            type="button"
             class="btn btn-sm btn-ghost"
-            disabled={pending || assignedCount === 0}
+            disabled={locked || pending || assignedCount === 0}
+            title={lockedTitle}
             onclick={clearAll}
         >
             <Eraser class="size-3" />
             Clear all
         </button>
 
-        <!-- The escape hatch, for when a hundred people is more dragging than
-             anyone wants to do. The file is this page in a spreadsheet; what
-             comes back lands on the workspace and still waits for Save. -->
-        <a
-            href={resolve(`/my/hackathon/${hackathonId}/teams/manage/export`)}
-            class="btn btn-sm btn-ghost no-underline"
-            title="Everyone on this page, with the answers and preferences shown here"
-            download
+        <!-- For when a hundred people is more dragging than anyone wants to do.
+             The file is this page in a spreadsheet; what comes back lands on the
+             workspace and still waits for Save. -->
+        <div class="flex flex-wrap items-center gap-3 border-l border-line pl-3">
+            <span class="meta">Spreadsheet</span>
+            <a
+                href={resolve(`/my/hackathon/${hackathonId}/teams/manage/export`)}
+                class="btn btn-sm btn-ghost no-underline"
+                title="Everyone on this page, with their preferences and registration answers"
+                download
+            >
+                <Download class="size-3" />
+                Download CSV
+            </a>
+            <!-- A label, so it cannot take `disabled` itself: the input does,
+                 and the label is dimmed and stops looking clickable. -->
+            <label
+                class="btn btn-sm btn-ghost"
+                class:cursor-pointer={!locked}
+                class:cursor-not-allowed={locked}
+                class:opacity-50={locked || pending}
+                title={lockedTitle ?? 'Upload an edited spreadsheet'}
+            >
+                <Upload class="size-3" />
+                Upload CSV
+                <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    class="hidden"
+                    disabled={locked || pending}
+                    onchange={importFile}
+                />
+            </label>
+        </div>
+
+        <!-- Outside the Spreadsheet group: it explains assigning teams as a
+             whole, dragging and saving included, not only the file. -->
+        <button
+            type="button"
+            class="btn btn-sm btn-quiet"
+            aria-expanded={helpOpen}
+            aria-controls="assignment-help"
+            onclick={() => (helpOpen = !helpOpen)}
         >
-            <Download class="size-3" />
-            Download CSV
-        </a>
-        <!-- The rules, where somebody about to use it will meet them, rather
-             than as a paragraph everyone else has to read past. -->
-        <label
-            class="btn btn-sm btn-ghost cursor-pointer"
-            class:opacity-50={pending}
-            title={'Edit the project and team columns and upload the file back. ' +
-                'A blank team unassigns; anyone not in the file is left as they are; ' +
-                'nothing is deleted, and a renamed team reads as a new one.'}
-        >
-            <Upload class="size-3" />
-            Upload CSV
-            <input
-                type="file"
-                accept=".csv,text/csv"
-                class="hidden"
-                disabled={pending}
-                onchange={importFile}
-            />
-        </label>
+            <CircleHelp class="size-3" />
+            How assignment works
+        </button>
 
         <div class="ml-auto flex items-center gap-3">
             {#if changes.total > 0}
@@ -591,8 +793,77 @@
         </div>
     </div>
 
+    <!-- The rules of the page in one place: what Save does (see the `save`
+         action), when it locks (`assignmentLockReasons`), and what an upload
+         does (`applyAssignmentCsv`). Change them together. -->
+    {#if helpOpen}
+        <section id="assignment-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">
+            <div class="flex items-start gap-3">
+                <h3 class="m-0 flex-1 meta">How team assignment works</h3>
+                <button
+                    type="button"
+                    class="shrink-0 text-ink-3 hover:text-ink"
+                    aria-label="Close"
+                    onclick={() => (helpOpen = false)}
+                >
+                    <X class="size-3" />
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-1 text-ink-2">
+                <p class="m-0">
+                    Drag people from Unassigned onto a team, or plan in the spreadsheet.
+                </p>
+                <p class="m-0">
+                    Nothing changes until you Save; Save deletes teams with nobody in them.
+                </p>
+                <p class="m-0">
+                    Once a team has a submission or teams are published, teams are fixed: no
+                    upload, no adding or deleting teams. Moving people and renaming still work.
+                </p>
+            </div>
+
+            <h4 class="m-0 border-t border-line pt-3 meta">Spreadsheet</h4>
+            <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
+                <li>
+                    <strong class="text-ink">Download CSV.</strong> One row per participant, with
+                    their current project and team, or empty if they have no team yet.
+                </li>
+                <li>
+                    <strong class="text-ink">Correct the <code>project</code> and <code>team</code>
+                        columns.</strong>
+                    Keep every row and leave <code>user_id</code> as it is; other columns are ignored.
+                </li>
+                <li>
+                    <strong class="text-ink">Upload CSV.</strong> Replaces all teams. Check, then
+                    Save.
+                </li>
+            </ol>
+
+            <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-ink-3">
+                <dt class="text-ink-2"><code>project</code></dt>
+                <dd class="m-0">
+                    a project number as shown here and in the prefers column; anything else is
+                    an incomplete assignment
+                </dd>
+
+                <dt class="text-ink-2"><code>team</code></dt>
+                <dd class="m-0">any name, even a single character; can be renamed after upload</dd>
+
+                <dt class="text-ink-2">both empty</dt>
+                <dd class="m-0">the person ends up unassigned</dd>
+
+                <dt class="text-ink-2">incomplete assignment</dt>
+                <dd class="m-0">a warning, and the person ends up unassigned</dd>
+
+                <dt class="text-ink-2">a row missing</dt>
+                <dd class="m-0">a warning, and the person ends up unassigned</dd>
+            </dl>
+        </section>
+    {/if}
+
     {#if importResult}
-        {@const bad = importResult.problems.length > 0}
+        {@const bad = importResult.refused || importResult.warnings.length > 0}
         <div
             class="flex flex-col gap-2 rounded-card border px-3 py-2 text-xs {bad
                 ? 'border-warning bg-warning/10'
@@ -624,53 +895,216 @@
                         <li>and {importResult.problems.length - 5} more.</li>
                     {/if}
                 </ul>
+                {#if !helpOpen}
+                    <button
+                        type="button"
+                        class="self-start text-ink-2 underline hover:text-ink"
+                        onclick={() => (helpOpen = true)}
+                    >
+                        How assignment works
+                    </button>
+                {/if}
+            {/if}
+            {#if importResult.warnings.length > 0}
+                <!-- Capped like the problems above: the first few say what kind
+                     of mistake the file has, and the rest repeat it. -->
+                <ul class="m-0 flex list-disc flex-col gap-0.5 pl-4 text-warning-ink">
+                    {#each importResult.warnings.slice(0, 5) as warning (warning)}
+                        <li>{warning}</li>
+                    {/each}
+                    {#if importResult.warnings.length > 5}
+                        <li>and {importResult.warnings.length - 5} more.</li>
+                    {/if}
+                </ul>
             {/if}
         </div>
     {/if}
 
-    <!-- Only the fixed-list questions reach here: a code is a position in a list
-         of options, so free text and tick-boxes have none. -->
+    <!-- Every question with the name its answers carry on a card — its letter,
+         or the short name given here — whether or not it is shown on cards yet. -->
     {#if answerQuestions.length > 0}
         <section class="card card-raised flex flex-col gap-3 p-3">
-            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-                <h3 class="m-0 meta">Registration answers</h3>
+            <h3 class="m-0 meta">Registration questions</h3>
+            <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
                 {#each answerQuestions as q (q.id)}
-                    <label class="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            class="checkbox"
-                            checked={shownIds.includes(q.id)}
-                            onchange={() => toggleQuestion(q.id)}
-                        />
-                        <span class="text-xs text-ink-2">
-                            <span class="font-semibold">{q.letter}</span>
-                            {q.label}
+                    <li class="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 last:pb-0">
+                        {#if namingId === q.id}
+                            <span class="flex flex-wrap items-center gap-2">
+                                <!-- A tick-box gets words for its two answers and
+                                     nothing else; see `QuestionLabels.short`. -->
+                                {#if q.kind === 'bool'}
+                                    <label class="flex items-center gap-1.5 text-xs text-ink-3">
+                                        Yes shows as
+                                        <!-- svelte-ignore a11y_autofocus -->
+                                        <input
+                                            type="text"
+                                            class="field h-7 w-24 px-2 text-xs"
+                                            placeholder="Yes"
+                                            maxlength={LABEL_MAX}
+                                            autofocus
+                                            bind:value={draft.yes}
+                                            onkeydown={(e) => namingKeys(e, q)}
+                                        />
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs text-ink-3">
+                                        No shows as
+                                        <input
+                                            type="text"
+                                            class="field h-7 w-24 px-2 text-xs"
+                                            placeholder="No"
+                                            maxlength={LABEL_MAX}
+                                            bind:value={draft.no}
+                                            onkeydown={(e) => namingKeys(e, q)}
+                                        />
+                                    </label>
+                                {:else}
+                                    <!-- svelte-ignore a11y_autofocus -->
+                                    <input
+                                        type="text"
+                                        class="field h-7 w-28 px-2 text-xs"
+                                        placeholder={q.letter}
+                                        maxlength={LABEL_MAX}
+                                        aria-label={`Short name for ${q.label}`}
+                                        autofocus
+                                        bind:value={draft.short}
+                                        onkeydown={(e) => namingKeys(e, q)}
+                                    />
+                                {/if}
+                                <button
+                                    type="button"
+                                    class="shrink-0 text-ink-3 hover:text-success-ink"
+                                    aria-label="Save names"
+                                    title="Save names"
+                                    onclick={() => commitNaming(q)}
+                                >
+                                    <Check class="size-3" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="shrink-0 text-ink-3 hover:text-danger-ink"
+                                    aria-label="Cancel"
+                                    title="Cancel"
+                                    onclick={() => (namingId = null)}
+                                >
+                                    <X class="size-3" />
+                                </button>
+                            </span>
+                        {/if}
+                        <span class="flex min-w-0 items-center gap-2">
+                            {#if namingId !== q.id}
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline shrink-0 font-semibold hover:bg-overlay"
+                                    aria-label={`Name ${q.label} on cards`}
+                                    title={q.kind === 'bool'
+                                        ? 'Name this question, and its Yes and No, for the cards'
+                                        : 'Name this question for the cards'}
+                                    onclick={() => startNaming(q)}
+                                >
+                                    <!-- A tick-box has no letter to show: just the
+                                         pencil, for its Yes and No words. -->
+                                    {#if q.kind !== 'bool'}{shortName(q, labels)}{/if}
+                                    <Pencil class="size-3" />
+                                </button>
+                            {/if}
+                            <span class="text-xs text-ink">{q.label}</span>
+                            {#if KIND_NOTE[q.kind]}
+                                <span class="meta shrink-0">{KIND_NOTE[q.kind]}</span>
+                            {/if}
                         </span>
-                    </label>
+                        {#if q.kind === 'text'}
+                            <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <input
+                                    type="search"
+                                    class="field h-7 w-44 px-2 text-xs"
+                                    placeholder="Filter: answer contains…"
+                                    aria-label={`Filter Unassigned by ${q.label}`}
+                                    value={filters.texts[q.id] ?? ''}
+                                    oninput={(e) =>
+                                        setFilters(setText(filters, q.id, e.currentTarget.value))}
+                                />
+                                <span class="meta tnum">
+                                    {answeredInPool(q.id)} of {unassigned.length} answered
+                                </span>
+                            </span>
+                        {:else}
+                            <span class="flex flex-wrap items-center gap-1.5">
+                                {#each q.options as o (o.code)}
+                                    {@const picked =
+                                        filters.answers[q.id]?.includes(o.label) ?? false}
+                                    <!-- Real buttons, styled as the toolbar's are: on
+                                         a raised card a fill-only control has no
+                                         edge and reads as plain text. -->
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm {picked
+                                            ? 'btn-outline-accent bg-accent/20'
+                                            : 'btn-outline hover:bg-overlay'}"
+                                        aria-pressed={picked}
+                                        title={picked
+                                            ? 'Stop filtering by this answer'
+                                            : 'Bring unassigned people who gave this answer to the top'}
+                                        onclick={() => setFilters(toggleAnswer(filters, q.id, o.label))}
+                                    >
+                                        {optionText(q, o.label, labels)}
+                                        <span class="tnum text-ink-3">
+                                            {poolCounts[q.id]?.[o.label] ?? 0}
+                                        </span>
+                                    </button>
+                                {/each}
+                            </span>
+                        {/if}
+                        <label class="ml-auto flex shrink-0 items-center gap-2">
+                            <input
+                                type="checkbox"
+                                class="checkbox"
+                                checked={shownIds.includes(q.id)}
+                                onchange={() => toggleQuestion(q.id)}
+                            />
+                            <span class="text-xs text-ink-3">Show on cards</span>
+                        </label>
+                    </li>
+                {/each}
+            </ul>
+        </section>
+    {/if}
+
+    <!-- Beside the answers rather than on each project row, so every filter
+         lives in one place and works one way. -->
+    {#if projectRows.length > 0}
+        <section class="card card-raised flex flex-col gap-3 p-3">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <h3 class="m-0 meta">Project preferences</h3>
+                <label class="ml-auto flex shrink-0 items-center gap-2">
+                    <input
+                        type="checkbox"
+                        class="checkbox"
+                        checked={showPreferences}
+                        onchange={toggleShowPreferences}
+                    />
+                    <span class="text-xs text-ink-3">Show on cards</span>
+                </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+                {#each projectRows as p (p.id)}
+                    {@const picked = filters.projects.includes(p.id)}
+                    <button
+                        type="button"
+                        class="btn btn-sm {picked
+                            ? 'btn-outline-accent bg-accent/20'
+                            : 'btn-outline hover:bg-overlay'}"
+                        aria-pressed={picked}
+                        title={picked
+                            ? 'Stop filtering by this project'
+                            : 'Bring unassigned people who prefer this project to the top'}
+                        onclick={() => setFilters(toggleProject(filters, p.id))}
+                    >
+                        <span class="font-semibold tnum">{p.number}</span>
+                        {p.title}
+                        <span class="tnum text-ink-3">{poolPreferenceCounts[p.id] ?? 0}</span>
+                    </button>
                 {/each}
             </div>
-
-            {#if shownQuestions.length === 0}
-                <p class="m-0 text-xs text-ink-3">
-                    Tick a question to mark everyone's answer beside their name.
-                </p>
-            {:else}
-                <dl class="m-0 flex flex-col gap-2 border-t border-line pt-3">
-                    {#each shownQuestions as q (q.id)}
-                        <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                            <dt class="text-xs font-semibold text-ink">{q.letter} · {q.label}</dt>
-                            <dd class="m-0 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                {#each q.options as o (o.code)}
-                                    <span class="flex items-center gap-1.5">
-                                        <span class="badge badge-neutral tnum">{o.code}</span>
-                                        <span class="text-xs text-ink-2">{o.label}</span>
-                                    </span>
-                                {/each}
-                            </dd>
-                        </div>
-                    {/each}
-                </dl>
-            {/if}
         </section>
     {/if}
 
@@ -711,7 +1145,7 @@
                                                 <input
                                                     type="text"
                                                     required
-                                                    minlength="3"
+                                                    minlength="1"
                                                     maxlength="255"
                                                     autofocus
                                                     bind:value={editName}
@@ -756,15 +1190,17 @@
                                                 >
                                                     <Pencil class="size-3" />
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    class="shrink-0 text-ink-3 hover:text-danger-ink"
-                                                    aria-label={`Delete ${t.name}`}
-                                                    title="Delete"
-                                                    onclick={() => removeTeam(t.key, t.name)}
-                                                >
-                                                    <Trash2 class="size-3" />
-                                                </button>
+                                                {#if !locked}
+                                                    <button
+                                                        type="button"
+                                                        class="shrink-0 text-ink-3 hover:text-danger-ink"
+                                                        aria-label={`Delete ${t.name}`}
+                                                        title="Delete"
+                                                        onclick={() => removeTeam(t.key, t.name)}
+                                                    >
+                                                        <Trash2 class="size-3" />
+                                                    </button>
+                                                {/if}
                                             {/if}
                                         </header>
                                         <div class="flex min-h-16 flex-1 flex-col gap-1 p-2">
@@ -795,16 +1231,18 @@
                                     </p>
                                 {/if}
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-ghost h-full"
-                                    title={projectTeams.length === 0
-                                        ? 'Add the first team for this project'
-                                        : 'Add another team for this project'}
-                                    onclick={() => addTeam(p.id)}
-                                >
-                                    {projectTeams.length === 0 ? '+ Add Team' : '+'}
-                                </button>
+                                {#if !locked}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-ghost h-full"
+                                        title={projectTeams.length === 0
+                                            ? 'Add the first team for this project'
+                                            : 'Add another team for this project'}
+                                        onclick={() => addTeam(p.id)}
+                                    >
+                                        {projectTeams.length === 0 ? '+ Add Team' : '+'}
+                                    </button>
+                                {/if}
                             </div>
                         </div>
                     {/each}
@@ -821,23 +1259,57 @@
                    lg:top-4"
             class:border-accent={dropTarget === POOL}
         >
-            <h3 class="m-0 meta">Unassigned ({unassigned.length})</h3>
-            <!-- The organiser is not in this list unless they joined like anybody
-                 else, and an absence explains nothing on its own. No link out:
-                 owning a hackathon is not a way into it, and there is no control
-                 here that would change that. -->
-            {#if data.ownerMissingFromPool}
-                <p class="m-0 text-xs text-ink-3">
-                    You are not here: you run this hackathon without taking part in it.
-                </p>
+            <h3 class="m-0 meta tnum">
+                Unassigned ({unassigned.length}){filtering
+                    ? ` · ${pool.matching.length} match`
+                    : ''}
+            </h3>
+            {#if filtering}
+                <div class="flex flex-wrap items-center gap-1.5">
+                    {#each activeFilters as f (f.key)}
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-accent bg-accent/20"
+                            title={`Remove filter: ${f.title}`}
+                            onclick={f.remove}
+                        >
+                            {f.text}
+                            <X class="size-3" />
+                        </button>
+                    {/each}
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-quiet"
+                        onclick={() => setFilters(NO_FILTERS)}
+                    >
+                        Reset filters
+                    </button>
+                </div>
             {/if}
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
             {:else}
-                <div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
-                    {#each unassigned as person (person.id)}
+                <!-- `scroll-visible`: a hundred people overflow this column,
+                     and a scrollbar macOS hides until hover hides that too. -->
+                <div class="scroll-visible flex min-h-0 flex-col gap-1 pr-1">
+                    {#if filtering && pool.matching.length === 0}
+                        <p class="m-0 text-xs text-ink-3">
+                            Nobody unassigned matches these filters.
+                        </p>
+                    {/if}
+                    {#each pool.matching as person (person.id)}
                         {@render personRow(person, POOL, null, null)}
                     {/each}
+                    <!-- Greyed rather than hidden: see `matchesFirst`. Still
+                         draggable, and full strength under the pointer. -->
+                    {#if pool.rest.length > 0}
+                        <p class="m-0 meta tnum pt-2">Not matching ({pool.rest.length})</p>
+                        {#each pool.rest as person (person.id)}
+                            <div class="opacity-50 transition-opacity hover:opacity-100">
+                                {@render personRow(person, POOL, null, null)}
+                            </div>
+                        {/each}
+                    {/if}
                 </div>
             {/if}
         </section>

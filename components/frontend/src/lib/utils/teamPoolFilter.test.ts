@@ -1,0 +1,233 @@
+import { describe, it, expect } from "vitest"
+import {
+  NO_FILTERS,
+  countAnswers,
+  countPreferences,
+  isFiltering,
+  matches,
+  matchesFirst,
+  restoreFilters,
+  setText,
+  toggleAnswer,
+  toggleProject,
+  type FilterQuestion,
+  type PoolFilters,
+} from "./teamPoolFilter"
+
+const QUESTIONS: FilterQuestion[] = [
+  {
+    id: "exp",
+    kind: "enum",
+    options: [{ label: "First time" }, { label: "A few" }, { label: "Many" }],
+  },
+  { id: "remote", kind: "bool", options: [{ label: "Yes" }, { label: "No" }] },
+  { id: "skills", kind: "text", options: [] },
+]
+
+const PROJECTS = ["p1", "p2"]
+
+const person = (
+  id: string,
+  codes: Record<string, string> = {},
+  preferredProjectIds: string[] = [],
+) => ({
+  id,
+  codes: Object.fromEntries(
+    Object.entries(codes).map(([q, label]) => [q, { label }]),
+  ),
+  preferredProjectIds,
+})
+
+const filters = (over: Partial<PoolFilters> = {}): PoolFilters => ({
+  ...NO_FILTERS,
+  ...over,
+})
+
+describe("matches", () => {
+  it("lets everyone through when nothing is picked", () => {
+    expect(matches(person("a"), NO_FILTERS)).toBe(true)
+  })
+
+  it("widens within one question", () => {
+    const f = filters({ answers: { exp: ["First time", "A few"] } })
+
+    expect(matches(person("a", { exp: "First time" }), f)).toBe(true)
+    expect(matches(person("b", { exp: "A few" }), f)).toBe(true)
+    expect(matches(person("c", { exp: "Many" }), f)).toBe(false)
+  })
+
+  it("narrows across questions", () => {
+    const f = filters({
+      answers: { exp: ["A few"], remote: ["Yes"] },
+    })
+
+    expect(matches(person("a", { exp: "A few", remote: "Yes" }), f)).toBe(true)
+    expect(matches(person("b", { exp: "A few", remote: "No" }), f)).toBe(false)
+  })
+
+  it("does not let through someone who skipped a filtered question", () => {
+    const f = filters({ answers: { exp: ["Many"] } })
+
+    expect(matches(person("a"), f)).toBe(false)
+  })
+
+  it("widens within the picked projects", () => {
+    const f = filters({ projects: ["p1", "p2"] })
+
+    expect(matches(person("a", {}, ["p1"]), f)).toBe(true)
+    expect(matches(person("b", {}, ["p2", "p3"]), f)).toBe(true)
+    expect(matches(person("c", {}, ["p3"]), f)).toBe(false)
+    expect(matches(person("d"), f)).toBe(false)
+  })
+
+  it("narrows projects against answers", () => {
+    const f = filters({ projects: ["p1"], answers: { exp: ["Many"] } })
+
+    expect(matches(person("a", { exp: "Many" }, ["p1"]), f)).toBe(true)
+    expect(matches(person("b", { exp: "A few" }, ["p1"]), f)).toBe(false)
+    expect(matches(person("c", { exp: "Many" }, ["p2"]), f)).toBe(false)
+  })
+
+  it("matches free text ignoring case and the spaces around it", () => {
+    const f = filters({ texts: { skills: "  PYTHON " } })
+
+    expect(matches(person("a", { skills: "Python, design" }), f)).toBe(true)
+    expect(matches(person("b", { skills: "Design" }), f)).toBe(false)
+    expect(matches(person("c"), f)).toBe(false)
+  })
+})
+
+describe("matchesFirst", () => {
+  it("splits the pool and keeps each part in its order", () => {
+    const pool = [
+      person("a", { exp: "Many" }),
+      person("b", { exp: "First time" }),
+      person("c", { exp: "Many" }),
+      person("d"),
+    ]
+    const { matching, rest } = matchesFirst(
+      pool,
+      filters({ answers: { exp: ["Many"] } }),
+    )
+
+    expect(matching.map((p) => p.id)).toEqual(["a", "c"])
+    expect(rest.map((p) => p.id)).toEqual(["b", "d"])
+  })
+})
+
+describe("toggleAnswer", () => {
+  it("picks, then unpicks, and leaves no empty question behind", () => {
+    const once = toggleAnswer(NO_FILTERS, "exp", "Many")
+    expect(once.answers).toEqual({ exp: ["Many"] })
+
+    const twice = toggleAnswer(once, "exp", "Many")
+    expect(twice.answers).toEqual({})
+    expect(isFiltering(twice)).toBe(false)
+  })
+
+  it("does not change what it was given", () => {
+    const before = filters({ answers: { exp: ["Many"] } })
+    toggleAnswer(before, "exp", "A few")
+
+    expect(before.answers).toEqual({ exp: ["Many"] })
+  })
+})
+
+describe("setText", () => {
+  it("removes a filter whose text is blank", () => {
+    const on = setText(NO_FILTERS, "skills", "py")
+    expect(on.texts).toEqual({ skills: "py" })
+
+    expect(setText(on, "skills", "   ").texts).toEqual({})
+  })
+})
+
+describe("restoreFilters", () => {
+  it("keeps what still means something", () => {
+    const stored = {
+      answers: { exp: ["Many"], remote: ["Yes"] },
+      texts: { skills: "py" },
+      projects: ["p1"],
+    }
+
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(stored)
+  })
+
+  it("drops questions, answers and projects that no longer exist", () => {
+    const stored = {
+      answers: { exp: ["Many", "Wizard"], gone: ["x"], remote: ["Maybe"] },
+      texts: { skills: "   ", alsoGone: "py" },
+      projects: ["p2", "unapproved", 7],
+    }
+
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual({
+      answers: { exp: ["Many"] },
+      texts: {},
+      projects: ["p2"],
+    })
+  })
+
+  it("does not take a free-text question's answers as picks, or the reverse", () => {
+    const stored = {
+      answers: { skills: ["py"] },
+      texts: { exp: "Many" },
+    }
+
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(NO_FILTERS)
+  })
+
+  it("reads filters saved before projects could be picked", () => {
+    const stored = { answers: { exp: ["Many"] }, texts: {} }
+
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(
+      filters({ answers: { exp: ["Many"] } }),
+    )
+  })
+
+  it.each([
+    null,
+    "nonsense",
+    42,
+    [],
+    { answers: "x", texts: [], projects: "p1" },
+  ])("reads %j as no filter", (stored) => {
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(NO_FILTERS)
+  })
+})
+
+describe("toggleProject", () => {
+  it("picks, then unpicks", () => {
+    const once = toggleProject(NO_FILTERS, "p1")
+    expect(once.projects).toEqual(["p1"])
+    expect(isFiltering(once)).toBe(true)
+
+    expect(toggleProject(once, "p1").projects).toEqual([])
+  })
+})
+
+describe("countPreferences", () => {
+  it("counts each person once per project they picked", () => {
+    const pool = [
+      person("a", {}, ["p1", "p2"]),
+      person("b", {}, ["p1", "p1"]),
+      person("c"),
+    ]
+
+    expect(countPreferences(pool)).toEqual({ p1: 2, p2: 1 })
+  })
+})
+
+describe("countAnswers", () => {
+  it("counts each answer by question", () => {
+    const pool = [
+      person("a", { exp: "Many", remote: "Yes" }),
+      person("b", { exp: "Many" }),
+      person("c", { exp: "A few" }),
+    ]
+
+    expect(countAnswers(pool)).toEqual({
+      exp: { Many: 2, "A few": 1 },
+      remote: { Yes: 1 },
+    })
+  })
+})

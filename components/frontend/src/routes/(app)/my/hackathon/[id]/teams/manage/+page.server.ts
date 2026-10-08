@@ -3,8 +3,9 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
-import { participantRowFor } from "$lib/server/hackathon/membership"
+import { numberedProjects } from "$lib/server/hackathon/projectNumbers"
 import { listAnswers } from "$lib/server/hackathon/questions"
+import { assignmentLockReasons } from "$lib/server/hackathon/teamAssignmentLock"
 import {
   answerLegend,
   questionRows,
@@ -35,6 +36,14 @@ export const load: PageServerLoad = async (event) => {
 
   const { teams } = await team.list({ hackathonId: event.params.id })
 
+  // Every team, not only those on approved projects: a submission anywhere in
+  // the hackathon is one a save could take with it.
+  const lockReasons = await assignmentLockReasons(
+    team,
+    teams.map((t) => t.id),
+    hackathon.state,
+  )
+
   // Who prefers what, per project — same `Project:Write` permission this page
   // is already gated on, so no separate check is needed here.
   const { projects: preferences } = await project.exportPreferences({
@@ -59,13 +68,14 @@ export const load: PageServerLoad = async (event) => {
   // deleting it, which is the part that actually mattered. Nothing here can
   // create one — TODO(backend: team-create-requires-approved-project) is what
   // stops the API from doing so.
-  const rowProjects = preferences.filter(
-    (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
-  )
-  const numberByProjectId = new Map(rowProjects.map((p, i) => [p.id, i + 1]))
+  //
+  // Numbered by `numberedProjects`, which the spreadsheet download shares: the
+  // file carries these numbers and an upload reads them back.
+  const rowProjects = numberedProjects(preferences)
+  const numberByProjectId = new Map(rowProjects.map((p) => [p.id, p.number]))
 
   // What people said about themselves on the way in, as codes short enough to
-  // sit beside a name. Fixed-list questions only — see `answerLegend`.
+  // sit beside a name — and free text whole. See `answerLegend`.
   //
   // Decoration, and fetched as such: the page assigns teams with or without it,
   // so a refusal leaves an empty legend and no ticks rather than a failed page.
@@ -107,7 +117,7 @@ export const load: PageServerLoad = async (event) => {
       id,
       name,
       // Keyed by question so the page can show the ticked ones and nothing
-      // else. Empty for anyone who answered no fixed-list question.
+      // else. Empty for anyone who answered nothing.
       codes: legend.codesByParticipant[id] ?? {},
       preferredTitles: preferred.map((p) => p.title),
       preferredProjectIds: preferred.map((p) => p.id),
@@ -139,9 +149,9 @@ export const load: PageServerLoad = async (event) => {
     teamsByProject.set(t.projectId, list)
   }
 
-  const projectRows = rowProjects.map((p, i) => ({
+  const projectRows = rowProjects.map((p) => ({
     id: p.id,
-    number: i + 1,
+    number: p.number,
     title: p.title,
     interested: p.preferences.length,
     teams: teamsByProject.get(p.id) ?? [],
@@ -151,20 +161,12 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
     unassigned,
     projectRows,
-    // Every fixed-list question, lettered — not only the ones an organizer has
+    // Every question, lettered — not only the ones an organizer has
     // chosen to show. Which of them to show is a preference of one person at
     // one screen, so it is kept in their browser and never reaches here.
     answerQuestions: legend.questions,
-    // Whether to explain the organiser's own absence from the pool. They hold no
-    // participant row unless they joined the hackathon the ordinary way, and
-    // `unassigned` is built from participant rows — so an organiser looking for
-    // their own name finds nothing, which reads as this page having lost them
-    // rather than as a state they are in. Stated, not offered: taking part is
-    // joining, and joining does not belong on a team-assignment screen.
-    ownerMissingFromPool:
-      isHackathonOwner &&
-      participantRowFor(hackathon.members, event.locals.platformUser?.id) ===
-        undefined,
+    // Why the assignment can no longer be changed; empty while it can.
+    lockReasons,
   }
 }
 
@@ -183,7 +185,11 @@ export const actions: Actions = {
   // Distributing a hundred people is a few hundred sequential calls and takes a
   // noticeable moment; that is a backend gap, not a client one.
   save: async (event) => {
-    const { team, project } = requireGrpc(event.locals.grpc)
+    const {
+      team,
+      project,
+      hackathon: hackathonClient,
+    } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
     const raw = form.get("teams")
@@ -200,18 +206,26 @@ export const actions: Actions = {
     if (!Array.isArray(plan) || !plan.every(isPlannedTeam)) {
       return fail(400, { message: "Could not read the changes" })
     }
-    if (plan.some((t) => t.name.trim().length < 3)) {
-      return fail(400, {
-        message: "Every team needs a name of at least 3 characters",
-      })
+    // Any name will do, even "1" — the backend asks only that it is not empty.
+    if (plan.some((t) => t.name.trim() === "")) {
+      return fail(400, { message: "Every team needs a name" })
     }
 
     try {
       const { teams: all } = await team.list({
         hackathonId: event.params.id,
       })
-      const keep = new Set(
-        plan.map((t) => t.id).filter((id): id is string => id !== null),
+
+      // Checked again here, not only on load: a page opened before the first
+      // submission or before teams were published still offers what is now
+      // locked.
+      const { hackathon: latest } = await hackathonClient.get({
+        hackathonId: event.params.id,
+      })
+      const locked = await assignmentLockReasons(
+        team,
+        all.map((t) => t.id),
+        latest?.state,
       )
 
       // Only the teams this page could actually show are in scope. The load gives
@@ -233,6 +247,31 @@ export const actions: Actions = {
           .map((p) => p.id),
       )
       const before = all.filter((t) => approved.has(t.projectId))
+
+      if (locked.length > 0) {
+        // Locked, the teams themselves stand: people may move between them or
+        // to Unassigned and a team may be renamed, but none may be added or
+        // deleted — deleting one takes its submissions with it, and published
+        // teams are what participants have been told. An emptied team is kept.
+        const planned = new Set(plan.map((t) => t.id))
+        if (
+          plan.some((t) => t.id === null) ||
+          before.some((t) => !planned.has(t.id))
+        ) {
+          return fail(409, {
+            message: `Teams cannot be added or deleted now: ${locked.join(" and ")}.`,
+          })
+        }
+      } else {
+        // A team with nobody in it is not part of the assignment: dropped, so
+        // a new one is never created and a saved one is deleted below like any
+        // team the plan leaves out.
+        plan = plan.filter((t) => t.memberIds.length > 0)
+      }
+
+      const keep = new Set(
+        plan.map((t) => t.id).filter((id): id is string => id !== null),
+      )
 
       // Deletions first, so their members are free before anything is assigned
       // and a name being reused is no longer taken.

@@ -640,6 +640,36 @@
     white-space: nowrap;
   }
 
+  /* A scrolling list whose scrollbar is there before anyone scrolls.
+   *
+   * macOS hides scrollbars until the pointer moves over them, so a list taller
+   * than its box looks like it simply ends. A styled `::-webkit-scrollbar` is
+   * never an overlay, which keeps it visible in Chrome, Edge and Safari.
+   *
+   * The standard properties are for Firefox only, and only there: Chrome
+   * ignores every `::-webkit-scrollbar` rule once `scrollbar-color` or
+   * `scrollbar-width` is set. Firefox on macOS still follows the system
+   * setting — thin and themed is as far as it goes. */
+  .scroll-visible {
+    overflow-y: auto;
+  }
+  .scroll-visible::-webkit-scrollbar {
+    width: --spacing(2);
+  }
+  .scroll-visible::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  .scroll-visible::-webkit-scrollbar-thumb {
+    background-color: var(--color-line-strong);
+    border-radius: var(--radius-control);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    .scroll-visible {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-line-strong) transparent;
+    }
+  }
+
   /* ---------------------------------------------------------------
    * Rendered markdown.
    *

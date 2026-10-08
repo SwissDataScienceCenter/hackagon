@@ -18,9 +18,54 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Teams fixes the teams once a team has a submission or teams are
+  published: a notice says why, and uploading, adding and deleting teams are
+  disabled. People can still be moved between teams or to Unassigned by hand,
+  and teams renamed.
+- Manage Teams can filter the Unassigned column by registration answers: click
+  an answer (or type into a free-text question's box) to bring the people who
+  gave it to the top; everyone else stays below, greyed out. Each answer shows
+  how many unassigned people gave it. Filters are remembered in your browser and
+  cleared with "Reset filters".
+- Manage Teams can also filter by project preference: click a project in the
+  "Project preferences" box to bring the unassigned people who picked it to the
+  top. Its "Show on cards" checkbox hides or shows the "Prefers …" line under
+  each name.
+- Manage Teams lets you give each registration question a short name for the
+  cards — "size: S" instead of "B: S" — and give a yes/no question its own words
+  for Yes and No, so a card says "remote" or "on site". Names are kept in your
+  browser.
+
 ### Changed
 
+- Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
+  people onto them, or by downloading the spreadsheet, filling in the team
+  column and uploading it again.
+- Manage Teams explains itself in one place: "How assignment works" covers
+  dragging, saving, when the assignment locks, and the spreadsheet steps and
+  rules.
+- Uploading the team assignment spreadsheet now replaces all teams with the ones
+  in the file. A row needs both a project and a team to put someone on a team;
+  anyone else ends up unassigned, with a warning for a row that has a mistake in
+  it or is missing from the file.
+- The team assignment spreadsheet uses the project numbers shown on the page, in
+  both the project and the prefers columns; an uploaded row whose project is not
+  one of those numbers is not an assignment. Team names can be anything, even a
+  single character.
+- Saving on Manage Teams now deletes every team with nobody in it.
+- Manage Teams lists every registration question, not only the multiple-choice
+  ones, and "Show on cards" puts the question's letter and the answer itself
+  under each name — "A: XL" — instead of a code like "A5". A yes/no question has
+  no letter and shows as "Yes" or "No"; a free-text answer shows as a line of
+  its own.
+- The team assignment spreadsheet now includes free-text registration answers,
+  one column per question, alongside the multiple-choice and yes/no ones.
+
 ### Fixed
+
+- The Unassigned list on Manage Teams shows its scrollbar from the start when
+  there are more people than fit, instead of only on hover (Chrome, Edge and
+  Safari).
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 
