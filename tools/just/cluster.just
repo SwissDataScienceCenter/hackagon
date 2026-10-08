@@ -6,6 +6,8 @@ root_dir := `git rev-parse --show-toplevel`
 # Names the chart gives a release called `hackagon` (see helm-chart/templates).
 namespace := "hackagon"
 backend_deploy := "hackagon-backend"
+backend_svc := "hackagon-backend"
+backend_port := "3000"
 backend_config := "hackagon-backend-config"
 backend_db_secret := "hackagon-backend-db"
 postgres_sts := "hackagon-postgresql"
@@ -20,6 +22,7 @@ dev_domain := "hackagon-dev.dscompute.ch"
 
 backup_dir := env("HOME") + "/hackagon-backups"
 local_pg_port := "15432"
+local_backend_port := "13000"
 
 # Runs inside the postgres pod: finds the superuser password the bitnami image
 # was started with (env var or mounted file) so it never leaves the pod.
@@ -58,6 +61,10 @@ help:
     echo ""
     echo -e "  ${cyan}just cluster::reseed${reset} <context>"
     echo -e "  ${dim}Back up, wipe, then run cmd/seed (backend code must match origin/main).${reset}"
+    echo ""
+    echo -e "  ${cyan}just cluster::smoke${reset} <context>"
+    echo -e "  ${dim}Run the smoke suite (check::smoke) against dev. Read-only apart from a${reset}"
+    echo -e "  ${dim}track it creates and deletes; needs a seeded dev (cluster::reseed).${reset}"
     echo ""
     echo -e "  ${dim}e.g. just cluster::wipe sck-sit-dev${reset}"
     echo ""
@@ -185,6 +192,60 @@ reseed context:
     HACKAGON_DATABASE_PASSWORD="$db_password" \
         "$tmp/seed" --config-dir "$tmp/"
     echo "✓ Seeded"
+
+# Run the smoke suite (check::smoke) against dev, through a port-forward to the
+# backend. Needs a seeded dev: the specs log in as the fixture's alice and bob.
+[group('cluster')]
+smoke context:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just -f "{{source_file()}}" _guard "{{context}}"
+
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    pf_pid=""
+    stop_tunnel() { [ -n "$pf_pid" ] && kill "$pf_pid" 2>/dev/null || true; }
+    trap stop_tunnel EXIT
+
+    echo "==> Waiting up to 3 minutes for the backend to be ready"
+    "${kc[@]}" rollout status "deploy/{{backend_deploy}}" --timeout=180s
+
+    # Ask Keycloak for tokens at the issuer the backend itself trusts, so a
+    # token can never be refused for coming from the wrong address.
+    issuer="$("${kc[@]}" get cm "{{backend_config}}" -o jsonpath='{.data.config\.yaml}' \
+        | sed -n 's/^ *issuerurl: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p')"
+    case "$issuer" in
+        http*://*/realms/*) ;;
+        *) echo "✗ No oidc issuerurl in {{backend_config}} (found: '${issuer}')." >&2; exit 1 ;;
+    esac
+    keycloak_url="${issuer%/realms/*}"
+    realm="${issuer##*/realms/}"
+
+    echo "==> Port-forwarding backend to localhost:{{local_backend_port}}"
+    "${kc[@]}" port-forward "svc/{{backend_svc}}" "{{local_backend_port}}:{{backend_port}}" >/dev/null &
+    pf_pid=$!
+
+    # Wait up to 10s for the tunnel to open.
+    for _ in $(seq 20); do
+        nc -z 127.0.0.1 "{{local_backend_port}}" 2>/dev/null && break
+        sleep 0.5
+    done
+    nc -z 127.0.0.1 "{{local_backend_port}}" 2>/dev/null \
+        || { echo "✗ The port-forward to the backend did not open within 10s." >&2; exit 1; }
+
+    echo "==> Running the smoke suite (Keycloak $keycloak_url, realm $realm)"
+    cd "{{root_dir}}"
+    HACKAGON_SMOKE_BACKEND_ADDR="127.0.0.1:{{local_backend_port}}" \
+    HACKAGON_SMOKE_KEYCLOAK_URL="$keycloak_url" \
+    HACKAGON_SMOKE_REALM="$realm" \
+        just check::smoke || {
+            echo "✗ Smoke suite failed; the first [FAILED] line above says which check broke." >&2
+            echo "  Usual causes on dev:" >&2
+            echo "  - dev is not seeded: just cluster::reseed {{context}}" >&2
+            echo "  - alice/bob missing in the realm, or another password: set HACKAGON_SMOKE_PASSWORD" >&2
+            echo "  - client hackagon-backend has 'Direct access grants' switched off" >&2
+            exit 1
+        }
+    echo "✓ Smoke suite passed against {{context}}"
 
 # Scale the backend to 0 and wait until its pods are gone. Scaling it back up is
 # the caller's job, in an EXIT trap set before calling, so it happens even when

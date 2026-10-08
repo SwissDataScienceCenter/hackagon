@@ -113,6 +113,7 @@ just helm::publish              # push the chart if Chart.yaml's version is unpu
 just cluster::backup <context>  # pg_dumpall to ~/hackagon-backups
 just cluster::wipe <context>    # backup, then drop + recreate the app DB; dev restarts empty
 just cluster::reseed <context>  # backup, wipe, then seed; refuses if components/backend differs from origin/main
+just cluster::smoke <context>   # run check::smoke against dev through a port-forward; needs a seeded dev
 ```
 
 Backend listens on **:3000**, frontend on **:8081**. Dev users (Keycloak
