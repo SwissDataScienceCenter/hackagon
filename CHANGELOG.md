@@ -41,8 +41,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   Download and Upload, lists the steps and what each kind of edit does.
 - Manage Teams lists every registration question, not only the multiple-choice
   ones, and "Show on cards" puts the question's letter and the answer itself
-  under each name — "A: XL", "B: No" — instead of a code like "A5". A free-text
-  answer shows as a line of its own.
+  under each name — "A: XL" — instead of a code like "A5". A yes/no question has
+  no letter and shows as "Yes" or "No"; a free-text answer shows as a line of
+  its own.
 - The team assignment spreadsheet now includes free-text registration answers,
   one column per question, alongside the multiple-choice and yes/no ones.
 

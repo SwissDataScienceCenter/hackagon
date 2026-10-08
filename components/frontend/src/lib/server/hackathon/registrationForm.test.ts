@@ -822,7 +822,7 @@ describe("answerLegend", () => {
     ])
   })
 
-  it("letters every kind of question, in question order", () => {
+  it("letters every question but a tick-box, in question order, without gaps", () => {
     const { questions } = answerLegend(
       [
         row({ id: "text", kind: "text", options: [] }),
@@ -834,8 +834,8 @@ describe("answerLegend", () => {
 
     expect(questions.map((q) => [q.id, q.letter, q.kind])).toEqual([
       ["text", "A", "text"],
-      ["coc", "B", "bool"],
-      ["q1", "C", "enum"],
+      ["coc", "", "bool"],
+      ["q1", "B", "enum"],
     ])
   })
 
@@ -849,8 +849,8 @@ describe("answerLegend", () => {
     )
 
     expect(questions[0]?.options).toEqual([
-      { code: "A1", label: "Yes" },
-      { code: "A2", label: "No" },
+      { code: "Yes", label: "Yes" },
+      { code: "No", label: "No" },
     ])
     expect(questions[1]?.options).toEqual([])
   })
@@ -921,8 +921,8 @@ describe("answerLegend", () => {
     )
 
     expect(codesByParticipant).toEqual({
-      alice: { coc: { code: "A1", label: "Yes" } },
-      bob: { coc: { code: "A2", label: "No" } },
+      alice: { coc: { code: "Yes", label: "Yes" } },
+      bob: { coc: { code: "No", label: "No" } },
     })
   })
 

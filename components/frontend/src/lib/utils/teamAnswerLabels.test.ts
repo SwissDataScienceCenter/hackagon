@@ -10,7 +10,8 @@ import {
 } from "./teamAnswerLabels"
 
 const SIZE: LabeledQuestion = { id: "size", letter: "B", kind: "enum" }
-const REMOTE: LabeledQuestion = { id: "remote", letter: "D", kind: "bool" }
+// A tick-box carries no letter; see `answerLegend`.
+const REMOTE: LabeledQuestion = { id: "remote", letter: "", kind: "bool" }
 const UNI: LabeledQuestion = { id: "uni", letter: "A", kind: "text" }
 const QUESTIONS = [UNI, SIZE, REMOTE]
 
@@ -20,8 +21,9 @@ describe("answerText", () => {
     expect(answerText(SIZE, "S", { size: { short: "size" } })).toBe("size: S")
   })
 
-  it("reads a tick-box with its letter until it has its own words", () => {
-    expect(answerText(REMOTE, "Yes", {})).toBe("D: Yes")
+  it("reads a tick-box as plain Yes or No until it has its own words", () => {
+    expect(answerText(REMOTE, "Yes", {})).toBe("Yes")
+    expect(answerText(REMOTE, "No", {})).toBe("No")
   })
 
   it("shows a tick-box's own word alone", () => {
@@ -34,7 +36,7 @@ describe("answerText", () => {
   it("falls back for the side of a tick-box that has no word", () => {
     const named = { remote: { yes: "remote" } }
 
-    expect(answerText(REMOTE, "No", named)).toBe("D: No")
+    expect(answerText(REMOTE, "No", named)).toBe("No")
   })
 
   it("prefixes free text like any other answer", () => {

@@ -971,7 +971,9 @@
                                         : 'Name this question for the cards'}
                                     onclick={() => startNaming(q)}
                                 >
-                                    {shortName(q, labels)}
+                                    <!-- A tick-box has no letter to show: just the
+                                         pencil, for its Yes and No words. -->
+                                    {#if q.kind !== 'bool'}{shortName(q, labels)}{/if}
                                     <Pencil class="size-3" />
                                 </button>
                             {/if}

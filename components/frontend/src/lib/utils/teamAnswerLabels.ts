@@ -132,17 +132,16 @@ export function optionText(
 /**
  * An answer as a card or a filter tag reads it.
  *
- * `size: S` — the short name (or letter) and the answer. A tick-box with its
- * own word for that answer shows the word alone — `remote` already says which
- * question — and falls back to its letter, `D: No`, for a side without one.
+ * `size: S` — the short name (or letter) and the answer. A tick-box has no
+ * letter, so it reads as its own word for that answer — `remote` — or as
+ * plain `Yes` or `No` until it has one.
  */
 export function answerText(
   question: LabeledQuestion,
   answer: string,
   labels: AnswerLabels,
 ): string {
-  const word = optionText(question, answer, labels)
-  if (question.kind === "bool" && word !== answer) return word
+  if (question.kind === "bool") return optionText(question, answer, labels)
 
   return `${shortName(question, labels)}: ${answer}`
 }

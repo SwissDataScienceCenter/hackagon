@@ -649,7 +649,10 @@ export function answeredParticipantIds(
 export interface LegendQuestion {
   id: string
   label: string
-  /** `A`, `B`, `C` … fixed by question order. */
+  /**
+   * `A`, `B`, `C` … fixed by question order, skipping tick-boxes, which have
+   * none and carry `""`.
+   */
   letter: string
   kind: QuestionKind
   /**
@@ -664,6 +667,7 @@ export interface AnswerCode {
   /**
    * The letter of the question and the position of the option: `A2`. For a
    * free-text answer, the letter alone — it names the question, not a choice.
+   * For a tick-box, `Yes` or `No`.
    */
   code: string
   /** The option as it was written, or the free-text answer in full. */
@@ -699,12 +703,13 @@ function letterAt(index: number): string {
  * numbers rather than the titles on every row.
  *
  * **Every kind of question is in it, each coded as far as it can be.** A code is
- * a position in a list of options. A fixed list has its own; a tick-box is read
- * as the two-option list `Yes`, `No`, so it codes like any other. Free text has
- * nothing to number, so its answer is carried whole under the question's bare
- * letter, and the page decides how much of it fits beside a name.
+ * a position in a list of options. A fixed list has its own. A tick-box has no
+ * letter and its answers are simply `Yes` and `No`, which the page lets an
+ * organizer reword. Free text has nothing to number, so its answer is carried
+ * whole under the question's bare letter, and the page decides how much of it
+ * fits beside a name.
  *
- * Letters go to **every** question in question order, whether or not the
+ * Letters go to **every** question but a tick-box, in question order, whether or not the
  * organizer has chosen to show it. Assigning them to the shown ones instead
  * would renumber the rest each time one is ticked, so a screenshot — or an
  * organizer's memory of what A meant — would stop being true. The cost is that
@@ -725,15 +730,29 @@ export function answerLegend(
   answers: readonly Answer[],
 ): AnswerLegend {
   const legend: LegendQuestion[] = []
+  let lettered = 0
   for (const q of questions) {
     // An enum with no options is answerable by nobody — the builder refuses to
     // save one, but the backend will store it — so it would be a tick that can
     // never mark anything.
     if (q.kind === "enum" && q.options.length === 0) continue
 
-    const letter = letterAt(legend.length)
-    const labels =
-      q.kind === "enum" ? q.options : q.kind === "bool" ? ["Yes", "No"] : []
+    // A tick-box takes no letter: "Yes" and "No" are their own codes, and the
+    // page lets an organizer give them words that say which question they
+    // answer. Lettering only the others keeps A, B, C free of gaps.
+    if (q.kind === "bool") {
+      legend.push({
+        id: q.id,
+        label: q.label,
+        letter: "",
+        kind: q.kind,
+        options: ["Yes", "No"].map((label) => ({ code: label, label })),
+      })
+      continue
+    }
+
+    const letter = letterAt(lettered++)
+    const labels = q.kind === "enum" ? q.options : []
     legend.push({
       id: q.id,
       label: q.label,
