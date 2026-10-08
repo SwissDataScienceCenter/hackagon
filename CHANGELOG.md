@@ -23,8 +23,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   gave it to the top; everyone else stays below, greyed out. Each answer shows
   how many unassigned people gave it. Filters are remembered in your browser and
   cleared with "Reset filters".
-- Manage Teams can also filter by project preference: click "14 want in" on a
-  project to bring the unassigned people who picked it to the top.
+- Manage Teams can also filter by project preference: click a project in the
+  "Project preferences" box to bring the unassigned people who picked it to the
+  top. Its "Show on cards" checkbox hides or shows the "Prefers …" line under
+  each name.
 
 ### Changed
 

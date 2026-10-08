@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   NO_FILTERS,
   countAnswers,
+  countPreferences,
   isFiltering,
   matches,
   matchesFirst,
@@ -201,6 +202,18 @@ describe("toggleProject", () => {
     expect(isFiltering(once)).toBe(true)
 
     expect(toggleProject(once, "p1").projects).toEqual([])
+  })
+})
+
+describe("countPreferences", () => {
+  it("counts each person once per project they picked", () => {
+    const pool = [
+      person("a", {}, ["p1", "p2"]),
+      person("b", {}, ["p1", "p1"]),
+      person("c"),
+    ]
+
+    expect(countPreferences(pool)).toEqual({ p1: 2, p2: 1 })
   })
 })
 

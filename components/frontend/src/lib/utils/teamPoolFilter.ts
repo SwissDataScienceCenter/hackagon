@@ -194,6 +194,20 @@ export function matchesFirst<T extends FilterablePerson>(
   return { matching, rest }
 }
 
+/** How many people picked each project, by project id. */
+export function countPreferences(
+  people: readonly FilterablePerson[],
+): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const p of people) {
+    for (const id of new Set(p.preferredProjectIds)) {
+      counts[id] = (counts[id] ?? 0) + 1
+    }
+  }
+
+  return counts
+}
+
 /** How many people gave each answer, by question id then answer text. */
 export function countAnswers(
   people: readonly FilterablePerson[],

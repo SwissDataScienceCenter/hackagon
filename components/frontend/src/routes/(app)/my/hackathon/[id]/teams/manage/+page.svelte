@@ -18,6 +18,7 @@
     import {
         NO_FILTERS,
         countAnswers,
+        countPreferences,
         isFiltering,
         matchesFirst,
         restoreFilters,
@@ -90,6 +91,33 @@
             localStorage.setItem(storageKey, JSON.stringify(shownIds));
         } catch {
             // Private browsing, or a full quota. The ticks still hold for this visit.
+        }
+    }
+
+    // Whether the "Prefers 3, 7" line rides along beside a name, kept like the
+    // question ticks. Shown unless turned off, which is how the page always
+    // looked; the "?" for a team off someone's preferences stays regardless —
+    // that is a warning about the assignment, not a preference on display.
+    let showPreferences = $state(true);
+
+    const preferencesKey = $derived(`hackagon:team-show-preferences:${hackathonId}`);
+
+    $effect(() => {
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(preferencesKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. Shown.
+        }
+        showPreferences = stored !== false;
+    });
+
+    function toggleShowPreferences() {
+        showPreferences = !showPreferences;
+        try {
+            localStorage.setItem(preferencesKey, JSON.stringify(showPreferences));
+        } catch {
+            // Private browsing, or a full quota. The tick still holds for this visit.
         }
     }
 
@@ -265,6 +293,7 @@
     // than the matching part, so a number beside an answer does not change as
     // other answers are picked.
     const poolCounts = $derived(countAnswers(unassigned));
+    const poolPreferenceCounts = $derived(countPreferences(unassigned));
 
     function answeredInPool(questionId: string): number {
         return Object.values(poolCounts[questionId] ?? {}).reduce((n, c) => n + c, 0);
@@ -522,7 +551,9 @@
         <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
             <span class="min-w-0 truncate text-xs text-ink">{person.name}</span>
-            {#if person.preferredNumbers.length > 0}
+            {#if !showPreferences}
+                <!-- Nothing: turned off in the Project preferences box. -->
+            {:else if person.preferredNumbers.length > 0}
                 <span
                     class="tnum min-w-0 truncate text-[0.65rem] text-ink-3"
                     title={person.preferredTitles.join(', ')}
@@ -866,6 +897,45 @@
         </section>
     {/if}
 
+    <!-- Beside the answers rather than on each project row, so every filter
+         lives in one place and works one way. -->
+    {#if projectRows.length > 0}
+        <section class="card card-raised flex flex-col gap-3 p-3">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <h3 class="m-0 meta">Project preferences</h3>
+                <label class="ml-auto flex shrink-0 items-center gap-2">
+                    <input
+                        type="checkbox"
+                        class="checkbox"
+                        checked={showPreferences}
+                        onchange={toggleShowPreferences}
+                    />
+                    <span class="text-xs text-ink-3">Show on cards</span>
+                </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+                {#each projectRows as p (p.id)}
+                    {@const picked = filters.projects.includes(p.id)}
+                    <button
+                        type="button"
+                        class="btn btn-sm {picked
+                            ? 'btn-outline-accent bg-accent/20'
+                            : 'btn-outline hover:bg-overlay'}"
+                        aria-pressed={picked}
+                        title={picked
+                            ? 'Stop filtering by this project'
+                            : 'Bring unassigned people who prefer this project to the top'}
+                        onclick={() => setFilters(toggleProject(filters, p.id))}
+                    >
+                        <span class="font-semibold tnum">{p.number}</span>
+                        {p.title}
+                        <span class="tnum text-ink-3">{poolPreferenceCounts[p.id] ?? 0}</span>
+                    </button>
+                {/each}
+            </div>
+        </section>
+    {/if}
+
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="card card-raised flex min-w-0 flex-col gap-4 p-3">
             <h3 class="m-0 meta">Projects</h3>
@@ -875,29 +945,15 @@
                 <div class="flex flex-col divide-y divide-line">
                     {#each projectRows as p (p.id)}
                         {@const projectTeams = teamsByProject[p.id] ?? []}
-                        {@const picked = filters.projects.includes(p.id)}
                         <div class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
                             <div class="flex items-center gap-2">
                                 <span class="badge badge-neutral tnum shrink-0">{p.number}</span>
                                 <span class="truncate text-sm font-semibold text-ink">{p.title}</span
                                 >
-                                <!-- A filter like an answer is, kept where a team
-                                     for this project is being built. -->
-                                <button
-                                    type="button"
-                                    class="btn btn-sm shrink-0 tnum {picked
-                                        ? 'btn-outline-accent bg-accent/20'
-                                        : 'btn-outline hover:bg-overlay'}"
-                                    aria-pressed={picked}
-                                    disabled={p.interested === 0}
-                                    title={picked
-                                        ? 'Stop filtering by this project'
-                                        : 'Bring unassigned people who prefer this project to the top'}
-                                    onclick={() => setFilters(toggleProject(filters, p.id))}
-                                >
+                                <span class="meta shrink-0">
                                     {p.interested}
                                     {p.interested === 1 ? 'wants in' : 'want in'}
-                                </button>
+                                </span>
                             </div>
 
                             <div class="flex flex-wrap items-stretch gap-3">
