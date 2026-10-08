@@ -206,11 +206,6 @@ export const actions: Actions = {
     if (!Array.isArray(plan) || !plan.every(isPlannedTeam)) {
       return fail(400, { message: "Could not read the changes" })
     }
-    // A team with nobody in it is not part of the assignment: dropped here, so
-    // a new one is never created and a saved one is deleted below like any
-    // team the plan leaves out. Before the name check, so an empty team the
-    // organizer never named properly cannot block the save.
-    plan = plan.filter((t) => t.memberIds.length > 0)
     // Any name will do, even "1" — the backend asks only that it is not empty.
     if (plan.some((t) => t.name.trim() === "")) {
       return fail(400, { message: "Every team needs a name" })
@@ -222,7 +217,8 @@ export const actions: Actions = {
       })
 
       // Checked again here, not only on load: a page opened before the first
-      // submission or before teams were published still offers Save.
+      // submission or before teams were published still offers what is now
+      // locked.
       const { hackathon: latest } = await hackathonClient.get({
         hackathonId: event.params.id,
       })
@@ -230,15 +226,6 @@ export const actions: Actions = {
         team,
         all.map((t) => t.id),
         latest?.state,
-      )
-      if (locked.length > 0) {
-        return fail(409, {
-          message: `Team assignment is locked: ${locked.join(" and ")}.`,
-        })
-      }
-
-      const keep = new Set(
-        plan.map((t) => t.id).filter((id): id is string => id !== null),
       )
 
       // Only the teams this page could actually show are in scope. The load gives
@@ -260,6 +247,31 @@ export const actions: Actions = {
           .map((p) => p.id),
       )
       const before = all.filter((t) => approved.has(t.projectId))
+
+      if (locked.length > 0) {
+        // Locked, the teams themselves stand: people may move between them or
+        // to Unassigned and a team may be renamed, but none may be added or
+        // deleted — deleting one takes its submissions with it, and published
+        // teams are what participants have been told. An emptied team is kept.
+        const planned = new Set(plan.map((t) => t.id))
+        if (
+          plan.some((t) => t.id === null) ||
+          before.some((t) => !planned.has(t.id))
+        ) {
+          return fail(409, {
+            message: `Teams cannot be added or deleted now: ${locked.join(" and ")}.`,
+          })
+        }
+      } else {
+        // A team with nobody in it is not part of the assignment: dropped, so
+        // a new one is never created and a saved one is deleted below like any
+        // team the plan leaves out.
+        plan = plan.filter((t) => t.memberIds.length > 0)
+      }
+
+      const keep = new Set(
+        plan.map((t) => t.id).filter((id): id is string => id !== null),
+      )
 
       // Deletions first, so their members are free before anything is assigned
       // and a name being reused is no longer taken.

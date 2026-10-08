@@ -9,21 +9,24 @@ import { enabledCapabilities } from "./phaseForm"
  */
 
 /**
- * Why the team assignment may no longer be changed — empty when it may.
+ * Why the teams themselves are fixed — empty while they are not.
  *
- * Two things lock it, each because changing teams afterwards would pull the
- * ground from under somebody:
+ * Fixed means no team may be added or deleted, and so no upload, which
+ * replaces every team. People may still be moved by hand and teams renamed:
+ * that is how an organizer handles someone dropping out late. Two things fix
+ * the teams, each because rebuilding them would pull the ground from under
+ * somebody:
  *
- * - **a submission exists.** Saving deletes and recreates teams, and a deleted
- *   team takes its submissions with it.
+ * - **a submission exists.** A deleted team takes its submissions with it.
  * - **teams are published** (`CAPABILITY_VIEW_TEAMS`). Participants have been
- *   told who they work with; reshuffling now changes that behind their backs.
+ *   told which team they are on; replacing the teams changes that behind their
+ *   backs.
  *
  * Either one is enough, and the reasons are listed so the page can say which.
  *
  * TODO(backend: team-assignment-lock): this is a frontend rule only. The page
- * stops offering the controls and its save action refuses, but `TeamService`
- * still accepts team changes in a locked hackathon from any other caller.
+ * stops offering the controls and its save action refuses a plan that adds or
+ * deletes a team, but `TeamService` still accepts that from any other caller.
  * Planned as a backend check in a follow-up pull request; the frontend can
  * then keep this for the explanation and rely on the error for the rule.
  */

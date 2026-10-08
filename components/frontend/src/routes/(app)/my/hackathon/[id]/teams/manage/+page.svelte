@@ -366,8 +366,9 @@
         const base = fromServer(data.projectRows);
         const nameBefore = new Map(base.map((t) => [t.key, t.name]));
         // Save drops a team with nobody in it, so an empty one counts as
-        // deleted, or as not added — the summary says what Save will do.
-        const kept = teams.filter((t) => t.memberIds.length > 0);
+        // deleted, or as not added — the summary says what Save will do. Not
+        // while the teams are fixed: then an emptied team is kept.
+        const kept = locked ? teams : teams.filter((t) => t.memberIds.length > 0);
         const alive = new Set(kept.map((t) => t.key));
 
         const added = kept.filter((t) => t.id === null).length;
@@ -437,16 +438,17 @@
         dropTarget = null;
     }
 
-    // Once a submission exists or teams are published the assignment is read
-    // only: every control that changes it is disabled or gone, and the reason
-    // is said once at the top and again on hover. Download and the filters
-    // still work — looking is not changing. See `assignmentLockReasons`.
+    // Once a submission exists or teams are published, the teams themselves
+    // stand: no upload (it replaces every team), no adding, deleting or Clear
+    // all. People can still be moved by hand — between teams or to Unassigned —
+    // and teams renamed, and the save action enforces the same line. The
+    // reason is said once at the top and again on hover over what is off. See
+    // `assignmentLockReasons`.
     const lockReasons = $derived(data.lockReasons);
     const locked = $derived(lockReasons.length > 0);
     const lockedTitle = $derived(locked ? `Locked: ${lockReasons.join(' and ')}` : undefined);
 
     function canDrop(target: string) {
-        if (locked) return false;
         return draggedId !== null && draggedFrom !== target;
     }
 
@@ -599,17 +601,14 @@
     {@const answers = answersFor(person)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-        draggable={!locked}
+        draggable="true"
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
-        class="flex items-center gap-1.5 rounded-card border border-line bg-raised px-2 py-1"
-        class:cursor-grab={!locked}
-        class:active:cursor-grabbing={!locked}
+        class="flex cursor-grab items-center gap-1.5 rounded-card border border-line bg-raised
+               px-2 py-1 active:cursor-grabbing"
         class:opacity-40={draggedId === person.id}
     >
-        {#if !locked}
-            <GripVertical class="size-3 shrink-0 text-ink-3" />
-        {/if}
+        <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
             <span class="min-w-0 truncate text-xs text-ink">{person.name}</span>
             {#if !showPreferences}
@@ -664,7 +663,7 @@
                 ?
             </span>
         {/if}
-        {#if from !== POOL && !locked}
+        {#if from !== POOL}
             <button
                 type="button"
                 class="shrink-0 text-ink-3 hover:text-danger-ink"
@@ -692,9 +691,9 @@
         >
             <LockIcon class="mt-0.5 size-3 shrink-0" />
             <p class="m-0">
-                <strong>Team assignment is locked:</strong>
-                {lockReasons.join(' and ')}. You can still download the spreadsheet and filter
-                participants.
+                <strong>Teams are fixed:</strong>
+                {lockReasons.join(' and ')}. Upload and adding or deleting teams are off; you can
+                still move people between teams or to Unassigned, and rename teams.
             </p>
         </div>
     {/if}
@@ -778,8 +777,7 @@
             <button
                 type="button"
                 class="btn btn-sm btn-ghost"
-                disabled={locked || pending || changes.total === 0}
-                title={lockedTitle}
+                disabled={pending || changes.total === 0}
                 onclick={discard}
             >
                 Discard
@@ -787,8 +785,7 @@
             <button
                 type="button"
                 class="btn btn-sm"
-                disabled={locked || pending || changes.total === 0}
-                title={lockedTitle}
+                disabled={pending || changes.total === 0}
                 onclick={save}
             >
                 Save
@@ -820,7 +817,10 @@
                 <p class="m-0">
                     Nothing changes until you Save; Save deletes teams with nobody in them.
                 </p>
-                <p class="m-0">Locked once a team has a submission or teams are published.</p>
+                <p class="m-0">
+                    Once a team has a submission or teams are published, teams are fixed: no
+                    upload, no adding or deleting teams. Moving people and renaming still work.
+                </p>
             </div>
 
             <h4 class="m-0 border-t border-line pt-3 meta">Spreadsheet</h4>
@@ -1183,16 +1183,16 @@
                                                 </span>
                                                 <span class="meta shrink-0">{t.memberIds.length}</span
                                                 >
+                                                <button
+                                                    type="button"
+                                                    class="shrink-0 text-ink-3 hover:text-accent-ink"
+                                                    aria-label={`Rename ${t.name}`}
+                                                    title="Rename"
+                                                    onclick={() => startEdit(t.key, t.name)}
+                                                >
+                                                    <Pencil class="size-3" />
+                                                </button>
                                                 {#if !locked}
-                                                    <button
-                                                        type="button"
-                                                        class="shrink-0 text-ink-3 hover:text-accent-ink"
-                                                        aria-label={`Rename ${t.name}`}
-                                                        title="Rename"
-                                                        onclick={() => startEdit(t.key, t.name)}
-                                                    >
-                                                        <Pencil class="size-3" />
-                                                    </button>
                                                     <button
                                                         type="button"
                                                         class="shrink-0 text-ink-3 hover:text-danger-ink"
@@ -1208,9 +1208,7 @@
                                         <div class="flex min-h-16 flex-1 flex-col gap-1 p-2">
                                             {#if t.memberIds.length === 0}
                                                 <p class="m-0 text-xs text-ink-3">
-                                                    {locked
-                                                        ? 'Nobody on this team.'
-                                                        : 'Drop a participant here.'}
+                                                    Drop a participant here.
                                                 </p>
                                             {:else}
                                                 {#each t.memberIds as id (id)}
