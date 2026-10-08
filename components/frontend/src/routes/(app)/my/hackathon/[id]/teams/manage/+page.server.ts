@@ -3,7 +3,6 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
-import { participantRowFor } from "$lib/server/hackathon/membership"
 import { listAnswers } from "$lib/server/hackathon/questions"
 import {
   answerLegend,
@@ -155,16 +154,6 @@ export const load: PageServerLoad = async (event) => {
     // chosen to show. Which of them to show is a preference of one person at
     // one screen, so it is kept in their browser and never reaches here.
     answerQuestions: legend.questions,
-    // Whether to explain the organiser's own absence from the pool. They hold no
-    // participant row unless they joined the hackathon the ordinary way, and
-    // `unassigned` is built from participant rows — so an organiser looking for
-    // their own name finds nothing, which reads as this page having lost them
-    // rather than as a state they are in. Stated, not offered: taking part is
-    // joining, and joining does not belong on a team-assignment screen.
-    ownerMissingFromPool:
-      isHackathonOwner &&
-      participantRowFor(hackathon.members, event.locals.platformUser?.id) ===
-        undefined,
   }
 }
 

@@ -583,11 +583,6 @@
     <div class="flex flex-col gap-1">
         <ManageHubBackLink {hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
-        <p class="m-0 text-xs text-ink-3">
-            Drag people from Unassigned onto a team, or plan in a spreadsheet and upload it.
-            Everyone is on at most one team, and no team holds more than {TEAM_MAX}. Nothing is
-            saved until you press Save.
-        </p>
     </div>
 
     {#if form?.message}
@@ -802,13 +797,7 @@
          beside the badge, whether or not that question is shown on cards yet. -->
     {#if answerQuestions.length > 0}
         <section class="card card-raised flex flex-col gap-3 p-3">
-            <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <h3 class="m-0 meta">Registration questions</h3>
-                <p class="m-0 text-xs text-ink-3">
-                    Click an answer to bring the people who gave it to the top of Unassigned (the
-                    number is how many unassigned people gave it).
-                </p>
-            </div>
+            <h3 class="m-0 meta">Registration questions</h3>
             <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
                 {#each answerQuestions as q (q.id)}
                     <li class="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 last:pb-0">
@@ -1064,15 +1053,6 @@
                         Reset filters
                     </button>
                 </div>
-            {/if}
-            <!-- The organiser is not in this list unless they joined like anybody
-                 else, and an absence explains nothing on its own. No link out:
-                 owning a hackathon is not a way into it, and there is no control
-                 here that would change that. -->
-            {#if data.ownerMissingFromPool}
-                <p class="m-0 text-xs text-ink-3">
-                    You are not here: you run this hackathon without taking part in it.
-                </p>
             {/if}
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
