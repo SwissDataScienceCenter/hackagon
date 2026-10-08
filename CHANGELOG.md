@@ -36,6 +36,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Teams lists every registration question, not only the multiple-choice
   ones: yes/no answers get codes like the others, and a free-text answer can be
   shown as a line under each name. Question letters may shift as a result.
+- The team assignment spreadsheet now includes free-text registration answers,
+  one column per question, alongside the multiple-choice and yes/no ones.
 
 ### Fixed
 

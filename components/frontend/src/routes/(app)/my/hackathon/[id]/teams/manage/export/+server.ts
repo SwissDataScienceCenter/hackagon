@@ -94,23 +94,20 @@ export const GET: RequestHandler = async (event) => {
     }
   }
 
-  // A column per question that has a summarisable answer. Free text is left out:
-  // a paragraph per cell is what makes a sheet unreadable, and the answer is on
-  // the participant's own page. A tick-box reads as Yes or No, which is what a
+  // A column per question, free text included: the spreadsheet is where teams
+  // are planned, and "which university" or "what can you do" is often exactly
+  // what decides who goes together. A long answer stays in its one cell — the
+  // writer quotes line breaks. A tick-box reads as Yes or No, which is what a
   // person editing a spreadsheet expects to see in a column.
-  const columns = questionRows(questions.questions).filter(
-    (q) => q.kind === "enum" || q.kind === "bool",
-  )
-  const coded = new Set(columns.map((q) => q.key))
-  const answersByUser = answersByParticipant(
-    questionRows(questions.questions),
-    answers,
-  )
+  //
+  // Written as stored, with no apostrophe in front of an answer starting `=`,
+  // the same choice `csvRow` makes for names; see there.
+  const columns = questionRows(questions.questions)
+  const answersByUser = answersByParticipant(columns, answers)
   const answersFor = (userId: string): Record<string, string> => {
     const filed = answersByUser[userId] ?? []
     const out: Record<string, string> = {}
     for (const a of filed) {
-      if (!coded.has(a.key)) continue
       out[a.key] =
         typeof a.value === "boolean" ? (a.value ? "Yes" : "No") : a.value
     }
