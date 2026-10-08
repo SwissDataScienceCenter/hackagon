@@ -59,6 +59,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- The Unassigned list on Manage Teams shows its scrollbar from the start when
+  there are more people than fit, instead of only on hover (Chrome, Edge and
+  Safari).
+
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 
 ### Added

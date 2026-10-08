@@ -1284,7 +1284,9 @@
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
             {:else}
-                <div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
+                <!-- `scroll-visible`: a hundred people overflow this column,
+                     and a scrollbar macOS hides until hover hides that too. -->
+                <div class="scroll-visible flex min-h-0 flex-col gap-1 pr-1">
                     {#if filtering && pool.matching.length === 0}
                         <p class="m-0 text-xs text-ink-3">
                             Nobody unassigned matches these filters.
