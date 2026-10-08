@@ -487,12 +487,13 @@
     }
 
     /**
-     * Read an edited assignment back in.
+     * Read an edited assignment back in, as the whole assignment.
      *
      * It lands on the workspace like any other edit — nothing is written until
      * Save, so the change summary and Discard both still apply to it. The file
-     * is applied to the workspace **as it stands**, not to the state it was
-     * downloaded from, which is what the confirmation is about.
+     * replaces the workspace **as it stands**, unsaved changes included, which
+     * is what the first confirmation is about; the second is for the one thing
+     * an upload does that is easy to miss: taking people off their teams.
      */
     async function importFile(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
@@ -503,7 +504,7 @@
 
         if (
             changes.total > 0 &&
-            !confirm('Apply this file on top of your unsaved changes?')
+            !confirm('Replace your unsaved changes with this file?')
         ) {
             return;
         }
@@ -518,8 +519,23 @@
             { max: TEAM_MAX }
         );
 
+        if (!result.refused && (result.unassigned > 0 || result.removed.length > 0)) {
+            const parts: string[] = [];
+            if (result.unassigned > 0) {
+                parts.push(
+                    `unassigns ${result.unassigned} ${result.unassigned === 1 ? 'person who is' : 'people who are'} on a team now`
+                );
+            }
+            if (result.removed.length > 0) {
+                parts.push(
+                    `removes ${result.removed.length} ${result.removed.length === 1 ? 'team' : 'teams'}`
+                );
+            }
+            if (!confirm(`This file ${parts.join(' and ')}. Apply it?`)) return;
+        }
+
         importResult = result;
-        if (result.read > 0 || result.created.length > 0) {
+        if (!result.refused) {
             teams = result.teams;
             editingKey = null;
         }
@@ -529,24 +545,23 @@
     const importSummary = $derived.by(() => {
         const r = importResult;
         if (r === null) return [];
+        if (r.refused) return ['Nothing was applied. Fix the file and upload it again.'];
 
         const lines: string[] = [];
-        if (r.read === 0) {
-            lines.push('Nothing was applied.');
-        } else {
-            const did: string[] = [];
-            if (r.moved > 0) did.push(`${r.moved} ${r.moved === 1 ? 'move' : 'moves'}`);
-            if (r.created.length > 0) did.push(`${r.created.length} new`);
+        const did: string[] = [];
+        if (r.moved > 0) did.push(`${r.moved} ${r.moved === 1 ? 'move' : 'moves'}`);
+        if (r.created.length > 0) did.push(`${r.created.length} new`);
+        lines.push(
+            `Read ${r.read} ${r.read === 1 ? 'assignment' : 'assignments'}` +
+                (did.length > 0 ? `: ${did.join(', ')}.` : ', changing nothing.')
+        );
+        if (r.unassigned > 0) {
             lines.push(
-                `Read ${r.read} ${r.read === 1 ? 'row' : 'rows'}` +
-                    (did.length > 0 ? `: ${did.join(', ')}.` : ', changing nothing.')
+                `${r.unassigned} ${r.unassigned === 1 ? 'person is' : 'people are'} now unassigned.`
             );
         }
-        if (r.absent > 0) {
-            lines.push(
-                `${r.absent} ${r.absent === 1 ? 'person was' : 'people were'} not in the file, ` +
-                    'and were left as they are.'
-            );
+        if (r.removed.length > 0) {
+            lines.push(`Removed, now empty: ${r.removed.join(', ')}.`);
         }
         if (r.oversized.length > 0) {
             lines.push(`Now over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
@@ -787,17 +802,17 @@
 
             <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
                 <li>
-                    <strong class="text-ink">Download CSV.</strong> One row per participant: people on
-                    a team first, grouped by project and team, then everyone unassigned.
+                    <strong class="text-ink">Download CSV.</strong> One row per participant, with
+                    their current project and team filled in.
                 </li>
                 <li>
-                    <strong class="text-ink">Fill in the <code>project</code> and
-                        <code>team</code> columns</strong> in any spreadsheet. Leave
-                    <code>user_id</code> as it is — it is how each row is matched to a person.
+                    <strong class="text-ink">Fill in <code>project</code> and <code>team</code></strong>
+                    in any spreadsheet. Keep every row, and leave <code>user_id</code> as it is — it
+                    is how each row is matched to a person.
                 </li>
                 <li>
-                    <strong class="text-ink">Upload CSV.</strong> The changes appear on this page as
-                    unsaved edits, with a summary of what was read. Check them, then Save.
+                    <strong class="text-ink">Upload CSV.</strong> The file becomes the whole team
+                    assignment, shown here as unsaved changes. Check them, then Save — or Discard.
                 </li>
             </ol>
 
@@ -805,35 +820,35 @@
                 class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 border-t
                        border-line pt-3 text-ink-3"
             >
-                <dt class="text-ink-2"><code>team</code> left empty</dt>
-                <dd class="m-0">the person becomes unassigned</dd>
-
-                <dt class="text-ink-2"><code>team</code> not found</dt>
-                <dd class="m-0">
-                    a new team with that name is created under the row's project
-                </dd>
-
                 <dt class="text-ink-2"><code>project</code></dt>
+                <dd class="m-0">a project title as shown on this page (capitals don't matter)</dd>
+
+                <dt class="text-ink-2"><code>team</code></dt>
                 <dd class="m-0">
-                    must be a project title shown on this page (capitals don't matter); needed
-                    whenever <code>team</code> is filled in
+                    any name. An existing team on that project is joined; a new name creates a
+                    team, which you can rename here before saving
                 </dd>
 
-                <dt class="text-ink-2">a row removed</dt>
-                <dd class="m-0">that person stays where they are</dd>
+                <dt class="text-ink-2">both empty</dt>
+                <dd class="m-0">the person is unassigned</dd>
 
-                <dt class="text-ink-2">renaming a team</dt>
+                <dt class="text-ink-2">only one filled</dt>
+                <dd class="m-0">an error — an assignment needs both</dd>
+
+                <dt class="text-ink-2">a row missing</dt>
                 <dd class="m-0">
-                    reads as a new team, so rename it on this page instead
+                    an error for someone on a team; for someone unassigned, perhaps new since
+                    the download, a warning — they stay unassigned
                 </dd>
 
-                <dt class="text-ink-2">deleting</dt>
-                <dd class="m-0">
-                    never happens — a team everyone left stays, empty, until you delete it here
-                </dd>
+                <dt class="text-ink-2">any error</dt>
+                <dd class="m-0">nothing is applied; fix the file and upload it again</dd>
+
+                <dt class="text-ink-2">a team left empty</dt>
+                <dd class="m-0">is removed when you save</dd>
 
                 <dt class="text-ink-2">more than {TEAM_MAX} on a team</dt>
-                <dd class="m-0">allowed by the upload, but flagged so you can fix it</dd>
+                <dd class="m-0">allowed, but flagged so you can fix it</dd>
 
                 <dt class="text-ink-2">every other column</dt>
                 <dd class="m-0">
@@ -845,7 +860,7 @@
     {/if}
 
     {#if importResult}
-        {@const bad = importResult.problems.length > 0}
+        {@const bad = importResult.refused || importResult.warnings.length > 0}
         <div
             class="flex flex-col gap-2 rounded-card border px-3 py-2 text-xs {bad
                 ? 'border-warning bg-warning/10'
@@ -886,6 +901,13 @@
                         How the file works
                     </button>
                 {/if}
+            {/if}
+            {#if importResult.warnings.length > 0}
+                <ul class="m-0 flex list-disc flex-col gap-0.5 pl-4 text-warning-ink">
+                    {#each importResult.warnings as warning (warning)}
+                        <li>{warning}</li>
+                    {/each}
+                </ul>
             {/if}
         </div>
     {/if}

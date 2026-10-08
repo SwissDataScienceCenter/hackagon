@@ -86,47 +86,47 @@ describe("assignmentCsv", () => {
 describe("applyAssignmentCsv", () => {
   const file = (...lines: string[]) =>
     ["user_id,name,project,team", ...lines].join("\r\n") + "\r\n"
+  const opts = { max: 6 }
 
-  it("is a no-op on a file that says what the workspace already says", () => {
+  // Bob as the download writes him while he has no team.
+  const BOB_FREE = "u2,Bob Smith,,"
+
+  it("changes nothing when the file is the download, unedited", () => {
     const result = applyAssignmentCsv(
-      file("u1,Alice Doe,Vision Pipeline,Team VP"),
+      file("u1,Alice Doe,Vision Pipeline,Team VP", BOB_FREE),
       world(),
-      { max: 6 },
+      opts,
     )
 
-    expect(result.moved).toBe(0)
+    expect(result.refused).toBe(false)
     expect(result.problems).toEqual([])
+    expect(result.moved).toBe(0)
     expect(result.teams).toEqual(world().teams)
   })
 
-  it("moves somebody onto a team that already exists", () => {
+  it("moves somebody onto a team that already exists, keeping its id", () => {
     const result = applyAssignmentCsv(
-      file("u2,Bob Smith,Vision Pipeline,Team VP"),
+      file(
+        "u1,Alice Doe,Vision Pipeline,Team VP",
+        "u2,Bob Smith,Vision Pipeline,Team VP",
+      ),
       world(),
-      { max: 6 },
+      opts,
     )
 
-    expect(result.teams[0]?.memberIds).toEqual(["u1", "u2"])
+    expect(result.teams).toEqual([team({ memberIds: ["u1", "u2"] })])
     expect(result.moved).toBe(1)
-    expect(result.read).toBe(1)
-  })
-
-  it("unassigns on a blank team, whatever the project says", () => {
-    const result = applyAssignmentCsv(
-      file("u1,Alice Doe,Vision Pipeline,"),
-      world(),
-      { max: 6 },
-    )
-
-    expect(result.teams[0]?.memberIds).toEqual([])
-    expect(result.moved).toBe(1)
+    expect(result.read).toBe(2)
   })
 
   it("creates a team the file names but the workspace does not hold", () => {
     const result = applyAssignmentCsv(
-      file("u2,Bob Smith,Chat Agent,Team CA"),
+      file(
+        "u1,Alice Doe,Vision Pipeline,Team VP",
+        "u2,Bob Smith,Chat Agent,Team CA",
+      ),
       world(),
-      { max: 6 },
+      opts,
     )
 
     expect(result.created).toEqual(["Team CA"])
@@ -141,59 +141,104 @@ describe("applyAssignmentCsv", () => {
 
   it("hands out a key no second import can collide with", () => {
     const once = applyAssignmentCsv(
-      file("u2,Bob Smith,Chat Agent,Team CA"),
+      file(
+        "u1,Alice Doe,Vision Pipeline,Team VP",
+        "u2,Bob Smith,Chat Agent,Team CA",
+      ),
       world(),
-      { max: 6 },
+      opts,
     )
     const twice = applyAssignmentCsv(
-      file("u1,Alice Doe,Chat Agent,Team CA 2"),
+      file(
+        "u1,Alice Doe,Chat Agent,Team CA 2",
+        "u2,Bob Smith,Chat Agent,Team CA",
+      ),
       world({ teams: once.teams }),
-      { max: 6 },
+      opts,
     )
 
-    expect(twice.teams.map((t) => t.key)).toEqual(["t1", "csv-0", "csv-1"])
+    expect(twice.teams.map((t) => t.key)).toEqual(["csv-0", "csv-1"])
   })
 
   it("matches a project and a team however they are cased", () => {
     const result = applyAssignmentCsv(
-      file("u2,Bob Smith,vision pipeline,TEAM VP"),
+      file(
+        "u1,Alice Doe,Vision Pipeline,Team VP",
+        "u2,Bob Smith,vision pipeline,TEAM VP",
+      ),
       world(),
-      { max: 6 },
+      opts,
     )
 
     expect(result.created).toEqual([])
     expect(result.teams[0]?.memberIds).toEqual(["u1", "u2"])
   })
 
-  it("leaves anybody the file does not mention exactly as they are", () => {
+  it("unassigns a row with neither project nor team", () => {
     const result = applyAssignmentCsv(
-      file("u2,Bob Smith,Chat Agent,Team CA"),
+      file("u1,Alice Doe,,", BOB_FREE),
       world(),
-      { max: 6 },
+      opts,
     )
 
-    expect(result.teams[0]?.memberIds).toEqual(["u1"])
-    expect(result.absent).toBe(1)
+    expect(result.problems).toEqual([])
+    expect(result.unassigned).toBe(1)
+    expect(result.teams).toEqual([])
   })
 
-  it("never deletes a team, even one the file empties", () => {
-    const result = applyAssignmentCsv(file("u1,Alice Doe,,"), world(), {
-      max: 6,
-    })
+  it("removes a team the file leaves with nobody, and says which", () => {
+    const result = applyAssignmentCsv(
+      file("u1,Alice Doe,Chat Agent,Team CA", BOB_FREE),
+      world(),
+      opts,
+    )
 
-    expect(result.teams).toHaveLength(1)
-    expect(result.teams[0]?.memberIds).toEqual([])
+    expect(result.teams.map((t) => t.name)).toEqual(["Team CA"])
+    expect(result.removed).toEqual(["Team VP"])
+    expect(result.unassigned).toBe(0)
+    expect(result.moved).toBe(1)
   })
 
   it("reads the columns by name, not by position", () => {
     const result = applyAssignmentCsv(
-      "team,notes,USER_ID,project\r\nTeam VP,anything,u2,Vision Pipeline\r\n",
+      "team,notes,USER_ID,project\r\n" +
+        "Team VP,anything,u1,Vision Pipeline\r\n" +
+        "Team VP,,u2,Vision Pipeline\r\n",
       world(),
-      { max: 6 },
+      opts,
     )
 
     expect(result.problems).toEqual([])
     expect(result.teams[0]?.memberIds).toEqual(["u1", "u2"])
+  })
+
+  it("warns about, but applies around, somebody unassigned with no row", () => {
+    // Bob joined after the download: nobody could have written his row.
+    const result = applyAssignmentCsv(
+      file("u1,Alice Doe,Chat Agent,Team CA"),
+      world(),
+      opts,
+    )
+
+    expect(result.refused).toBe(false)
+    expect(result.problems).toEqual([])
+    expect(result.warnings).toEqual([
+      "1 unassigned person has no row in the file, perhaps because they " +
+        "joined after it was downloaded: Bob Smith. They stay unassigned.",
+    ])
+    expect(result.teams.map((t) => [t.name, t.memberIds])).toEqual([
+      ["Team CA", ["u1"]],
+    ])
+  })
+
+  it("has nothing to warn about when everyone has a row", () => {
+    const result = applyAssignmentCsv(
+      file("u1,Alice Doe,Vision Pipeline,Team VP", BOB_FREE),
+      world(),
+      opts,
+    )
+
+    expect(result.warnings).toEqual([])
   })
 
   it("says which teams are now too big without refusing them", () => {
@@ -206,111 +251,122 @@ describe("applyAssignmentCsv", () => {
         .concat(crowd.map((p) => `${p.id},${p.name},Vision Pipeline,Team VP`))
         .join("\r\n"),
       world({ people: crowd, teams: [team()] }),
-      { max: 6 },
+      opts,
     )
 
     expect(result.oversized).toEqual(["Team VP"])
     expect(result.teams[0]?.memberIds).toHaveLength(7)
   })
 
-  describe("what it refuses", () => {
-    it("an empty file", () => {
-      const result = applyAssignmentCsv("", world(), { max: 6 })
+  describe("refuses the whole file, changing nothing, over", () => {
+    const refused = (text: string) => {
+      const result = applyAssignmentCsv(text, world(), opts)
 
-      expect(result.problems).toEqual(["That file is empty."])
+      expect(result.refused).toBe(true)
       expect(result.teams).toEqual(world().teams)
+      expect(result.created).toEqual([])
+
+      return result.problems
+    }
+
+    it("an empty file", () => {
+      expect(refused("")).toEqual(["That file is empty."])
     })
 
     it("a file with none of the columns it reads", () => {
-      const result = applyAssignmentCsv(
-        "name,email\r\nAlice,a@example.com\r\n",
-        world(),
-        { max: 6 },
+      expect(refused("name,email\r\nAlice,a@example.com\r\n")[0]).toContain(
+        "needs a user_id",
       )
-
-      expect(result.problems[0]).toContain("needs a user_id")
-      expect(result.read).toBe(0)
     })
 
-    it("a row for somebody this page cannot place, naming them", () => {
-      const result = applyAssignmentCsv(
-        file("u9,Carol Jones,Vision Pipeline,Team VP"),
-        world(),
-        { max: 6 },
-      )
-
-      expect(result.problems).toEqual([
-        "Row 2: Carol Jones is not somebody this page can place.",
+    it("somebody on a team missing from the file, naming them", () => {
+      expect(refused(file(BOB_FREE))).toEqual([
+        "1 person who is on a team has no row in the file: Alice Doe. Every " +
+          "participant needs a row; leave project and team empty to unassign " +
+          "someone.",
       ])
-      expect(result.moved).toBe(0)
     })
 
-    it("a team on a project that is not on this page", () => {
+    it("many people on a team missing, in one line", () => {
+      const crowd = Array.from({ length: 5 }, (_, i) => ({
+        id: `x${i}`,
+        name: `Person ${i}`,
+      }))
       const result = applyAssignmentCsv(
-        file("u2,Bob Smith,Weather Bot,Team WB"),
-        world(),
-        { max: 6 },
+        file("x0,Person 0,Vision Pipeline,Team VP"),
+        world({
+          people: crowd,
+          teams: [team({ memberIds: crowd.map((p) => p.id) })],
+        }),
+        opts,
       )
 
+      expect(result.refused).toBe(true)
       expect(result.problems).toEqual([
-        'Row 2: no project on this page is called "Weather Bot".',
+        "4 people who are on a team have no row in the file: Person 1, " +
+          "Person 2, Person 3 and 1 more. Every participant needs a row; " +
+          "leave project and team empty to unassign someone.",
       ])
-      expect(result.created).toEqual([])
+    })
+
+    it("a project with no team, rather than guessing it means unassign", () => {
+      expect(refused(file("u1,Alice Doe,Vision Pipeline,", BOB_FREE))).toEqual([
+        "Row 2: Alice Doe has a project but no team; an assignment needs both.",
+      ])
     })
 
     it("a team with no project to put it on", () => {
-      const result = applyAssignmentCsv(
-        file("u2,Bob Smith,,Team CA"),
-        world(),
-        { max: 6 },
-      )
-
-      expect(result.problems).toEqual([
-        'Row 2: Bob Smith is on "Team CA", but no project says which.',
+      expect(
+        refused(
+          file("u1,Alice Doe,Vision Pipeline,Team VP", "u2,Bob Smith,,Team CA"),
+        ),
+      ).toEqual([
+        'Row 3: Bob Smith is on "Team CA", but no project says which.',
       ])
     })
 
-    it("a second row for the same person, keeping the first", () => {
-      const result = applyAssignmentCsv(
-        file(
-          "u2,Bob Smith,Vision Pipeline,Team VP",
-          "u2,Bob Smith,Chat Agent,Team CA",
+    it("a team on a project that is not on this page", () => {
+      expect(
+        refused(
+          file(
+            "u1,Alice Doe,Vision Pipeline,Team VP",
+            "u2,Bob Smith,Weather Bot,Team WB",
+          ),
         ),
-        world(),
-        { max: 6 },
-      )
+      ).toEqual(['Row 3: no project on this page is called "Weather Bot".'])
+    })
 
-      expect(result.problems).toEqual([
-        "Row 3: Bob Smith appears more than once; the first won.",
-      ])
-      expect(result.teams[0]?.memberIds).toEqual(["u1", "u2"])
-      expect(result.created).toEqual([])
+    it("a row for somebody this page cannot place, naming them", () => {
+      expect(
+        refused(
+          file(
+            "u1,Alice Doe,Vision Pipeline,Team VP",
+            BOB_FREE,
+            "u9,Carol Jones,Vision Pipeline,Team VP",
+          ),
+        ),
+      ).toEqual(["Row 4: Carol Jones is not somebody this page can place."])
+    })
+
+    it("a second row for the same person", () => {
+      expect(
+        refused(
+          file(
+            "u1,Alice Doe,Vision Pipeline,Team VP",
+            BOB_FREE,
+            "u2,Bob Smith,Chat Agent,Team CA",
+          ),
+        ),
+      ).toEqual(["Row 4: Bob Smith appears more than once."])
     })
 
     it("a truncated row, rather than reading it as an unassignment", () => {
-      const result = applyAssignmentCsv(
-        "user_id,name,project,team\r\nu1,Alice Doe\r\n",
-        world(),
-        { max: 6 },
-      )
-
-      expect(result.problems).toEqual(["Row 2: too few columns to read."])
-      expect(result.teams[0]?.memberIds).toEqual(["u1"])
-    })
-
-    it("one bad row without losing the good ones around it", () => {
-      const result = applyAssignmentCsv(
-        file(
-          "u9,Carol Jones,Vision Pipeline,Team VP",
-          "u2,Bob Smith,Vision Pipeline,Team VP",
-        ),
-        world(),
-        { max: 6 },
-      )
-
-      expect(result.problems).toHaveLength(1)
-      expect(result.read).toBe(1)
-      expect(result.teams[0]?.memberIds).toEqual(["u1", "u2"])
+      expect(refused(file("u1,Alice Doe", BOB_FREE))).toEqual([
+        "Row 2: too few columns to read.",
+        "1 person who is on a team has no row in the file: Alice Doe. Every " +
+          "participant needs a row; leave project and team empty to unassign " +
+          "someone.",
+      ])
     })
   })
 })
