@@ -96,8 +96,10 @@ wipe context:
     [ "${replicas:-0}" -gt 0 ] || replicas=1
 
     restore_backend() {
-        echo "==> Scaling backend back to $replicas (it recreates the schema on startup)"
-        "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
+        echo "==> Bringing the backend back (it recreates the schema on startup)"
+        # An EXIT trap keeps the recipe's exit status unless it exits itself,
+        # so a backend that does not come back would otherwise report success.
+        just -f "{{source_file()}}" _backend-up "{{context}}" "$replicas" || exit 1
     }
     # The backend must be off while its database is replaced; bring it back
     # however this ends, including when stopping it or the wipe fails halfway.
@@ -123,8 +125,10 @@ reseed context:
 
     restore_backend() {
         # Starting fresh is also what loads the casbin rows the seed wrote.
-        echo "==> Scaling backend back to $replicas"
-        "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
+        echo "==> Bringing the backend back"
+        # An EXIT trap keeps the recipe's exit status unless it exits itself,
+        # so a backend that does not come back would otherwise report success.
+        just -f "{{source_file()}}" _backend-up "{{context}}" "$replicas" || exit 1
     }
     # However this ends: close the tunnel, delete the temp dir, and bring the
     # backend back if it was taken down.
@@ -206,6 +210,24 @@ _backend-down context:
     done
     [ -z "$(backend_pods)" ] \
         || { echo "✗ Backend pods still running after 2 minutes." >&2; exit 1; }
+
+# Scale the backend to `replicas` and wait until it is serving again, so a
+# recipe only reports success once dev is actually back.
+[private]
+_backend-up context replicas:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Guard the context, so a recipe pointed at the prod context by mistake stops before touching anything.
+    just -f "{{source_file()}}" _guard "{{context}}"
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+
+    echo "==> Scaling backend to {{replicas}}"
+    "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="{{replicas}}"
+
+    echo "==> Waiting up to 3 minutes for the backend to be ready"
+    "${kc[@]}" rollout status "deploy/{{backend_deploy}}" --timeout=180s \
+        || { echo "✗ Backend not ready; see: kubectl logs deploy/{{backend_deploy}}" >&2; exit 1; }
 
 # Drop and recreate the app database and run _backend-down first,
 # so the backend does not try to connect to it while it is being replaced.
