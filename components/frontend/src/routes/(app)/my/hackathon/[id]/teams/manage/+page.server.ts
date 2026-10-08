@@ -204,6 +204,11 @@ export const actions: Actions = {
     if (!Array.isArray(plan) || !plan.every(isPlannedTeam)) {
       return fail(400, { message: "Could not read the changes" })
     }
+    // A team with nobody in it is not part of the assignment: dropped here, so
+    // a new one is never created and a saved one is deleted below like any
+    // team the plan leaves out. Before the name check, so an empty team the
+    // organizer never named properly cannot block the save.
+    plan = plan.filter((t) => t.memberIds.length > 0)
     if (plan.some((t) => t.name.trim().length < 3)) {
       return fail(400, {
         message: "Every team needs a name of at least 3 characters",

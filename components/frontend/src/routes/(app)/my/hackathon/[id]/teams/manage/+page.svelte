@@ -365,11 +365,14 @@
     const changes = $derived.by(() => {
         const base = fromServer(data.projectRows);
         const nameBefore = new Map(base.map((t) => [t.key, t.name]));
-        const alive = new Set(teams.map((t) => t.key));
+        // Save drops a team with nobody in it, so an empty one counts as
+        // deleted, or as not added — the summary says what Save will do.
+        const kept = teams.filter((t) => t.memberIds.length > 0);
+        const alive = new Set(kept.map((t) => t.key));
 
-        const added = teams.filter((t) => t.id === null).length;
+        const added = kept.filter((t) => t.id === null).length;
         const removed = base.filter((t) => !alive.has(t.key)).length;
-        const renamed = teams.filter(
+        const renamed = kept.filter(
             (t) => t.id !== null && nameBefore.get(t.key) !== t.name
         ).length;
 
@@ -1194,7 +1197,9 @@
                                         <div class="flex min-h-16 flex-1 flex-col gap-1 p-2">
                                             {#if t.memberIds.length === 0}
                                                 <p class="m-0 text-xs text-ink-3">
-                                                    {locked ? 'Nobody on this team.' : 'Drop a participant here.'}
+                                                    {locked
+                                                        ? 'Nobody on this team.'
+                                                        : 'Drop a participant here — an empty team is removed on save.'}
                                                 </p>
                                             {:else}
                                                 {#each t.memberIds as id (id)}
