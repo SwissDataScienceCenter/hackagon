@@ -27,6 +27,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   "Project preferences" box to bring the unassigned people who picked it to the
   top. Its "Show on cards" checkbox hides or shows the "Prefers …" line under
   each name.
+- Manage Teams lets you give each registration question a short name for the
+  cards — "size: S" instead of "B: S" — and give a yes/no question its own words
+  for Yes and No, so a card says "remote" or "on site". Names are kept in your
+  browser.
 
 ### Changed
 

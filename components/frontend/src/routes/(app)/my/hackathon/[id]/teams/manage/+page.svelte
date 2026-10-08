@@ -16,6 +16,15 @@
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { initialsOf } from '$lib/utils/teamDistribution';
     import {
+        LABEL_MAX,
+        answerText,
+        optionText,
+        restoreLabels,
+        setLabels,
+        shortName,
+        type AnswerLabels
+    } from '$lib/utils/teamAnswerLabels';
+    import {
         NO_FILTERS,
         countAnswers,
         countPreferences,
@@ -135,7 +144,7 @@
             if (!answer) continue;
             const entry = {
                 key: q.id,
-                text: `${q.letter}: ${answer.label}`,
+                text: answerText(q, answer.label, labels),
                 title: `${q.label}: ${answer.label}`
             };
             (q.kind === 'text' ? texts : tags).push(entry);
@@ -145,6 +154,49 @@
     }
 
     const KIND_NOTE: Partial<Record<string, string>> = { bool: 'yes / no', text: 'free text' };
+
+    // What the organizer has named each question — `size` for B, `remote` and
+    // `on site` for a tick-box's Yes and No. Kept in the browser like the
+    // ticks; see `teamAnswerLabels`.
+    let labels: AnswerLabels = $state({});
+
+    const labelsKey = $derived(`hackagon:team-answer-labels:${hackathonId}`);
+
+    // Restored the way `shownIds` is, and for the same reason it only reads.
+    $effect(() => {
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(labelsKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. Letters it is.
+        }
+        labels = restoreLabels(stored, answerQuestions);
+    });
+
+    // One question's names are editable at a time, like a team's name.
+    let namingId: string | null = $state(null);
+    let draft = $state({ short: '', yes: '', no: '' });
+
+    function startNaming(q: (typeof answerQuestions)[number]) {
+        const named = labels[q.id];
+        namingId = q.id;
+        draft = { short: named?.short ?? '', yes: named?.yes ?? '', no: named?.no ?? '' };
+    }
+
+    function commitNaming(q: (typeof answerQuestions)[number]) {
+        labels = setLabels(labels, q, draft);
+        namingId = null;
+        try {
+            localStorage.setItem(labelsKey, JSON.stringify(labels));
+        } catch {
+            // Private browsing, or a full quota. The names still hold for this visit.
+        }
+    }
+
+    function namingKeys(e: KeyboardEvent, q: (typeof answerQuestions)[number]) {
+        if (e.key === 'Enter') commitNaming(q);
+        if (e.key === 'Escape') namingId = null;
+    }
 
     // Which answers bring people to the top of the Unassigned column. The rules
     // live in `teamPoolFilter`; this keeps them, stores them and draws them.
@@ -193,7 +245,7 @@
         ...answerQuestions.flatMap((q) => [
             ...(filters.answers[q.id] ?? []).map((label) => ({
                 key: `${q.id}:${label}`,
-                text: `${q.letter}: ${label}`,
+                text: answerText(q, label, labels),
                 title: `${q.label}: ${label}`,
                 remove: () => setFilters(toggleAnswer(filters, q.id, label))
             })),
@@ -201,7 +253,7 @@
                 ? [
                       {
                           key: `${q.id}:text`,
-                          text: `${q.letter}: "${filters.texts[q.id]?.trim()}"`,
+                          text: `${shortName(q, labels)}: "${filters.texts[q.id]?.trim()}"`,
                           title: `${q.label} contains "${filters.texts[q.id]?.trim()}"`,
                           remove: () => setFilters(setText(filters, q.id, ''))
                       }
@@ -838,16 +890,91 @@
         </div>
     {/if}
 
-    <!-- Every question with its codes, always — the key to a badge belongs
-         beside the badge, whether or not that question is shown on cards yet. -->
+    <!-- Every question with the name its answers carry on a card — its letter,
+         or the short name given here — whether or not it is shown on cards yet. -->
     {#if answerQuestions.length > 0}
         <section class="card card-raised flex flex-col gap-3 p-3">
             <h3 class="m-0 meta">Registration questions</h3>
             <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
                 {#each answerQuestions as q (q.id)}
                     <li class="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 last:pb-0">
-                        <span class="flex min-w-0 items-baseline gap-2">
-                            <span class="text-xs font-semibold text-ink">{q.letter}</span>
+                        {#if namingId === q.id}
+                            <span class="flex flex-wrap items-center gap-2">
+                                <!-- A tick-box gets words for its two answers and
+                                     nothing else; see `QuestionLabels.short`. -->
+                                {#if q.kind === 'bool'}
+                                    <label class="flex items-center gap-1.5 text-xs text-ink-3">
+                                        Yes shows as
+                                        <!-- svelte-ignore a11y_autofocus -->
+                                        <input
+                                            type="text"
+                                            class="field h-7 w-24 px-2 text-xs"
+                                            placeholder="Yes"
+                                            maxlength={LABEL_MAX}
+                                            autofocus
+                                            bind:value={draft.yes}
+                                            onkeydown={(e) => namingKeys(e, q)}
+                                        />
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs text-ink-3">
+                                        No shows as
+                                        <input
+                                            type="text"
+                                            class="field h-7 w-24 px-2 text-xs"
+                                            placeholder="No"
+                                            maxlength={LABEL_MAX}
+                                            bind:value={draft.no}
+                                            onkeydown={(e) => namingKeys(e, q)}
+                                        />
+                                    </label>
+                                {:else}
+                                    <!-- svelte-ignore a11y_autofocus -->
+                                    <input
+                                        type="text"
+                                        class="field h-7 w-28 px-2 text-xs"
+                                        placeholder={q.letter}
+                                        maxlength={LABEL_MAX}
+                                        aria-label={`Short name for ${q.label}`}
+                                        autofocus
+                                        bind:value={draft.short}
+                                        onkeydown={(e) => namingKeys(e, q)}
+                                    />
+                                {/if}
+                                <button
+                                    type="button"
+                                    class="shrink-0 text-ink-3 hover:text-success-ink"
+                                    aria-label="Save names"
+                                    title="Save names"
+                                    onclick={() => commitNaming(q)}
+                                >
+                                    <Check class="size-3" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="shrink-0 text-ink-3 hover:text-danger-ink"
+                                    aria-label="Cancel"
+                                    title="Cancel"
+                                    onclick={() => (namingId = null)}
+                                >
+                                    <X class="size-3" />
+                                </button>
+                            </span>
+                        {/if}
+                        <span class="flex min-w-0 items-center gap-2">
+                            {#if namingId !== q.id}
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline shrink-0 font-semibold hover:bg-overlay"
+                                    aria-label={`Name ${q.label} on cards`}
+                                    title={q.kind === 'bool'
+                                        ? 'Name this question, and its Yes and No, for the cards'
+                                        : 'Name this question for the cards'}
+                                    onclick={() => startNaming(q)}
+                                >
+                                    {shortName(q, labels)}
+                                    <Pencil class="size-3" />
+                                </button>
+                            {/if}
                             <span class="text-xs text-ink">{q.label}</span>
                             {#if KIND_NOTE[q.kind]}
                                 <span class="meta shrink-0">{KIND_NOTE[q.kind]}</span>
@@ -887,7 +1014,7 @@
                                             : 'Bring unassigned people who gave this answer to the top'}
                                         onclick={() => setFilters(toggleAnswer(filters, q.id, o.label))}
                                     >
-                                        {o.label}
+                                        {optionText(q, o.label, labels)}
                                         <span class="tnum text-ink-3">
                                             {poolCounts[q.id]?.[o.label] ?? 0}
                                         </span>
