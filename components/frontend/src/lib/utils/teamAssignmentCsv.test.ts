@@ -15,9 +15,10 @@ const QUESTIONS = [
 const row = (over: Partial<AssignmentRow> = {}): AssignmentRow => ({
   userId: "u1",
   name: "Alice Doe",
-  project: "Vision Pipeline",
+  project: "1",
+  projectTitle: "Vision Pipeline",
   team: "Team VP",
-  prefers: ["Vision Pipeline"],
+  prefers: ["1"],
   answers: { experience: "Many", tshirt: "M" },
   ...over,
 })
@@ -37,8 +38,8 @@ const world = (over: Partial<ImportWorld> = {}): ImportWorld => ({
     { id: "u2", name: "Bob Smith" },
   ],
   projects: [
-    { id: "p1", title: "Vision Pipeline" },
-    { id: "p2", title: "Chat Agent" },
+    { id: "p1", title: "Vision Pipeline", number: 1 },
+    { id: "p2", title: "Chat Agent", number: 2 },
   ],
   teams: [team({ memberIds: ["u1"] })],
   ...over,
@@ -49,21 +50,19 @@ describe("assignmentCsv", () => {
     const [header] = assignmentCsv([], QUESTIONS).split("\r\n")
 
     expect(header).toBe(
-      "user_id,name,project,team,prefers,How much have you hacked before?,T-shirt size",
+      "user_id,name,project,project_title,team,prefers,How much have you hacked before?,T-shirt size",
     )
   })
 
   it("writes a person's row, preferences joined and answers in column order", () => {
     const [, first] = assignmentCsv(
-      [row({ prefers: ["Vision Pipeline", "Chat Agent"] })],
+      [row({ prefers: ["1", "2"] })],
       QUESTIONS,
     ).split("\r\n")
 
     // Unquoted: a semicolon is an ordinary character in a comma-separated
     // file, and the header is what a reader sniffs the delimiter from.
-    expect(first).toBe(
-      "u1,Alice Doe,Vision Pipeline,Team VP,Vision Pipeline; Chat Agent,Many,M",
-    )
+    expect(first).toBe("u1,Alice Doe,1,Vision Pipeline,Team VP,1; 2,Many,M")
   })
 
   it("leaves an unanswered question's cell empty", () => {
@@ -75,11 +74,12 @@ describe("assignmentCsv", () => {
   })
 
   it("writes an unassigned person with no project and no team", () => {
-    const [, first] = assignmentCsv([row({ project: "", team: "" })], []).split(
-      "\r\n",
-    )
+    const [, first] = assignmentCsv(
+      [row({ project: "", projectTitle: "", team: "" })],
+      [],
+    ).split("\r\n")
 
-    expect(first).toBe("u1,Alice Doe,,,Vision Pipeline")
+    expect(first).toBe("u1,Alice Doe,,,,1")
   })
 })
 
@@ -93,6 +93,33 @@ describe("applyAssignmentCsv", () => {
 
   const shape = (teams: PlannedTeam[]) =>
     teams.map((t) => [t.projectId, t.name, t.memberIds])
+
+  it("reads the project as the number the page shows", () => {
+    const result = applyAssignmentCsv(
+      "user_id,name,project,project_title,team\r\n" +
+        "u1,Alice Doe,2,Chat Agent,Team CA\r\n" +
+        "u2,Bob Smith,02,,Team CA\r\n",
+      world(),
+      opts,
+    )
+
+    expect(result.warnings).toEqual([])
+    expect(shape(result.teams)).toEqual([["p2", "Team CA", ["u1", "u2"]]])
+  })
+
+  it("takes any team name, even a single character", () => {
+    const result = applyAssignmentCsv(
+      file("u1,Alice Doe,1,A", "u2,Bob Smith,1,7"),
+      world(),
+      opts,
+    )
+
+    expect(result.warnings).toEqual([])
+    expect(shape(result.teams)).toEqual([
+      ["p1", "A", ["u1"]],
+      ["p1", "7", ["u2"]],
+    ])
+  })
 
   it("rebuilds the download, unedited, without a warning", () => {
     const result = applyAssignmentCsv(
@@ -223,10 +250,28 @@ describe("applyAssignmentCsv", () => {
       ])
     })
 
-    it("a team name too short to save", () => {
-      expect(warned("u1,Alice Doe,Vision Pipeline,A", BOB_FREE)).toEqual([
-        'Row 2: team "A" needs at least 3 characters, so Alice Doe is left unassigned.',
+    it("a project number that is not on this page", () => {
+      expect(warned("u1,Alice Doe,7,Team X", BOB_FREE)).toEqual([
+        "Row 2: no project on this page has number 7, so Alice Doe is left unassigned.",
       ])
+    })
+
+    it("a number whose project_title no longer matches it", () => {
+      // Downloaded when project 1 was still "Old Name": the numbering has
+      // moved since, so the number cannot be trusted.
+      const result = applyAssignmentCsv(
+        "user_id,name,project,project_title,team\r\n" +
+          "u1,Alice Doe,1,Old Name,Team VP\r\n" +
+          "u2,Bob Smith,,,\r\n",
+        world(),
+        opts,
+      )
+
+      expect(result.warnings).toEqual([
+        'Row 2: project 1 is now "Vision Pipeline", not "Old Name" — the file ' +
+          "may be out of date, so Alice Doe is left unassigned.",
+      ])
+      expect(result.teams).toEqual([])
     })
 
     it("a second row for the same person, using neither", () => {

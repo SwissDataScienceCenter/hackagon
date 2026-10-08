@@ -1,9 +1,9 @@
 import type { RequestHandler } from "./$types"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
-import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { viewerMembership } from "$lib/server/hackathon/membership"
+import { numberedProjects } from "$lib/server/hackathon/projectNumbers"
 import { listAnswers } from "$lib/server/hackathon/questions"
 import {
   answersByParticipant,
@@ -77,20 +77,21 @@ export const GET: RequestHandler = async (event) => {
     listAnswers(hackathon, event.params.id),
   ])
 
-  const titleById = new Map(projects.map((p) => [p.id, p.title]))
-  const approved = new Set(
-    projects
-      .filter((p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED)
-      .map((p) => p.id),
-  )
+  // The page's own numbering, from the same helper, so a number in this file
+  // names the project the page shows under it.
+  const numbered = numberedProjects(projects)
+  const byId = new Map(numbered.map((p) => [p.id, p]))
 
-  // Every preference, including ones naming a project that is not on offer. A
-  // title in this column is context for a decision, not a value to copy across
-  // — and the import names the project it cannot find, so a misuse is loud.
+  // As the page's "Prefers 3, 7": numbers, in project order, and only for
+  // projects that have one — a preference for a project not on offer has no
+  // row to be placed on, here as there.
   const prefersByUser = new Map<string, string[]>()
-  for (const p of projects) {
+  for (const p of numbered) {
     for (const u of p.preferences) {
-      prefersByUser.set(u.id, [...(prefersByUser.get(u.id) ?? []), p.title])
+      prefersByUser.set(u.id, [
+        ...(prefersByUser.get(u.id) ?? []),
+        String(p.number),
+      ])
     }
   }
 
@@ -118,37 +119,39 @@ export const GET: RequestHandler = async (event) => {
   const person = (
     id: string,
     name: string,
-    projectTitle: string,
+    project: { number: number; title: string } | undefined,
     teamName: string,
   ): AssignmentRow => ({
     userId: id,
     name,
-    project: projectTitle,
+    project: project ? String(project.number) : "",
+    projectTitle: project?.title ?? "",
     team: teamName,
     prefers: prefersByUser.get(id) ?? [],
     answers: answersFor(id),
   })
 
-  // Grouped the way the screen is — by project, then by team — because the file
-  // is for reading a team as a block and moving somebody out of it, not for
-  // looking one person up. Unassigned last, which is where the pool sits.
+  // Grouped the way the screen is — by project number, then by team — because
+  // the file is for reading a team as a block and moving somebody out of it,
+  // not for looking one person up. Unassigned last, which is where the pool
+  // sits.
   const rows: AssignmentRow[] = []
   const placed = teams
-    .filter((t) => approved.has(t.projectId))
-    .map((t) => ({ ...t, projectTitle: titleById.get(t.projectId) ?? "" }))
+    .map((t) => ({ ...t, project: byId.get(t.projectId) }))
+    .filter(
+      (t): t is typeof t & { project: NonNullable<typeof t.project> } =>
+        t.project !== undefined,
+    )
     .sort(
       (a, b) =>
-        a.projectTitle.localeCompare(b.projectTitle) ||
-        a.name.localeCompare(b.name),
+        a.project.number - b.project.number || a.name.localeCompare(b.name),
     )
   for (const t of placed) {
     const members = [...t.members].sort((a, b) =>
       (a.displayName || a.username).localeCompare(b.displayName || b.username),
     )
     for (const m of members) {
-      rows.push(
-        person(m.id, m.displayName || m.username, t.projectTitle, t.name),
-      )
+      rows.push(person(m.id, m.displayName || m.username, t.project, t.name))
     }
   }
 
@@ -162,7 +165,7 @@ export const GET: RequestHandler = async (event) => {
       name: m.user!.displayName || m.user!.username,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
-  for (const p of pool) rows.push(person(p.id, p.name, "", ""))
+  for (const p of pool) rows.push(person(p.id, p.name, undefined, ""))
 
   return new Response(
     assignmentCsv(

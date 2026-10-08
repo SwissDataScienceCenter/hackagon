@@ -401,7 +401,7 @@
 
     function commitEdit(key: string) {
         const name = editName.trim();
-        if (name.length < 3) return;
+        if (name === '') return;
         const team = teams.find((t) => t.key === key);
         if (team) team.name = name;
         editingKey = null;
@@ -519,7 +519,11 @@
             await file.text(),
             {
                 people: [...peopleById.values()],
-                projects: projectRows.map((p) => ({ id: p.id, title: p.title })),
+                projects: projectRows.map((p) => ({
+                    id: p.id,
+                    title: p.title,
+                    number: p.number
+                })),
                 teams
             },
             { max: TEAM_MAX }
@@ -838,10 +842,15 @@
 
             <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-ink-3">
                 <dt class="text-ink-2"><code>project</code></dt>
-                <dd class="m-0">the project title as shown here or in the prefers column</dd>
+                <dd class="m-0">the project number as shown here and in the prefers column</dd>
 
                 <dt class="text-ink-2"><code>team</code></dt>
-                <dd class="m-0">any name of at least 3 characters; can be renamed after upload</dd>
+                <dd class="m-0">any name, even a single character; can be renamed after upload</dd>
+
+                <dt class="text-ink-2"><code>project_title</code></dt>
+                <dd class="m-0">
+                    for reading; if it no longer matches the number, that row gets a warning
+                </dd>
 
                 <dt class="text-ink-2">both empty</dt>
                 <dd class="m-0">the person ends up unassigned</dd>
@@ -1138,7 +1147,7 @@
                                                 <input
                                                     type="text"
                                                     required
-                                                    minlength="3"
+                                                    minlength="1"
                                                     maxlength="255"
                                                     autofocus
                                                     bind:value={editName}

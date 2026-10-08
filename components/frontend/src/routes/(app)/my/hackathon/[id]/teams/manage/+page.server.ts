@@ -3,6 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
+import { numberedProjects } from "$lib/server/hackathon/projectNumbers"
 import { listAnswers } from "$lib/server/hackathon/questions"
 import { assignmentLockReasons } from "$lib/server/hackathon/teamAssignmentLock"
 import {
@@ -67,10 +68,11 @@ export const load: PageServerLoad = async (event) => {
   // deleting it, which is the part that actually mattered. Nothing here can
   // create one — TODO(backend: team-create-requires-approved-project) is what
   // stops the API from doing so.
-  const rowProjects = preferences.filter(
-    (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
-  )
-  const numberByProjectId = new Map(rowProjects.map((p, i) => [p.id, i + 1]))
+  //
+  // Numbered by `numberedProjects`, which the spreadsheet download shares: the
+  // file carries these numbers and an upload reads them back.
+  const rowProjects = numberedProjects(preferences)
+  const numberByProjectId = new Map(rowProjects.map((p) => [p.id, p.number]))
 
   // What people said about themselves on the way in, as codes short enough to
   // sit beside a name — and free text whole. See `answerLegend`.
@@ -147,9 +149,9 @@ export const load: PageServerLoad = async (event) => {
     teamsByProject.set(t.projectId, list)
   }
 
-  const projectRows = rowProjects.map((p, i) => ({
+  const projectRows = rowProjects.map((p) => ({
     id: p.id,
-    number: i + 1,
+    number: p.number,
     title: p.title,
     interested: p.preferences.length,
     teams: teamsByProject.get(p.id) ?? [],
@@ -209,10 +211,9 @@ export const actions: Actions = {
     // team the plan leaves out. Before the name check, so an empty team the
     // organizer never named properly cannot block the save.
     plan = plan.filter((t) => t.memberIds.length > 0)
-    if (plan.some((t) => t.name.trim().length < 3)) {
-      return fail(400, {
-        message: "Every team needs a name of at least 3 characters",
-      })
+    // Any name will do, even "1" — the backend asks only that it is not empty.
+    if (plan.some((t) => t.name.trim() === "")) {
+      return fail(400, { message: "Every team needs a name" })
     }
 
     try {
