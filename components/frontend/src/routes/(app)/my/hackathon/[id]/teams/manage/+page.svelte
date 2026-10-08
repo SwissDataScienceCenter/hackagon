@@ -487,13 +487,9 @@
     }
 
     /**
-     * Read an edited assignment back in, as the whole assignment.
-     *
-     * It lands on the workspace like any other edit — nothing is written until
-     * Save, so the change summary and Discard both still apply to it. The file
-     * replaces the workspace **as it stands**, unsaved changes included, which
-     * is what the first confirmation is about; the second is for the one thing
-     * an upload does that is easy to miss: taking people off their teams.
+     * Read an edited assignment back in. The file replaces every team — see
+     * `applyAssignmentCsv` — and lands on the workspace like any other edit:
+     * nothing is written until Save, and Discard undoes it.
      */
     async function importFile(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
@@ -502,10 +498,7 @@
         input.value = '';
         if (file === undefined || pending) return;
 
-        if (
-            changes.total > 0 &&
-            !confirm('Replace your unsaved changes with this file?')
-        ) {
+        if (teams.length > 0 && !confirm('Uploading replaces all current teams. Continue?')) {
             return;
         }
 
@@ -519,21 +512,6 @@
             { max: TEAM_MAX }
         );
 
-        if (!result.refused && (result.unassigned > 0 || result.removed.length > 0)) {
-            const parts: string[] = [];
-            if (result.unassigned > 0) {
-                parts.push(
-                    `unassigns ${result.unassigned} ${result.unassigned === 1 ? 'person who is' : 'people who are'} on a team now`
-                );
-            }
-            if (result.removed.length > 0) {
-                parts.push(
-                    `removes ${result.removed.length} ${result.removed.length === 1 ? 'team' : 'teams'}`
-                );
-            }
-            if (!confirm(`This file ${parts.join(' and ')}. Apply it?`)) return;
-        }
-
         importResult = result;
         if (!result.refused) {
             teams = result.teams;
@@ -545,26 +523,15 @@
     const importSummary = $derived.by(() => {
         const r = importResult;
         if (r === null) return [];
-        if (r.refused) return ['Nothing was applied. Fix the file and upload it again.'];
+        if (r.refused) return ['Nothing was applied.'];
 
-        const lines: string[] = [];
-        const did: string[] = [];
-        if (r.moved > 0) did.push(`${r.moved} ${r.moved === 1 ? 'move' : 'moves'}`);
-        if (r.created.length > 0) did.push(`${r.created.length} new`);
-        lines.push(
-            `Read ${r.read} ${r.read === 1 ? 'assignment' : 'assignments'}` +
-                (did.length > 0 ? `: ${did.join(', ')}.` : ', changing nothing.')
-        );
-        if (r.unassigned > 0) {
-            lines.push(
-                `${r.unassigned} ${r.unassigned === 1 ? 'person is' : 'people are'} now unassigned.`
-            );
-        }
-        if (r.removed.length > 0) {
-            lines.push(`Removed, now empty: ${r.removed.join(', ')}.`);
-        }
+        const lines = [
+            `${r.teams.length} ${r.teams.length === 1 ? 'team' : 'teams'} with ` +
+                `${r.assigned} ${r.assigned === 1 ? 'person' : 'people'}; ` +
+                `${r.unassigned} unassigned.`
+        ];
         if (r.oversized.length > 0) {
-            lines.push(`Now over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
+            lines.push(`Over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
         }
 
         return lines;
@@ -803,12 +770,13 @@
             <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
                 <li>
                     <strong class="text-ink">Download CSV.</strong> One row per participant, with
-                    their current project and team filled in.
+                    their current project and team filled in, or empty if they have no team yet.
                 </li>
                 <li>
-                    <strong class="text-ink">Fill in <code>project</code> and <code>team</code></strong>
-                    in any spreadsheet. Keep every row, and leave <code>user_id</code> as it is — it
-                    is how each row is matched to a person.
+                    <strong class="text-ink">Correct the <code>project</code> and <code>team</code>
+                        columns.</strong>
+                    Keep every row, and leave <code>user_id</code> as it is — it is how each row is
+                    matched to a person. Other columns don't matter and are ignored on upload.
                 </li>
                 <li>
                     <strong class="text-ink">Upload CSV.</strong> The file becomes the whole team
@@ -821,40 +789,28 @@
                        border-line pt-3 text-ink-3"
             >
                 <dt class="text-ink-2"><code>project</code></dt>
-                <dd class="m-0">a project title as shown on this page (capitals don't matter)</dd>
+                <dd class="m-0">the project title as shown on this page or in the prefers column</dd>
 
                 <dt class="text-ink-2"><code>team</code></dt>
                 <dd class="m-0">
-                    any name. An existing team on that project is joined; a new name creates a
-                    team, which you can rename here before saving
+                    any name of at least 3 characters: it only tells teams apart and can be
+                    changed after upload
                 </dd>
+
+                <dt class="text-ink-2">valid assignment</dt>
+                <dd class="m-0">both columns filled, and the project exists</dd>
 
                 <dt class="text-ink-2">both empty</dt>
-                <dd class="m-0">the person is unassigned</dd>
+                <dd class="m-0">the person ends up unassigned</dd>
 
-                <dt class="text-ink-2">only one filled</dt>
-                <dd class="m-0">an error — an assignment needs both</dd>
+                <dt class="text-ink-2">incomplete assignment</dt>
+                <dd class="m-0">a warning, and the person ends up unassigned</dd>
 
                 <dt class="text-ink-2">a row missing</dt>
-                <dd class="m-0">
-                    an error for someone on a team; for someone unassigned, perhaps new since
-                    the download, a warning — they stay unassigned
-                </dd>
+                <dd class="m-0">a warning, and the person ends up unassigned</dd>
 
-                <dt class="text-ink-2">any error</dt>
-                <dd class="m-0">nothing is applied; fix the file and upload it again</dd>
-
-                <dt class="text-ink-2">a team left empty</dt>
-                <dd class="m-0">is removed when you save</dd>
-
-                <dt class="text-ink-2">more than {TEAM_MAX} on a team</dt>
-                <dd class="m-0">allowed, but flagged so you can fix it</dd>
-
-                <dt class="text-ink-2">every other column</dt>
-                <dd class="m-0">
-                    is there to read and is ignored on upload — reorder, add or delete columns
-                    freely
-                </dd>
+                <dt class="text-ink-2">on save</dt>
+                <dd class="m-0">the complete assignment is applied</dd>
             </dl>
         </section>
     {/if}
@@ -903,10 +859,15 @@
                 {/if}
             {/if}
             {#if importResult.warnings.length > 0}
+                <!-- Capped like the problems above: the first few say what kind
+                     of mistake the file has, and the rest repeat it. -->
                 <ul class="m-0 flex list-disc flex-col gap-0.5 pl-4 text-warning-ink">
-                    {#each importResult.warnings as warning (warning)}
+                    {#each importResult.warnings.slice(0, 5) as warning (warning)}
                         <li>{warning}</li>
                     {/each}
+                    {#if importResult.warnings.length > 5}
+                        <li>and {importResult.warnings.length - 5} more.</li>
+                    {/if}
                 </ul>
             {/if}
         </div>

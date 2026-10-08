@@ -39,11 +39,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   column and uploading it again.
 - Manage Teams explains the spreadsheet upload: "How the file works", next to
   Download and Upload, lists the steps and what each kind of edit does.
-- Uploading the team assignment spreadsheet now replaces the whole assignment: a
-  row needs both a project and a team to put someone on a team, a row with
-  neither unassigns them, and a team left empty is removed. Any mistake in the
-  file — including a row with only one of the two, or a missing row for someone
-  on a team — cancels the upload, so a file is applied completely or not at all.
+- Uploading the team assignment spreadsheet now replaces all teams with the ones
+  in the file. A row needs both a project and a team to put someone on a team;
+  anyone else ends up unassigned, with a warning for a row that has a mistake in
+  it or is missing from the file.
 - Manage Teams lists every registration question, not only the multiple-choice
   ones, and "Show on cards" puts the question's letter and the answer itself
   under each name — "A: XL" — instead of a code like "A5". A yes/no question has
