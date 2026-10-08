@@ -8,6 +8,7 @@ import {
   restoreFilters,
   setText,
   toggleAnswer,
+  toggleProject,
   type FilterQuestion,
   type PoolFilters,
 } from "./teamPoolFilter"
@@ -22,11 +23,18 @@ const QUESTIONS: FilterQuestion[] = [
   { id: "skills", kind: "text", options: [] },
 ]
 
-const person = (id: string, codes: Record<string, string> = {}) => ({
+const PROJECTS = ["p1", "p2"]
+
+const person = (
+  id: string,
+  codes: Record<string, string> = {},
+  preferredProjectIds: string[] = [],
+) => ({
   id,
   codes: Object.fromEntries(
     Object.entries(codes).map(([q, label]) => [q, { label }]),
   ),
+  preferredProjectIds,
 })
 
 const filters = (over: Partial<PoolFilters> = {}): PoolFilters => ({
@@ -60,6 +68,23 @@ describe("matches", () => {
     const f = filters({ answers: { exp: ["Many"] } })
 
     expect(matches(person("a"), f)).toBe(false)
+  })
+
+  it("widens within the picked projects", () => {
+    const f = filters({ projects: ["p1", "p2"] })
+
+    expect(matches(person("a", {}, ["p1"]), f)).toBe(true)
+    expect(matches(person("b", {}, ["p2", "p3"]), f)).toBe(true)
+    expect(matches(person("c", {}, ["p3"]), f)).toBe(false)
+    expect(matches(person("d"), f)).toBe(false)
+  })
+
+  it("narrows projects against answers", () => {
+    const f = filters({ projects: ["p1"], answers: { exp: ["Many"] } })
+
+    expect(matches(person("a", { exp: "Many" }, ["p1"]), f)).toBe(true)
+    expect(matches(person("b", { exp: "A few" }, ["p1"]), f)).toBe(false)
+    expect(matches(person("c", { exp: "Many" }, ["p2"]), f)).toBe(false)
   })
 
   it("matches free text ignoring case and the spaces around it", () => {
@@ -121,20 +146,23 @@ describe("restoreFilters", () => {
     const stored = {
       answers: { exp: ["Many"], remote: ["Yes"] },
       texts: { skills: "py" },
+      projects: ["p1"],
     }
 
-    expect(restoreFilters(stored, QUESTIONS)).toEqual(stored)
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(stored)
   })
 
-  it("drops questions and answers that no longer exist", () => {
+  it("drops questions, answers and projects that no longer exist", () => {
     const stored = {
       answers: { exp: ["Many", "Wizard"], gone: ["x"], remote: ["Maybe"] },
       texts: { skills: "   ", alsoGone: "py" },
+      projects: ["p2", "unapproved", 7],
     }
 
-    expect(restoreFilters(stored, QUESTIONS)).toEqual({
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual({
       answers: { exp: ["Many"] },
       texts: {},
+      projects: ["p2"],
     })
   })
 
@@ -144,15 +172,36 @@ describe("restoreFilters", () => {
       texts: { exp: "Many" },
     }
 
-    expect(restoreFilters(stored, QUESTIONS)).toEqual(NO_FILTERS)
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(NO_FILTERS)
   })
 
-  it.each([null, "nonsense", 42, [], { answers: "x", texts: [] }])(
-    "reads %j as no filter",
-    (stored) => {
-      expect(restoreFilters(stored, QUESTIONS)).toEqual(NO_FILTERS)
-    },
-  )
+  it("reads filters saved before projects could be picked", () => {
+    const stored = { answers: { exp: ["Many"] }, texts: {} }
+
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(
+      filters({ answers: { exp: ["Many"] } }),
+    )
+  })
+
+  it.each([
+    null,
+    "nonsense",
+    42,
+    [],
+    { answers: "x", texts: [], projects: "p1" },
+  ])("reads %j as no filter", (stored) => {
+    expect(restoreFilters(stored, QUESTIONS, PROJECTS)).toEqual(NO_FILTERS)
+  })
+})
+
+describe("toggleProject", () => {
+  it("picks, then unpicks", () => {
+    const once = toggleProject(NO_FILTERS, "p1")
+    expect(once.projects).toEqual(["p1"])
+    expect(isFiltering(once)).toBe(true)
+
+    expect(toggleProject(once, "p1").projects).toEqual([])
+  })
 })
 
 describe("countAnswers", () => {

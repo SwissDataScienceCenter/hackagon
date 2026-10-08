@@ -18,9 +18,15 @@ export type PoolFilters = {
   answers: Record<string, string[]>
   /** "Contains" text for free-text questions, by question id. Never blank. */
   texts: Record<string, string>
+  /**
+   * Picked projects, by id: people who prefer any of them match. Treated as
+   * one more question — "which projects do you want" — so it widens within
+   * itself and narrows against the answers.
+   */
+  projects: string[]
 }
 
-export const NO_FILTERS: PoolFilters = { answers: {}, texts: {} }
+export const NO_FILTERS: PoolFilters = { answers: {}, texts: {}, projects: [] }
 
 /** A question as far as filtering needs it. */
 export interface FilterQuestion {
@@ -29,9 +35,12 @@ export interface FilterQuestion {
   options: readonly { label: string }[]
 }
 
-/** A person as far as filtering needs it: their answers by question id. */
+/** A person as far as filtering needs it. */
 export interface FilterablePerson {
+  /** Their answers, by question id. */
   codes: Record<string, { label: string }>
+  /** The projects they said they want. */
+  preferredProjectIds: readonly string[]
 }
 
 /**
@@ -39,12 +48,13 @@ export interface FilterablePerson {
  *
  * Keyed by question id and answer text rather than by code, so a letter that
  * shifts when a question is added cannot point a saved filter at a different
- * question. Anything naming a question or an answer that no longer exists is
- * dropped, and anything that is not ours at all reads as no filter.
+ * question. Anything naming a question, an answer or a project that no longer
+ * exists is dropped, and anything that is not ours at all reads as no filter.
  */
 export function restoreFilters(
   stored: unknown,
   questions: readonly FilterQuestion[],
+  projectIds: readonly string[],
 ): PoolFilters {
   const byId = new Map(questions.map((q) => [q.id, q]))
   const record = (v: unknown): Record<string, unknown> =>
@@ -75,7 +85,31 @@ export function restoreFilters(
     }
   }
 
-  return { answers, texts }
+  const known = new Set(projectIds)
+  const projects = Array.isArray(s.projects)
+    ? [
+        ...new Set(
+          s.projects.filter(
+            (id): id is string => typeof id === "string" && known.has(id),
+          ),
+        ),
+      ]
+    : []
+
+  return { answers, texts, projects }
+}
+
+/** Picks a project if it is not picked, and unpicks it if it is. */
+export function toggleProject(
+  filters: PoolFilters,
+  projectId: string,
+): PoolFilters {
+  return {
+    ...filters,
+    projects: filters.projects.includes(projectId)
+      ? filters.projects.filter((id) => id !== projectId)
+      : [...filters.projects, projectId],
+  }
 }
 
 /** Picks an answer if it is not picked, and unpicks it if it is. */
@@ -109,7 +143,8 @@ export function setText(
 export function isFiltering(filters: PoolFilters): boolean {
   return (
     Object.keys(filters.answers).length > 0 ||
-    Object.keys(filters.texts).length > 0
+    Object.keys(filters.texts).length > 0 ||
+    filters.projects.length > 0
   )
 }
 
@@ -121,6 +156,12 @@ export function matches(
   person: FilterablePerson,
   filters: PoolFilters,
 ): boolean {
+  if (
+    filters.projects.length > 0 &&
+    !filters.projects.some((id) => person.preferredProjectIds.includes(id))
+  ) {
+    return false
+  }
   for (const [id, labels] of Object.entries(filters.answers)) {
     const answer = person.codes[id]
     if (!answer || !labels.includes(answer.label)) return false

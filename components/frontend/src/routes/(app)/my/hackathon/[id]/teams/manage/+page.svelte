@@ -23,6 +23,7 @@
         restoreFilters,
         setText,
         toggleAnswer,
+        toggleProject,
         type PoolFilters
     } from '$lib/utils/teamPoolFilter';
     import type { ActionData, PageData } from './$types';
@@ -131,7 +132,11 @@
         } catch {
             // No storage, or something in it that is not ours. No filter.
         }
-        filters = restoreFilters(stored, answerQuestions);
+        filters = restoreFilters(
+            stored,
+            answerQuestions,
+            projectRows.map((p) => p.id)
+        );
     });
 
     function setFilters(next: PoolFilters) {
@@ -143,9 +148,16 @@
         }
     }
 
-    /** The filters as removable tags, in question order. */
-    const activeFilters = $derived(
-        answerQuestions.flatMap((q) => [
+    /** The filters as removable tags: projects in row order, then questions. */
+    const activeFilters = $derived([
+        ...projectRows
+            .filter((p) => filters.projects.includes(p.id))
+            .map((p) => ({
+                key: `project:${p.id}`,
+                text: `Prefers ${p.number}`,
+                remove: () => setFilters(toggleProject(filters, p.id))
+            })),
+        ...answerQuestions.flatMap((q) => [
             ...(filters.answers[q.id] ?? []).map((label) => ({
                 key: `${q.id}:${label}`,
                 text: `${q.options.find((o) => o.label === label)?.code ?? q.letter} ${label}`,
@@ -161,7 +173,7 @@
                   ]
                 : [])
         ])
-    );
+    ]);
 
     // Drop target id for the unassigned pool; team keys are used as-is.
     const POOL = 'pool';
@@ -874,15 +886,29 @@
                 <div class="flex flex-col divide-y divide-line">
                     {#each projectRows as p (p.id)}
                         {@const projectTeams = teamsByProject[p.id] ?? []}
+                        {@const picked = filters.projects.includes(p.id)}
                         <div class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
                             <div class="flex items-center gap-2">
                                 <span class="badge badge-neutral tnum shrink-0">{p.number}</span>
                                 <span class="truncate text-sm font-semibold text-ink">{p.title}</span
                                 >
-                                <span class="meta shrink-0">
+                                <!-- A filter like an answer is, kept where a team
+                                     for this project is being built. -->
+                                <button
+                                    type="button"
+                                    class="btn btn-sm shrink-0 tnum {picked
+                                        ? 'btn-outline-accent bg-accent/20'
+                                        : 'btn-outline hover:bg-overlay'}"
+                                    aria-pressed={picked}
+                                    disabled={p.interested === 0}
+                                    title={picked
+                                        ? 'Stop filtering by this project'
+                                        : 'Bring unassigned people who prefer this project to the top'}
+                                    onclick={() => setFilters(toggleProject(filters, p.id))}
+                                >
                                     {p.interested}
                                     {p.interested === 1 ? 'wants in' : 'want in'}
-                                </span>
+                                </button>
                             </div>
 
                             <div class="flex flex-wrap items-stretch gap-3">
