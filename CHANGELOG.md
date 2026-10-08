@@ -41,8 +41,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
   people onto them, or by downloading the spreadsheet, filling in the team
   column and uploading it again.
-- Manage Teams explains the spreadsheet upload: "How the file works", next to
-  Download and Upload, lists the steps and what each kind of edit does.
+- Manage Teams explains itself in one place: "How assignment works" covers
+  dragging, saving, when the assignment locks, and the spreadsheet steps and
+  rules.
 - Uploading the team assignment spreadsheet now replaces all teams with the ones
   in the file. A row needs both a project and a team to put someone on a team;
   anyone else ends up unassigned, with a warning for a row that has a mistake in

@@ -310,9 +310,9 @@
     /** What the last uploaded file did, until it is dismissed or superseded. */
     let importResult: ImportResult | null = $state(null);
 
-    // Closed by default: the rules matter to whoever is about to upload, and
-    // everyone else should not have to read past them.
-    let fileHelpOpen = $state(false);
+    // "How assignment works". Closed by default: whoever needs the rules asks
+    // for them, and everyone else should not have to read past them.
+    let helpOpen = $state(false);
 
     // Only one team's name is editable at a time.
     let editingKey: string | null = $state(null);
@@ -750,17 +750,20 @@
                     onchange={importFile}
                 />
             </label>
-            <button
-                type="button"
-                class="btn btn-sm btn-quiet"
-                aria-expanded={fileHelpOpen}
-                aria-controls="file-help"
-                onclick={() => (fileHelpOpen = !fileHelpOpen)}
-            >
-                <CircleHelp class="size-3" />
-                How the file works
-            </button>
         </div>
+
+        <!-- Outside the Spreadsheet group: it explains assigning teams as a
+             whole, dragging and saving included, not only the file. -->
+        <button
+            type="button"
+            class="btn btn-sm btn-quiet"
+            aria-expanded={helpOpen}
+            aria-controls="assignment-help"
+            onclick={() => (helpOpen = !helpOpen)}
+        >
+            <CircleHelp class="size-3" />
+            How assignment works
+        </button>
 
         <div class="ml-auto flex items-center gap-3">
             {#if changes.total > 0}
@@ -789,54 +792,56 @@
         </div>
     </div>
 
-    <!-- Every rule here is one `applyAssignmentCsv` enforces; change them
-         together. -->
-    {#if fileHelpOpen}
-        <section id="file-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">
+    <!-- The rules of the page in one place: what Save does (see the `save`
+         action), when it locks (`assignmentLockReasons`), and what an upload
+         does (`applyAssignmentCsv`). Change them together. -->
+    {#if helpOpen}
+        <section id="assignment-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">
             <div class="flex items-start gap-3">
-                <h3 class="m-0 flex-1 meta">How the spreadsheet works</h3>
+                <h3 class="m-0 flex-1 meta">How team assignment works</h3>
                 <button
                     type="button"
                     class="shrink-0 text-ink-3 hover:text-ink"
                     aria-label="Close"
-                    onclick={() => (fileHelpOpen = false)}
+                    onclick={() => (helpOpen = false)}
                 >
                     <X class="size-3" />
                 </button>
             </div>
 
+            <div class="flex flex-col gap-1 text-ink-2">
+                <p class="m-0">
+                    Drag people from Unassigned onto a team, or plan in the spreadsheet.
+                </p>
+                <p class="m-0">
+                    Nothing changes until you Save; Save deletes teams with nobody in them.
+                </p>
+                <p class="m-0">Locked once a team has a submission or teams are published.</p>
+            </div>
+
+            <h4 class="m-0 border-t border-line pt-3 meta">Spreadsheet</h4>
             <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
                 <li>
                     <strong class="text-ink">Download CSV.</strong> One row per participant, with
-                    their current project and team filled in, or empty if they have no team yet.
+                    their current project and team, or empty if they have no team yet.
                 </li>
                 <li>
                     <strong class="text-ink">Correct the <code>project</code> and <code>team</code>
                         columns.</strong>
-                    Keep every row, and leave <code>user_id</code> as it is — it is how each row is
-                    matched to a person. Other columns don't matter and are ignored on upload.
+                    Keep every row and leave <code>user_id</code> as it is; other columns are ignored.
                 </li>
                 <li>
-                    <strong class="text-ink">Upload CSV.</strong> The file becomes the whole team
-                    assignment, shown here as unsaved changes. Check them, then Save — or Discard.
+                    <strong class="text-ink">Upload CSV.</strong> Replaces all teams. Check, then
+                    Save.
                 </li>
             </ol>
 
-            <dl
-                class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 border-t
-                       border-line pt-3 text-ink-3"
-            >
+            <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-ink-3">
                 <dt class="text-ink-2"><code>project</code></dt>
-                <dd class="m-0">the project title as shown on this page or in the prefers column</dd>
+                <dd class="m-0">the project title as shown here or in the prefers column</dd>
 
                 <dt class="text-ink-2"><code>team</code></dt>
-                <dd class="m-0">
-                    any name of at least 3 characters: it only tells teams apart and can be
-                    changed after upload
-                </dd>
-
-                <dt class="text-ink-2">valid assignment</dt>
-                <dd class="m-0">both columns filled, and the project exists</dd>
+                <dd class="m-0">any name of at least 3 characters; can be renamed after upload</dd>
 
                 <dt class="text-ink-2">both empty</dt>
                 <dd class="m-0">the person ends up unassigned</dd>
@@ -846,9 +851,6 @@
 
                 <dt class="text-ink-2">a row missing</dt>
                 <dd class="m-0">a warning, and the person ends up unassigned</dd>
-
-                <dt class="text-ink-2">on save</dt>
-                <dd class="m-0">the complete assignment is applied</dd>
             </dl>
         </section>
     {/if}
@@ -886,13 +888,13 @@
                         <li>and {importResult.problems.length - 5} more.</li>
                     {/if}
                 </ul>
-                {#if !fileHelpOpen}
+                {#if !helpOpen}
                     <button
                         type="button"
                         class="self-start text-ink-2 underline hover:text-ink"
-                        onclick={() => (fileHelpOpen = true)}
+                        onclick={() => (helpOpen = true)}
                     >
-                        How the file works
+                        How assignment works
                     </button>
                 {/if}
             {/if}
@@ -1199,7 +1201,7 @@
                                                 <p class="m-0 text-xs text-ink-3">
                                                     {locked
                                                         ? 'Nobody on this team.'
-                                                        : 'Drop a participant here — an empty team is removed on save.'}
+                                                        : 'Drop a participant here.'}
                                                 </p>
                                             {:else}
                                                 {#each t.memberIds as id (id)}
