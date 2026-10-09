@@ -28,6 +28,7 @@ import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
 import Ticket from "lucide-svelte/icons/ticket"
+import Inbox from "lucide-svelte/icons/inbox"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import Globe from "lucide-svelte/icons/globe"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
@@ -475,6 +476,16 @@ export function manageNav(
       label: "Manage Teams",
       icon: UserRoundCog,
       href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
+    },
+    // After Teams, as in the participant entries: submissions hang off a team.
+    // Unconditional, like Manage Voting — whether submissions are open is a
+    // switch the page itself reports, and "who has not submitted" is the
+    // question an organiser asks most once they have closed.
+    {
+      id: "manage:submissions",
+      label: "Manage Submissions",
+      icon: Inbox,
+      href: resolve(`/my/hackathon/${hackathonId}/submissions/manage`),
     },
     // Editing, deleting and declaring a phase current — but only once there is a
     // phase to do any of that to. Phases are optional, exactly like tracks, so
