@@ -19,9 +19,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 ### Added
 
 - Manage Teams fixes the teams once a team has a submission or teams are
-  published: a notice says why, and uploading, adding and deleting teams are
-  disabled. People can still be moved between teams or to Unassigned by hand,
-  and teams renamed.
+  published: a notice says why, and uploading and deleting teams are disabled.
+  People can still be moved between teams or to Unassigned by hand, teams
+  renamed, and new teams added.
 - Manage Teams can filter the Unassigned column by registration answers: click
   an answer (or type into a free-text question's box) to bring the people who
   gave it to the top; everyone else stays below, greyed out. Each answer shows

@@ -366,9 +366,12 @@
         const base = fromServer(data.projectRows);
         const nameBefore = new Map(base.map((t) => [t.key, t.name]));
         // Save drops a team with nobody in it, so an empty one counts as
-        // deleted, or as not added — the summary says what Save will do. Not
-        // while the teams are fixed: then an emptied team is kept.
-        const kept = locked ? teams : teams.filter((t) => t.memberIds.length > 0);
+        // deleted, or as not added — the summary says what Save will do. While
+        // the teams are fixed, an emptied saved team is kept; an empty new one
+        // is still not created.
+        const kept = teams.filter(
+            (t) => t.memberIds.length > 0 || (locked && t.id !== null)
+        );
         const alive = new Set(kept.map((t) => t.key));
 
         const added = kept.filter((t) => t.id === null).length;
@@ -438,10 +441,10 @@
         dropTarget = null;
     }
 
-    // Once a submission exists or teams are published, the teams themselves
-    // stand: no upload (it replaces every team), no adding, deleting or Clear
-    // all. People can still be moved by hand — between teams or to Unassigned —
-    // and teams renamed, and the save action enforces the same line. The
+    // Once a submission exists or teams are published, no team may go: no
+    // upload (it replaces every team), no deleting, no Clear all. People can
+    // still be moved by hand — between teams or to Unassigned — teams renamed
+    // and new teams added, and the save action enforces the same line. The
     // reason is said once at the top and again on hover over what is off. See
     // `assignmentLockReasons`.
     const lockReasons = $derived(data.lockReasons);
@@ -692,8 +695,8 @@
             <LockIcon class="mt-0.5 size-3 shrink-0" />
             <p class="m-0">
                 <strong>Teams are fixed:</strong>
-                {lockReasons.join(' and ')}. Upload and adding or deleting teams are off; you can
-                still move people between teams or to Unassigned, and rename teams.
+                {lockReasons.join(' and ')}. Upload and deleting teams are off; you can still
+                move people between teams or to Unassigned, rename teams and add new ones.
             </p>
         </div>
     {/if}
@@ -819,7 +822,7 @@
                 </p>
                 <p class="m-0">
                     Once a team has a submission or teams are published, teams are fixed: no
-                    upload, no adding or deleting teams. Moving people and renaming still work.
+                    upload, no deleting teams. Moving people, renaming and adding teams still work.
                 </p>
             </div>
 
@@ -1190,7 +1193,9 @@
                                                 >
                                                     <Pencil class="size-3" />
                                                 </button>
-                                                {#if !locked}
+                                                <!-- While fixed, only a team added here
+                                                     and not yet saved may go. -->
+                                                {#if !locked || t.id === null}
                                                     <button
                                                         type="button"
                                                         class="shrink-0 text-ink-3 hover:text-danger-ink"
@@ -1231,18 +1236,16 @@
                                     </p>
                                 {/if}
 
-                                {#if !locked}
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-ghost h-full"
-                                        title={projectTeams.length === 0
-                                            ? 'Add the first team for this project'
-                                            : 'Add another team for this project'}
-                                        onclick={() => addTeam(p.id)}
-                                    >
-                                        {projectTeams.length === 0 ? '+ Add Team' : '+'}
-                                    </button>
-                                {/if}
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-ghost h-full"
+                                    title={projectTeams.length === 0
+                                        ? 'Add the first team for this project'
+                                        : 'Add another team for this project'}
+                                    onclick={() => addTeam(p.id)}
+                                >
+                                    {projectTeams.length === 0 ? '+ Add Team' : '+'}
+                                </button>
                             </div>
                         </div>
                     {/each}
