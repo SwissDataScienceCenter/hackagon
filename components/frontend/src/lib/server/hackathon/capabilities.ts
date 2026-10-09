@@ -241,6 +241,28 @@ export function mayFinalizeSubmissions(
 }
 
 /**
+ * Whether to offer the organiser's overview of every team's submissions.
+ *
+ * Mirrors the backend exactly: `ListSubmissions` falls back to a hackathon-wide
+ * `submission:read` (`team_service.go:1103-1106`), a default policy granted to
+ * `Owner` outright (`rbac.go:238`) and to an admin through the global escape
+ * hatch. Not gated on `CREATE_PROJECT_SUBMISSIONS` — that capability is about
+ * teams filing work, and an organiser needs the overview most once it is closed.
+ *
+ * Read only. Creating and finalizing need `submission:write` scoped to the team,
+ * which only `Member` holds (`rbac.go:234`); with no role inheritance an owner
+ * cannot finalize for a team, so the overview offers no action at all.
+ */
+export function mayViewAllSubmissions(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}
+
+/**
  * Whether to offer vote category management — create, edit, delete.
  *
  * Mirrors the backend exactly, same as `mayManageTracks`: `CreateVoteCategory`

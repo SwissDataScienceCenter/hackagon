@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest"
 import type { Submission } from "$lib/server/grpc/generated/hackathon/entities/submission"
-import { submissionVersions } from "./submissions"
+import type { Team } from "$lib/server/grpc/generated/hackathon/entities/team"
+import type { User } from "$lib/server/grpc/generated/user/entities/user"
+import {
+  submissionOverview,
+  submissionStanding,
+  submissionVersions,
+} from "./submissions"
 
 // SubmissionStatus numeric values: DRAFT=1, FINAL=2.
 const DRAFT = 1
@@ -148,5 +154,97 @@ describe("submissionVersions", () => {
     )
 
     expect(r.latest?.result).toBeUndefined()
+  })
+})
+
+describe("submissionStanding", () => {
+  it("is missing with nothing filed", () => {
+    expect(submissionStanding(submissionVersions([], names))).toBe("missing")
+  })
+
+  it("is draft while nothing is final", () => {
+    const r = submissionVersions(
+      [sub({ version: 1 }), sub({ version: 2 })],
+      names,
+    )
+
+    expect(submissionStanding(r)).toBe("draft")
+  })
+
+  it("stays final when a newer draft sits on top of the entry", () => {
+    const r = submissionVersions(
+      [sub({ version: 1, status: FINAL }), sub({ version: 2, status: DRAFT })],
+      names,
+    )
+
+    expect(submissionStanding(r)).toBe("final")
+  })
+})
+
+describe("submissionOverview", () => {
+  const user = (id: string, displayName: string): User =>
+    ({ id, displayName, username: id }) as User
+
+  /** A team with only the fields the overview reads. */
+  const team = (id: string, name: string, members: User[] = []): Team =>
+    ({ id, name, projectId: "project-1", members }) as unknown as Team
+
+  const titles = new Map([["project-1", "Flood maps"]])
+
+  it("puts teams with nothing first, then drafts, then finals, each by name", () => {
+    const teams = [
+      team("t-final", "Alpha"),
+      team("t-draft-b", "Bravo"),
+      team("t-none", "Zulu"),
+      team("t-draft-a", "Able"),
+    ]
+    const byTeam = new Map([
+      ["t-final", [sub({ version: 1, status: FINAL })]],
+      ["t-draft-b", [sub({ version: 1 })]],
+      ["t-draft-a", [sub({ version: 1 })]],
+    ])
+
+    const rows = submissionOverview(teams, byTeam, titles, names)
+
+    expect(rows.map((r) => [r.teamName, r.standing])).toEqual([
+      ["Zulu", "missing"],
+      ["Able", "draft"],
+      ["Bravo", "draft"],
+      ["Alpha", "final"],
+    ])
+  })
+
+  it("names the project, and says so when it cannot", () => {
+    const rows = submissionOverview(
+      [
+        team("t1", "Known"),
+        { ...team("t2", "Orphan"), projectId: "gone" } as Team,
+      ],
+      new Map(),
+      titles,
+      names,
+    )
+
+    expect(rows.map((r) => r.projectTitle)).toEqual([
+      "Flood maps",
+      "Unknown project",
+    ])
+  })
+
+  it("lists members by name, sorted, falling back to the username", () => {
+    const rows = submissionOverview(
+      [
+        team("t1", "Team", [
+          user("u-zed", "Zed"),
+          { id: "u-anon", displayName: "", username: "anon" } as User,
+          user("u-amy", "Amy"),
+        ]),
+      ],
+      new Map(),
+      titles,
+      names,
+    )
+
+    expect(rows[0]?.members).toEqual(["Amy", "anon", "Zed"])
   })
 })
