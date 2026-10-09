@@ -18,6 +18,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Teams makes unsaved changes hard to lose: a bar at the top stays in
+  view while you scroll and shows what is unsaved with Save and Discard, the
+  people and teams that changed are marked until saved, and following a link
+  away from the page asks first.
 - Manage Teams fixes the teams once a team has a submission or teams are
   published: a notice says why, and uploading and deleting teams are disabled.
   People can still be moved between teams or to Unassigned by hand, teams

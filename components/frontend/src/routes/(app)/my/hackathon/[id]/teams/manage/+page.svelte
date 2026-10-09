@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { beforeNavigate, goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import {
         Check,
@@ -14,6 +15,7 @@
         X
     } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { initialsOf } from '$lib/utils/teamDistribution';
     import {
@@ -305,6 +307,9 @@
     let pending: boolean = $state(false);
 
     let saveForm: HTMLFormElement;
+    // Every question this page asks — replacing teams, deleting one, leaving
+    // with unsaved changes — goes through this one dialog.
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
     let savePayload: HTMLInputElement;
 
     /** What the last uploaded file did, until it is dismissed or superseded. */
@@ -374,28 +379,38 @@
         );
         const alive = new Set(kept.map((t) => t.key));
 
-        const added = kept.filter((t) => t.id === null).length;
+        const addedKeys = kept.filter((t) => t.id === null).map((t) => t.key);
         const removed = base.filter((t) => !alive.has(t.key)).length;
-        const renamed = kept.filter(
-            (t) => t.id !== null && nameBefore.get(t.key) !== t.name
-        ).length;
+        const renamedKeys = kept
+            .filter((t) => t.id !== null && nameBefore.get(t.key) !== t.name)
+            .map((t) => t.key);
 
         const teamOf = (list: WorkTeam[]) =>
             new Map(list.flatMap((t) => t.memberIds.map((m) => [m, t.key] as const)));
         const before = teamOf(base);
         const after = teamOf(teams);
-        let moved = 0;
-        for (const id of new Set([...before.keys(), ...after.keys()])) {
-            if (before.get(id) !== after.get(id)) moved++;
-        }
+        const movedIds = [...new Set([...before.keys(), ...after.keys()])].filter(
+            (id) => before.get(id) !== after.get(id)
+        );
 
+        const added = addedKeys.length;
+        const renamed = renamedKeys.length;
+        const moved = movedIds.length;
         const parts: string[] = [];
         if (added > 0) parts.push(`${added} new ${added === 1 ? 'team' : 'teams'}`);
         if (removed > 0) parts.push(`${removed} deleted`);
         if (renamed > 0) parts.push(`${renamed} renamed`);
         if (moved > 0) parts.push(`${moved} ${moved === 1 ? 'move' : 'moves'}`);
 
-        return { total: added + removed + renamed + moved, summary: parts.join(', ') };
+        return {
+            total: added + removed + renamed + moved,
+            summary: parts.join(', '),
+            // What to mark on the page until it is saved: the people whose team
+            // changed, and the teams that are new or renamed. A deleted team is
+            // gone from the page and has nothing left to mark.
+            movedIds: new Set(movedIds),
+            changedTeamKeys: new Set([...addedKeys, ...renamedKeys])
+        };
     });
 
     function startEdit(key: string, name: string) {
@@ -411,7 +426,7 @@
         editingKey = null;
     }
 
-    function removeTeam(key: string, name: string) {
+    async function removeTeam(key: string, name: string) {
         const team = teams.find((t) => t.key === key);
         if (team === undefined) return;
         // Only a team that exists on the server is a real loss — and deleting it
@@ -419,7 +434,14 @@
         // not yet saved is nothing to lose.
         if (
             team.id !== null &&
-            !confirm(`Delete "${name}" when you save? Its members become unassigned.`)
+            !(await confirmDialog.ask({
+                title: `Delete team "${name}"?`,
+                message:
+                    'Its members become unassigned. The team is deleted when you save, ' +
+                    'together with anything it has submitted.',
+                confirmLabel: 'Delete team',
+                danger: true
+            }))
         ) {
             return;
         }
@@ -516,7 +538,16 @@
         input.value = '';
         if (file === undefined || pending) return;
 
-        if (teams.length > 0 && !confirm('Uploading replaces all current teams. Continue?')) {
+        if (
+            teams.length > 0 &&
+            !(await confirmDialog.ask({
+                title: 'Replace all teams?',
+                message:
+                    'Uploading replaces all current teams with the ones in the file. ' +
+                    'Nothing is saved until you press Save.',
+                confirmLabel: 'Replace teams'
+            }))
+        ) {
             return;
         }
 
@@ -570,6 +601,39 @@
         );
         saveForm.requestSubmit();
     }
+
+    // A link inside the app leaves without unloading the page, so the window's
+    // `beforeunload` below never hears of it — and the workspace goes with the
+    // component, silently. Closing or reloading the tab (`leave`) is the
+    // browser's own prompt's job, which no page can replace.
+    //
+    // The guard cannot wait for an answer — it has to cancel or not right
+    // away — so it always cancels, asks, and on a "yes" goes where the
+    // organizer was heading, with `leaving` set so it does not ask twice.
+    let leaving = false;
+
+    beforeNavigate((navigation) => {
+        if (leaving || changes.total === 0 || navigation.type === 'leave') return;
+        const target = navigation.to?.url;
+        navigation.cancel();
+        if (!target) return;
+
+        void confirmDialog
+            .ask({
+                title: 'Leave without saving?',
+                message: `You have unsaved changes: ${changes.summary}. They are lost if you leave.`,
+                confirmLabel: 'Leave without saving',
+                danger: true
+            })
+            .then((leave) => {
+                if (!leave) return;
+                leaving = true;
+                // Another site cannot be reached through the router.
+                if (navigation.willUnload) window.location.href = target.href;
+                // eslint-disable-next-line svelte/no-navigation-without-resolve -- the URL SvelteKit was already navigating to, resolved by whatever link started it
+                else void goto(target);
+            });
+    });
 </script>
 
 <svelte:window
@@ -594,6 +658,8 @@
     <input type="hidden" name="teams" bind:this={savePayload} />
 </form>
 
+<ConfirmDialog bind:this={confirmDialog} />
+
 {#snippet personRow(
     person: Person,
     from: string,
@@ -602,14 +668,20 @@
 )}
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
     {@const answers = answersFor(person)}
+    {@const unsaved = changes.movedIds.has(person.id)}
+    <!-- Warning-tinted while their move is unsaved: the same color as the
+         save bar, so the bar and what it is about read as one thing. -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
-        class="flex cursor-grab items-center gap-1.5 rounded-card border border-line bg-raised
-               px-2 py-1 active:cursor-grabbing"
+        class="flex cursor-grab items-center gap-1.5 rounded-card border px-2 py-1
+               active:cursor-grabbing {unsaved
+            ? 'border-warning bg-warning/10'
+            : 'border-line bg-raised'}"
         class:opacity-40={draggedId === person.id}
+        title={unsaved ? 'Moved — not saved yet' : undefined}
     >
         <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
@@ -684,6 +756,50 @@
     <div class="flex flex-col gap-1">
         <ManageHubBackLink {hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+    </div>
+
+    <!-- Save lives here, always, and sticks below the nav bar (`top-14`, the
+         same offset the sidebar uses) so it stays in reach however far down
+         the projects the organizer has scrolled. Quiet while everything is
+         saved; warning-colored as soon as anything is not — unsaved is a
+         state, so warning rather than accent, and the same color marks what
+         changed on the page. A failed save's message is repeated here, where
+         it is in view. -->
+    <div
+        class="sticky top-14 z-10 flex flex-wrap items-center gap-3 rounded-card border px-3
+               py-2 text-xs {changes.total > 0
+            ? 'border-warning bg-warning/10'
+            : 'border-line bg-raised'}"
+        role="status"
+    >
+        <span class="flex-1 {changes.total > 0 ? 'text-warning-ink' : 'text-ink-3'}">
+            {#if pending}
+                Saving…
+            {:else if changes.total > 0}
+                Unsaved changes, marked on the page: {changes.summary}
+            {:else}
+                No unsaved changes
+            {/if}
+        </span>
+        {#if form?.message && !pending}
+            <span class="text-danger-ink">{form.message}</span>
+        {/if}
+        <button
+            type="button"
+            class="btn btn-sm btn-ghost"
+            disabled={pending || changes.total === 0}
+            onclick={discard}
+        >
+            Discard
+        </button>
+        <button
+            type="button"
+            class="btn btn-sm btn-solid"
+            disabled={pending || changes.total === 0}
+            onclick={save}
+        >
+            Save
+        </button>
     </div>
 
     {#if locked}
@@ -771,29 +887,6 @@
             How assignment works
         </button>
 
-        <div class="ml-auto flex items-center gap-3">
-            {#if changes.total > 0}
-                <span class="text-xs text-ink-2">Unsaved: {changes.summary}</span>
-            {:else}
-                <span class="text-xs text-ink-3">No unsaved changes</span>
-            {/if}
-            <button
-                type="button"
-                class="btn btn-sm btn-ghost"
-                disabled={pending || changes.total === 0}
-                onclick={discard}
-            >
-                Discard
-            </button>
-            <button
-                type="button"
-                class="btn btn-sm"
-                disabled={pending || changes.total === 0}
-                onclick={save}
-            >
-                Save
-            </button>
-        </div>
     </div>
 
     <!-- The rules of the page in one place: what Save does (see the `save`
@@ -1140,6 +1233,13 @@
                                         ondrop={(e) => drop(e, t.key)}
                                         class="card flex w-64 flex-col"
                                         class:border-accent={dropTarget === t.key}
+                                        class:border-warning={dropTarget !== t.key &&
+                                            changes.changedTeamKeys.has(t.key)}
+                                        title={changes.changedTeamKeys.has(t.key)
+                                            ? t.id === null
+                                                ? 'New team — not saved yet'
+                                                : 'Renamed — not saved yet'
+                                            : undefined}
                                     >
                                         <header
                                             class="flex items-center gap-1 border-b border-line px-2 py-1"
