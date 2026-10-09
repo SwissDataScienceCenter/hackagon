@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { beforeNavigate } from '$app/navigation';
     import { resolve } from '$app/paths';
     import {
         Check,
@@ -567,6 +568,17 @@
         );
         saveForm.requestSubmit();
     }
+
+    // A link inside the app leaves without unloading the page, so the window's
+    // `beforeunload` below never hears of it — and the workspace goes with the
+    // component, silently. Closing or reloading the tab (`leave`) is the
+    // browser's own prompt's job, which cannot be replaced by a `confirm`.
+    beforeNavigate((navigation) => {
+        if (changes.total === 0 || navigation.type === 'leave') return;
+        if (!confirm(`You have unsaved changes (${changes.summary}). Leave without saving?`)) {
+            navigation.cancel();
+        }
+    });
 </script>
 
 <svelte:window
@@ -768,28 +780,14 @@
             How assignment works
         </button>
 
+        <!-- Status only: Save and Discard live in the bar at the bottom, which
+             appears with the first change and stays in view while scrolling. -->
         <div class="ml-auto flex items-center gap-3">
             {#if changes.total > 0}
-                <span class="text-xs text-ink-2">Unsaved: {changes.summary}</span>
+                <span class="text-xs text-warning-ink">Unsaved: {changes.summary}</span>
             {:else}
                 <span class="text-xs text-ink-3">No unsaved changes</span>
             {/if}
-            <button
-                type="button"
-                class="btn btn-sm btn-ghost"
-                disabled={pending || changes.total === 0}
-                onclick={discard}
-            >
-                Discard
-            </button>
-            <button
-                type="button"
-                class="btn btn-sm"
-                disabled={pending || changes.total === 0}
-                onclick={save}
-            >
-                Save
-            </button>
         </div>
     </div>
 
@@ -1314,4 +1312,35 @@
             {/if}
         </section>
     </div>
+
+    <!-- Up only while something is unsaved, and sticky so it is in view
+         however far down the projects the organizer has scrolled: the toolbar
+         is long gone by project fifteen. Warning, not accent — unsaved is a
+         state. It repeats a failed save's message, which otherwise sits at the
+         top of the page, out of sight. -->
+    {#if changes.total > 0}
+        <div
+            class="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-card border
+                   border-warning bg-raised px-3 py-2 text-xs"
+            role="status"
+        >
+            <span class="flex-1 text-warning-ink">
+                {pending ? 'Saving…' : `Unsaved changes: ${changes.summary}`}
+            </span>
+            {#if form?.message && !pending}
+                <span class="text-danger-ink">{form.message}</span>
+            {/if}
+            <button
+                type="button"
+                class="btn btn-sm btn-ghost"
+                disabled={pending}
+                onclick={discard}
+            >
+                Discard
+            </button>
+            <button type="button" class="btn btn-sm btn-solid" disabled={pending} onclick={save}>
+                Save
+            </button>
+        </div>
+    {/if}
 </div>
