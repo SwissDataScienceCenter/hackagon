@@ -2,14 +2,18 @@
     import { enhance } from '$app/forms';
     import { beforeNavigate, goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import { tick } from 'svelte';
     import {
         Check,
+        ChevronDown,
+        ChevronUp,
         CircleHelp,
         Download,
         Eraser,
         GripVertical,
         Lock as LockIcon,
         Pencil,
+        Search,
         Trash2,
         Upload,
         X
@@ -17,6 +21,7 @@
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
+    import { nameSegments, stepMatch, type NameSegment } from '$lib/utils/personSearch';
     import { initialsOf } from '$lib/utils/teamDistribution';
     import {
         LABEL_MAX,
@@ -354,6 +359,72 @@
     const pool = $derived(matchesFirst(unassigned, filters));
     const filtering = $derived(isFiltering(filters));
 
+    // "Find a person": highlights and jumps, never hides or reorders — see
+    // `personSearch`. Independent of the filters, and not stored: a search
+    // left over from yesterday would read as a bug.
+    let query = $state('');
+    /** The match last jumped to, by person id so dragging does not lose it. */
+    let currentId: string | null = $state(null);
+    /** The sticky save bar's height, so the search row can stick below it. */
+    let saveBarHeight = $state(0);
+
+    /** Every matching person's name, cut into marked and unmarked pieces. */
+    const searchHits = $derived.by(() => {
+        const hits: Record<string, NameSegment[]> = {};
+        for (const p of peopleById.values()) {
+            const segments = nameSegments(p.name, query);
+            if (segments) hits[p.id] = segments;
+        }
+
+        return hits;
+    });
+
+    /** The matches in the order the page shows them, top to bottom. */
+    const searchOrder = $derived(
+        [
+            ...projectRows.flatMap((p) =>
+                (teamsByProject[p.id] ?? []).flatMap((t) => t.memberIds)
+            ),
+            ...pool.matching.map((p) => p.id),
+            ...pool.rest.map((p) => p.id)
+        ].filter((id) => id in searchHits)
+    );
+
+    const searchPosition = $derived.by(() => {
+        if (query.trim() === '') return '';
+        if (searchOrder.length === 0) return 'No match';
+        const at = currentId === null ? -1 : searchOrder.indexOf(currentId);
+
+        return at === -1 ? `${searchOrder.length} found` : `${at + 1} of ${searchOrder.length}`;
+    });
+
+    /**
+     * Makes a match the current one and scrolls it into view. `center` keeps
+     * it clear of the sticky save bar, and scrolls the Unassigned column too
+     * when that is where it is.
+     */
+    async function showMatch(id: string | null) {
+        currentId = id;
+        if (id === null) return;
+        await tick();
+        document
+            .querySelector(`[data-person-id="${CSS.escape(id)}"]`)
+            ?.scrollIntoView({ block: 'center' });
+    }
+
+    function clearSearch() {
+        query = '';
+        currentId = null;
+    }
+
+    function searchKeys(e: KeyboardEvent) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            showMatch(stepMatch(searchOrder, currentId, e.shiftKey ? -1 : 1));
+        }
+        if (e.key === 'Escape') clearSearch();
+    }
+
     // How many unassigned people gave each answer, over the whole pool rather
     // than the matching part, so a number beside an answer does not change as
     // other answers are picked.
@@ -669,23 +740,37 @@
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
     {@const answers = answersFor(person)}
     {@const unsaved = changes.movedIds.has(person.id)}
+    {@const hit = searchHits[person.id]}
     <!-- Warning-tinted while their move is unsaved: the same color as the
          save bar, so the bar and what it is about read as one thing. -->
+    <!-- A search match gets an accent ring — the focus ring's color, as it is
+         what the organizer is looking at, not a state of the person. A ring
+         rather than a border so it shows alongside an unsaved border, and
+         inset so the Unassigned column's scroll edge does not clip it. -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
+        data-person-id={person.id}
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
         class="flex cursor-grab items-center gap-1.5 rounded-card border px-2 py-1
                active:cursor-grabbing {unsaved
             ? 'border-warning bg-warning/10'
-            : 'border-line bg-raised'}"
+            : 'border-line bg-raised'} {!hit
+            ? ''
+            : currentId === person.id
+              ? 'ring-2 ring-accent ring-inset'
+              : 'ring-1 ring-accent/50 ring-inset'}"
         class:opacity-40={draggedId === person.id}
         title={unsaved ? 'Moved — not saved yet' : undefined}
     >
         <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
-            <span class="min-w-0 truncate text-xs text-ink">{person.name}</span>
+            <span class="min-w-0 truncate text-xs text-ink"
+                >{#if hit}{#each hit as s, i (i)}{#if s.hit}<mark class="bg-accent/25 text-ink"
+                                >{s.text}</mark
+                            >{:else}{s.text}{/if}{/each}{:else}{person.name}{/if}</span
+            >
             {#if !showPreferences}
                 <!-- Nothing: turned off in the Project preferences box. -->
             {:else if person.preferredNumbers.length > 0}
@@ -766,6 +851,7 @@
          changed on the page. A failed save's message is repeated here, where
          it is in view. -->
     <div
+        bind:offsetHeight={saveBarHeight}
         class="sticky top-14 z-10 flex flex-wrap items-center gap-3 rounded-card border px-3
                py-2 text-xs {changes.total > 0
             ? 'border-warning bg-warning/10'
@@ -1204,6 +1290,70 @@
         </section>
     {/if}
 
+    <!-- Find-on-page for people: Enter steps forward, Shift+Enter back,
+         Esc clears. Right above what it searches, and sticky just below the
+         save bar — the browser keeps the field being typed in on screen, so
+         a field left behind would pull every jump back up to itself. The
+         offset is the bar's measured height, which grows when it wraps.
+         `text` rather than `search`, whose own clear button only some
+         browsers draw and would sit beside ours. -->
+    <div
+        class="sticky z-10 -my-2 flex flex-wrap items-center gap-1.5 bg-canvas py-2"
+        style:top="calc(3.5rem + {saveBarHeight}px)"
+    >
+        <div class="relative w-56">
+            <Search
+                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
+                       -translate-y-1/2 text-ink-3"
+                aria-hidden="true"
+            />
+            <input
+                type="text"
+                value={query}
+                oninput={(e) => {
+                    query = e.currentTarget.value;
+                    showMatch(searchOrder[0] ?? null);
+                }}
+                onkeydown={searchKeys}
+                placeholder="Find a person…"
+                aria-label="Find a person"
+                class="field pl-9 pr-3"
+            />
+        </div>
+        {#if query.trim() !== ''}
+            <span class="meta tnum" aria-live="polite">{searchPosition}</span>
+            <button
+                type="button"
+                class="btn btn-sm btn-quiet btn-icon"
+                aria-label="Previous match"
+                title="Previous match (Shift+Enter)"
+                disabled={searchOrder.length === 0}
+                onclick={() => showMatch(stepMatch(searchOrder, currentId, -1))}
+            >
+                <ChevronUp class="size-3" />
+            </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-quiet btn-icon"
+                aria-label="Next match"
+                title="Next match (Enter)"
+                disabled={searchOrder.length === 0}
+                onclick={() => showMatch(stepMatch(searchOrder, currentId, 1))}
+            >
+                <ChevronDown class="size-3" />
+            </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-quiet btn-icon"
+                aria-label="Clear search"
+                title="Clear (Esc)"
+                onclick={clearSearch}
+            >
+                <X class="size-3" />
+            </button>
+        {/if}
+    </div>
+
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="card card-raised flex min-w-0 flex-col gap-4 p-3">
             <h3 class="m-0 meta">Projects</h3>
@@ -1404,11 +1554,16 @@
                         {@render personRow(person, POOL, null, null)}
                     {/each}
                     <!-- Greyed rather than hidden: see `matchesFirst`. Still
-                         draggable, and full strength under the pointer. -->
+                         draggable, and full strength under the pointer — or
+                         when "Find a person" found them. -->
                     {#if pool.rest.length > 0}
                         <p class="m-0 meta tnum pt-2">Not matching ({pool.rest.length})</p>
                         {#each pool.rest as person (person.id)}
-                            <div class="opacity-50 transition-opacity hover:opacity-100">
+                            <div
+                                class="transition-opacity hover:opacity-100 {person.id in searchHits
+                                    ? ''
+                                    : 'opacity-50'}"
+                            >
                                 {@render personRow(person, POOL, null, null)}
                             </div>
                         {/each}

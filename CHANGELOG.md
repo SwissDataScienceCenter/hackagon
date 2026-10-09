@@ -18,6 +18,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Teams can find a person by name: type part of a name to highlight
+  everyone who matches, on teams and in Unassigned, and press Enter to jump from
+  one to the next. Accents and case do not matter.
 - Manage Teams makes unsaved changes hard to lose: a bar at the top stays in
   view while you scroll and shows what is unsaved with Save and Discard, the
   people and teams that changed are marked until saved, and following a link
