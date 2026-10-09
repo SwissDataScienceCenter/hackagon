@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CircleAlert, Search } from 'lucide-svelte';
+    import { CircleAlert, Download, Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import SubmissionStandingTabs from '$lib/components/hackathon/SubmissionStandingTabs.svelte';
@@ -159,19 +159,35 @@
                 current={data.filter}
                 counts={data.counts}
             />
-            <label class="relative w-full sm:w-64">
-                <span class="sr-only">Find a team, project or person</span>
-                <Search
-                    class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-3"
-                    aria-hidden="true"
-                />
-                <input
-                    type="search"
-                    bind:value={query}
-                    placeholder="Team, project or person"
-                    class="field h-8 pr-3 pl-9 text-xs"
-                />
-            </label>
+            <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                <label class="relative w-full sm:w-64">
+                    <span class="sr-only">Find a team, project or person</span>
+                    <Search
+                        class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-3"
+                        aria-hidden="true"
+                    />
+                    <input
+                        type="search"
+                        bind:value={query}
+                        placeholder="Team, project or person"
+                        class="field h-8 pr-3 pl-9 text-xs"
+                    />
+                </label>
+                <!-- Every team at every standing, deliberately not the tab or
+                     the search you happen to be on — the same choice the
+                     project export makes. The Standing column keeps them apart. -->
+                <a
+                    href={resolve(
+                        `/my/hackathon/${data.hackathonId}/submissions/manage/export`
+                    )}
+                    class="btn btn-sm btn-ghost no-underline"
+                    title="Every team, where it stands and its entry"
+                    download
+                >
+                    <Download class="h-3 w-3 shrink-0" aria-hidden="true" />
+                    Download CSV
+                </a>
+            </div>
         </div>
 
         <div class="flex w-full flex-col items-stretch gap-2">
