@@ -11,9 +11,9 @@ import { enabledCapabilities } from "./phaseForm"
 /**
  * Why the teams themselves are fixed — empty while they are not.
  *
- * Fixed means no team may be added or deleted, and so no upload, which
- * replaces every team. People may still be moved by hand and teams renamed:
- * that is how an organizer handles someone dropping out late. Two things fix
+ * Fixed means no team may be deleted, and so no upload, which replaces every
+ * team. People may still be moved by hand, teams renamed and new teams added:
+ * that is how an organizer handles a late dropout or a late joiner. Two things fix
  * the teams, each because rebuilding them would pull the ground from under
  * somebody:
  *
@@ -25,8 +25,8 @@ import { enabledCapabilities } from "./phaseForm"
  * Either one is enough, and the reasons are listed so the page can say which.
  *
  * TODO(backend: team-assignment-lock): this is a frontend rule only. The page
- * stops offering the controls and its save action refuses a plan that adds or
- * deletes a team, but `TeamService` still accepts that from any other caller.
+ * stops offering the controls and its save action refuses a plan that deletes
+ * a team, but `TeamService` still accepts that from any other caller.
  * Planned as a backend check in a follow-up pull request; the frontend can
  * then keep this for the explanation and rely on the error for the rule.
  */

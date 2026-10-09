@@ -249,19 +249,18 @@ export const actions: Actions = {
       const before = all.filter((t) => approved.has(t.projectId))
 
       if (locked.length > 0) {
-        // Locked, the teams themselves stand: people may move between them or
-        // to Unassigned and a team may be renamed, but none may be added or
-        // deleted — deleting one takes its submissions with it, and published
-        // teams are what participants have been told. An emptied team is kept.
+        // Locked, no team may be deleted: deleting one takes its submissions
+        // with it, and published teams are what participants have been told.
+        // Everything else stays open — people may move between teams or to
+        // Unassigned, teams may be renamed, and a new team may be added. An
+        // emptied team is kept; a new one nobody was put on is not created.
         const planned = new Set(plan.map((t) => t.id))
-        if (
-          plan.some((t) => t.id === null) ||
-          before.some((t) => !planned.has(t.id))
-        ) {
+        if (before.some((t) => !planned.has(t.id))) {
           return fail(409, {
-            message: `Teams cannot be added or deleted now: ${locked.join(" and ")}.`,
+            message: `Teams cannot be deleted now: ${locked.join(" and ")}.`,
           })
         }
+        plan = plan.filter((t) => t.id !== null || t.memberIds.length > 0)
       } else {
         // A team with nobody in it is not part of the assignment: dropped, so
         // a new one is never created and a saved one is deleted below like any
