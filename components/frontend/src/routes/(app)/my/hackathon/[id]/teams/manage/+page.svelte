@@ -372,28 +372,38 @@
         const kept = locked ? teams : teams.filter((t) => t.memberIds.length > 0);
         const alive = new Set(kept.map((t) => t.key));
 
-        const added = kept.filter((t) => t.id === null).length;
+        const addedKeys = kept.filter((t) => t.id === null).map((t) => t.key);
         const removed = base.filter((t) => !alive.has(t.key)).length;
-        const renamed = kept.filter(
-            (t) => t.id !== null && nameBefore.get(t.key) !== t.name
-        ).length;
+        const renamedKeys = kept
+            .filter((t) => t.id !== null && nameBefore.get(t.key) !== t.name)
+            .map((t) => t.key);
 
         const teamOf = (list: WorkTeam[]) =>
             new Map(list.flatMap((t) => t.memberIds.map((m) => [m, t.key] as const)));
         const before = teamOf(base);
         const after = teamOf(teams);
-        let moved = 0;
-        for (const id of new Set([...before.keys(), ...after.keys()])) {
-            if (before.get(id) !== after.get(id)) moved++;
-        }
+        const movedIds = [...new Set([...before.keys(), ...after.keys()])].filter(
+            (id) => before.get(id) !== after.get(id)
+        );
 
+        const added = addedKeys.length;
+        const renamed = renamedKeys.length;
+        const moved = movedIds.length;
         const parts: string[] = [];
         if (added > 0) parts.push(`${added} new ${added === 1 ? 'team' : 'teams'}`);
         if (removed > 0) parts.push(`${removed} deleted`);
         if (renamed > 0) parts.push(`${renamed} renamed`);
         if (moved > 0) parts.push(`${moved} ${moved === 1 ? 'move' : 'moves'}`);
 
-        return { total: added + removed + renamed + moved, summary: parts.join(', ') };
+        return {
+            total: added + removed + renamed + moved,
+            summary: parts.join(', '),
+            // What to mark on the page until it is saved: the people whose team
+            // changed, and the teams that are new or renamed. A deleted team is
+            // gone from the page and has nothing left to mark.
+            movedIds: new Set(movedIds),
+            changedTeamKeys: new Set([...addedKeys, ...renamedKeys])
+        };
     });
 
     function startEdit(key: string, name: string) {
@@ -611,14 +621,20 @@
 )}
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
     {@const answers = answersFor(person)}
+    {@const unsaved = changes.movedIds.has(person.id)}
+    <!-- Warning-tinted while their move is unsaved: the same color as the
+         save bar, so the bar and what it is about read as one thing. -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
-        class="flex cursor-grab items-center gap-1.5 rounded-card border border-line bg-raised
-               px-2 py-1 active:cursor-grabbing"
+        class="flex cursor-grab items-center gap-1.5 rounded-card border px-2 py-1
+               active:cursor-grabbing {unsaved
+            ? 'border-warning bg-warning/10'
+            : 'border-line bg-raised'}"
         class:opacity-40={draggedId === person.id}
+        title={unsaved ? 'Moved — not saved yet' : undefined}
     >
         <GripVertical class="size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-1 flex-col">
@@ -693,6 +709,50 @@
     <div class="flex flex-col gap-1">
         <ManageHubBackLink {hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+    </div>
+
+    <!-- Save lives here, always, and sticks below the nav bar (`top-14`, the
+         same offset the sidebar uses) so it stays in reach however far down
+         the projects the organizer has scrolled. Quiet while everything is
+         saved; warning-colored as soon as anything is not — unsaved is a
+         state, so warning rather than accent, and the same color marks what
+         changed on the page. A failed save's message is repeated here, where
+         it is in view. -->
+    <div
+        class="sticky top-14 z-10 flex flex-wrap items-center gap-3 rounded-card border px-3
+               py-2 text-xs {changes.total > 0
+            ? 'border-warning bg-warning/10'
+            : 'border-line bg-raised'}"
+        role="status"
+    >
+        <span class="flex-1 {changes.total > 0 ? 'text-warning-ink' : 'text-ink-3'}">
+            {#if pending}
+                Saving…
+            {:else if changes.total > 0}
+                Unsaved changes, marked on the page: {changes.summary}
+            {:else}
+                No unsaved changes
+            {/if}
+        </span>
+        {#if form?.message && !pending}
+            <span class="text-danger-ink">{form.message}</span>
+        {/if}
+        <button
+            type="button"
+            class="btn btn-sm btn-ghost"
+            disabled={pending || changes.total === 0}
+            onclick={discard}
+        >
+            Discard
+        </button>
+        <button
+            type="button"
+            class="btn btn-sm btn-solid"
+            disabled={pending || changes.total === 0}
+            onclick={save}
+        >
+            Save
+        </button>
     </div>
 
     {#if locked}
@@ -780,15 +840,6 @@
             How assignment works
         </button>
 
-        <!-- Status only: Save and Discard live in the bar at the bottom, which
-             appears with the first change and stays in view while scrolling. -->
-        <div class="ml-auto flex items-center gap-3">
-            {#if changes.total > 0}
-                <span class="text-xs text-warning-ink">Unsaved: {changes.summary}</span>
-            {:else}
-                <span class="text-xs text-ink-3">No unsaved changes</span>
-            {/if}
-        </div>
     </div>
 
     <!-- The rules of the page in one place: what Save does (see the `save`
@@ -1135,6 +1186,13 @@
                                         ondrop={(e) => drop(e, t.key)}
                                         class="card flex w-64 flex-col"
                                         class:border-accent={dropTarget === t.key}
+                                        class:border-warning={dropTarget !== t.key &&
+                                            changes.changedTeamKeys.has(t.key)}
+                                        title={changes.changedTeamKeys.has(t.key)
+                                            ? t.id === null
+                                                ? 'New team — not saved yet'
+                                                : 'Renamed — not saved yet'
+                                            : undefined}
                                     >
                                         <header
                                             class="flex items-center gap-1 border-b border-line px-2 py-1"
@@ -1312,35 +1370,4 @@
             {/if}
         </section>
     </div>
-
-    <!-- Up only while something is unsaved, and sticky so it is in view
-         however far down the projects the organizer has scrolled: the toolbar
-         is long gone by project fifteen. Warning, not accent — unsaved is a
-         state. It repeats a failed save's message, which otherwise sits at the
-         top of the page, out of sight. -->
-    {#if changes.total > 0}
-        <div
-            class="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-card border
-                   border-warning bg-raised px-3 py-2 text-xs"
-            role="status"
-        >
-            <span class="flex-1 text-warning-ink">
-                {pending ? 'Saving…' : `Unsaved changes: ${changes.summary}`}
-            </span>
-            {#if form?.message && !pending}
-                <span class="text-danger-ink">{form.message}</span>
-            {/if}
-            <button
-                type="button"
-                class="btn btn-sm btn-ghost"
-                disabled={pending}
-                onclick={discard}
-            >
-                Discard
-            </button>
-            <button type="button" class="btn btn-sm btn-solid" disabled={pending} onclick={save}>
-                Save
-            </button>
-        </div>
-    {/if}
 </div>
