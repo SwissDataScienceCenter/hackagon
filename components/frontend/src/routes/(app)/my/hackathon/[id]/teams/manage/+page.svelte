@@ -1,6 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
-    import { beforeNavigate } from '$app/navigation';
+    import { beforeNavigate, goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import {
         Check,
@@ -15,6 +15,7 @@
         X
     } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { initialsOf } from '$lib/utils/teamDistribution';
     import {
@@ -306,6 +307,9 @@
     let pending: boolean = $state(false);
 
     let saveForm: HTMLFormElement;
+    // Every question this page asks — replacing teams, deleting one, leaving
+    // with unsaved changes — goes through this one dialog.
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
     let savePayload: HTMLInputElement;
 
     /** What the last uploaded file did, until it is dismissed or superseded. */
@@ -419,7 +423,7 @@
         editingKey = null;
     }
 
-    function removeTeam(key: string, name: string) {
+    async function removeTeam(key: string, name: string) {
         const team = teams.find((t) => t.key === key);
         if (team === undefined) return;
         // Only a team that exists on the server is a real loss — and deleting it
@@ -427,7 +431,14 @@
         // not yet saved is nothing to lose.
         if (
             team.id !== null &&
-            !confirm(`Delete "${name}" when you save? Its members become unassigned.`)
+            !(await confirmDialog.ask({
+                title: `Delete team "${name}"?`,
+                message:
+                    'Its members become unassigned. The team is deleted when you save, ' +
+                    'together with anything it has submitted.',
+                confirmLabel: 'Delete team',
+                danger: true
+            }))
         ) {
             return;
         }
@@ -524,7 +535,16 @@
         input.value = '';
         if (file === undefined || pending) return;
 
-        if (teams.length > 0 && !confirm('Uploading replaces all current teams. Continue?')) {
+        if (
+            teams.length > 0 &&
+            !(await confirmDialog.ask({
+                title: 'Replace all teams?',
+                message:
+                    'Uploading replaces all current teams with the ones in the file. ' +
+                    'Nothing is saved until you press Save.',
+                confirmLabel: 'Replace teams'
+            }))
+        ) {
             return;
         }
 
@@ -582,12 +602,34 @@
     // A link inside the app leaves without unloading the page, so the window's
     // `beforeunload` below never hears of it — and the workspace goes with the
     // component, silently. Closing or reloading the tab (`leave`) is the
-    // browser's own prompt's job, which cannot be replaced by a `confirm`.
+    // browser's own prompt's job, which no page can replace.
+    //
+    // The guard cannot wait for an answer — it has to cancel or not right
+    // away — so it always cancels, asks, and on a "yes" goes where the
+    // organizer was heading, with `leaving` set so it does not ask twice.
+    let leaving = false;
+
     beforeNavigate((navigation) => {
-        if (changes.total === 0 || navigation.type === 'leave') return;
-        if (!confirm(`You have unsaved changes (${changes.summary}). Leave without saving?`)) {
-            navigation.cancel();
-        }
+        if (leaving || changes.total === 0 || navigation.type === 'leave') return;
+        const target = navigation.to?.url;
+        navigation.cancel();
+        if (!target) return;
+
+        void confirmDialog
+            .ask({
+                title: 'Leave without saving?',
+                message: `You have unsaved changes: ${changes.summary}. They are lost if you leave.`,
+                confirmLabel: 'Leave without saving',
+                danger: true
+            })
+            .then((leave) => {
+                if (!leave) return;
+                leaving = true;
+                // Another site cannot be reached through the router.
+                if (navigation.willUnload) window.location.href = target.href;
+                // eslint-disable-next-line svelte/no-navigation-without-resolve -- the URL SvelteKit was already navigating to, resolved by whatever link started it
+                else void goto(target);
+            });
     });
 </script>
 
@@ -612,6 +654,8 @@
 >
     <input type="hidden" name="teams" bind:this={savePayload} />
 </form>
+
+<ConfirmDialog bind:this={confirmDialog} />
 
 {#snippet personRow(
     person: Person,
