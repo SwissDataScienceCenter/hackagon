@@ -9,12 +9,6 @@ import {
   submissionsByTeam,
 } from "$lib/server/hackathon/submissions"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
-import {
-  DEFAULT_SUBMISSION_FILTER,
-  SUBMISSION_FILTERS,
-  submissionFilterFrom,
-  type SubmissionFilter,
-} from "$lib/utils/submissionFilter"
 import { error } from "@sveltejs/kit"
 
 // The organiser's overview: every team, where it stands with its submission,
@@ -56,10 +50,6 @@ export const load: PageServerLoad = async (event) => {
       submissionsOpen,
       teamsReadable: false,
       rows: [],
-      counts: Object.fromEntries(
-        SUBMISSION_FILTERS.map((f) => [f, 0]),
-      ) as Record<SubmissionFilter, number>,
-      filter: DEFAULT_SUBMISSION_FILTER,
     }
   }
 
@@ -68,33 +58,20 @@ export const load: PageServerLoad = async (event) => {
   const names = namesByUserId(hackathon.members, hackathon.owners)
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 
-  const all = submissionOverview(
-    teams,
-    await submissionsByTeam(team, teams),
-    projectTitles,
-    names,
-  )
-
-  // Counted over every team, never over the rows on screen: the number an
-  // organiser wants is usually the one on the tab they are not on.
-  const counts = Object.fromEntries(
-    SUBMISSION_FILTERS.map((f) => [
-      f,
-      f === "all" ? all.length : all.filter((r) => r.standing === f).length,
-    ]),
-  ) as Record<SubmissionFilter, number>
-
-  // From the address bar, so a view can be bookmarked and the back button works.
-  const filter =
-    submissionFilterFrom(event.url.searchParams.get("standing")) ??
-    DEFAULT_SUBMISSION_FILTER
-
+  // Every team, whichever tab is open. The tab is applied on the page, for two
+  // reasons: a search has to see every team to say which tab its matches are
+  // on, and a load that never reads `?standing=` is one SvelteKit does not
+  // re-run when only the tab changes — switching tabs would otherwise repeat a
+  // `ListSubmissions` per team.
   return {
     hackathonId: hackathon.id,
     submissionsOpen,
     teamsReadable: true,
-    rows: filter === "all" ? all : all.filter((r) => r.standing === filter),
-    counts,
-    filter,
+    rows: submissionOverview(
+      teams,
+      await submissionsByTeam(team, teams),
+      projectTitles,
+      names,
+    ),
   }
 }

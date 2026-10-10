@@ -14,8 +14,10 @@
      * slice is a real address that can be bookmarked and that the back button
      * understands.
      *
-     * Counts come from every team, never from the rows on screen, so the tab you
-     * are not on still tells you what is there.
+     * Counts come from the caller and never from the rows on screen, so the tab
+     * you are not on still tells you what is there: every team normally, and
+     * only the teams matching a search while there is one — which is how a
+     * search says which tab its matches are on.
      */
     let {
         hackathonId,

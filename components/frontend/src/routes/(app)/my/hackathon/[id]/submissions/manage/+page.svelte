@@ -1,11 +1,21 @@
 <script lang="ts">
     import { CircleAlert, Download, Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
+    import { page } from '$app/state';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import SubmissionStandingTabs from '$lib/components/hackathon/SubmissionStandingTabs.svelte';
     import { nameSegments, type NameSegment } from '$lib/utils/personSearch';
     import { submissionStatusLabel } from '$lib/utils/submissionStatus';
-    import type { SubmissionStanding } from '$lib/utils/submissionFilter';
+    import {
+        DEFAULT_SUBMISSION_FILTER,
+        SUBMISSION_FILTER_LABEL,
+        SUBMISSION_STANDINGS,
+        inSubmissionFilter,
+        submissionFilterCounts,
+        submissionFilterFrom,
+        submissionFilterQuery,
+        type SubmissionStanding
+    } from '$lib/utils/submissionFilter';
     import { isHttpUrl } from '$lib/utils/url';
     import type { PageData } from './$types';
 
@@ -25,10 +35,22 @@
         final: { label: 'Final', variant: 'badge-success' }
     };
 
+    // The tab, read here rather than in the load: the load returns every team
+    // and never looks at `?standing=`, so switching tabs re-runs nothing on the
+    // server — see the load. An absent or unknown value lands on All.
+    const filter = $derived(
+        submissionFilterFrom(page.url.searchParams.get('standing')) ??
+            DEFAULT_SUBMISSION_FILTER
+    );
+
     // Narrows the rows of the current tab, unlike the search on Manage Teams,
     // which only marks: there people are being moved and must stay put, here
     // the point is to get to one team out of many.
+    //
+    // It survives a tab change: the tabs are links to this same route, and
+    // SvelteKit keeps the component mounted across them.
     let query = $state('');
+    const searching = $derived(query.trim() !== '');
 
     const matched = $derived(
         data.rows.map((row) => ({
@@ -38,10 +60,18 @@
             member: row.members.some((m) => nameSegments(m, query) !== null)
         }))
     );
-    const shown = $derived(
-        query.trim() === ''
-            ? matched
-            : matched.filter((m) => m.team || m.project || m.member)
+    // Every team the search finds, on any tab — what the tab counts are taken
+    // from while searching, so they say where the matches are instead of
+    // switching tabs under the organiser as they type.
+    const hits = $derived(
+        searching ? matched.filter((m) => m.team || m.project || m.member) : matched
+    );
+    const counts = $derived(submissionFilterCounts(hits.map((m) => m.row.standing)));
+    const shown = $derived(hits.filter((m) => inSubmissionFilter(m.row.standing, filter)));
+
+    // The other tabs holding matches, for the empty state to point at.
+    const elsewhere = $derived(
+        SUBMISSION_STANDINGS.filter((s) => s !== filter && counts[s] > 0)
     );
 
     function formatDate(d: Date | undefined): string {
@@ -154,11 +184,20 @@
         </p>
     {:else}
         <div class="flex flex-wrap items-center justify-between gap-2">
-            <SubmissionStandingTabs
-                hackathonId={data.hackathonId}
-                current={data.filter}
-                counts={data.counts}
-            />
+            <div class="flex flex-col gap-1">
+                <SubmissionStandingTabs
+                    hackathonId={data.hackathonId}
+                    current={filter}
+                    {counts}
+                />
+                <!-- Said, because the same numbers mean something else a moment
+                     earlier: without it a tab dropping to 0 reads as teams gone. -->
+                {#if searching}
+                    <span class="text-xs text-ink-3">
+                        Counting teams that match “{query.trim()}”.
+                    </span>
+                {/if}
+            </div>
             <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <label class="relative w-full sm:w-64">
                     <span class="sr-only">Find a team, project or person</span>
@@ -191,7 +230,7 @@
         </div>
 
         <div class="flex w-full flex-col items-stretch gap-2">
-            {#if data.counts.all === 0}
+            {#if data.rows.length === 0}
                 <p class="m-0 py-6 text-center text-sm text-ink-3">
                     There are no teams yet, so nobody can submit.
                     <a
@@ -201,19 +240,36 @@
                         Set up teams
                     </a>
                 </p>
-            {:else if data.rows.length === 0}
+            {:else if shown.length === 0 && searching}
+                <!-- Points at the tabs holding matches rather than switching to
+                     one: the search runs on every keystroke, and a match can be
+                     on more than one tab. Following a link keeps the search. -->
                 <p class="m-0 py-6 text-center text-sm text-ink-3">
-                    {#if data.filter === 'missing'}
-                        Every team has submitted something.
-                    {:else if data.filter === 'draft'}
-                        No team is left with only drafts.
+                    {#if elsewhere.length === 0}
+                        No team, project or person matches “{query.trim()}”.
                     {:else}
-                        No team has a final entry yet.
+                        Nothing on {SUBMISSION_FILTER_LABEL[filter]} matches “{query.trim()}” —
+                        {#each elsewhere as s, i (s)}{#if i > 0},
+                            {/if}<a
+                                href="{resolve(
+                                    `/my/hackathon/${data.hackathonId}/submissions/manage`
+                                )}{submissionFilterQuery(s)}"
+                                class="font-semibold text-accent-ink no-underline hover:underline"
+                                ><span class="tnum">{counts[s]}</span> on {SUBMISSION_FILTER_LABEL[
+                                    s
+                                ]}</a
+                            >{/each}.
                     {/if}
                 </p>
             {:else if shown.length === 0}
                 <p class="m-0 py-6 text-center text-sm text-ink-3">
-                    No team, project or person here matches “{query.trim()}”.
+                    {#if filter === 'missing'}
+                        Every team has submitted something.
+                    {:else if filter === 'draft'}
+                        No team is left with only drafts.
+                    {:else}
+                        No team has a final entry yet.
+                    {/if}
                 </p>
             {:else}
                 {#each shown as { row, team, project } (row.teamId)}

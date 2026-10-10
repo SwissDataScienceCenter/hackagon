@@ -52,3 +52,29 @@ export function submissionFilterFrom(
 export function submissionFilterQuery(filter: SubmissionFilter): string {
   return `?standing=${filter}`
 }
+
+/** Whether a team with this standing belongs on this tab. */
+export function inSubmissionFilter(
+  standing: SubmissionStanding,
+  filter: SubmissionFilter,
+): boolean {
+  return filter === "all" || standing === filter
+}
+
+/**
+ * How many of these teams each tab would show.
+ *
+ * Handed the teams the tabs should count — every team, or only those matching
+ * a search — so the same tabs can say "where are the teams" and "where are the
+ * matches" without knowing which.
+ */
+export function submissionFilterCounts(
+  standings: readonly SubmissionStanding[],
+): Record<SubmissionFilter, number> {
+  return Object.fromEntries(
+    SUBMISSION_FILTERS.map((f) => [
+      f,
+      standings.filter((s) => inSubmissionFilter(s, f)).length,
+    ]),
+  ) as Record<SubmissionFilter, number>
+}
