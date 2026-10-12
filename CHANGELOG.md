@@ -18,6 +18,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Organizers have a Manage Submissions page: every team and where it stands with
+  its submission — nothing yet, drafts only, or final — with the teams still
+  owing an entry first. Tabs filter by standing, a search finds a team by its
+  name, its project or a member — while searching, the tabs count the matches,
+  so a team on another tab is never missed — and each team shows its link or
+  notes and any earlier versions. A banner says whether submissions are open,
+  and "Download CSV" saves every team as a spreadsheet. The page only shows
+  submissions: an organizer cannot submit or finalize one for a team.
 - Manage Teams can find a person by name: type part of a name to highlight
   everyone who matches, on teams and in Unassigned, and press Enter to jump from
   one to the next. Accents and case do not matter.

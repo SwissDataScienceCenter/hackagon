@@ -330,10 +330,27 @@ describe("manageNav", () => {
       "manage:projects",
       "manage:tracks",
       "manage:teams",
+      "manage:submissions",
       "manage:timeline",
       "manage:pages",
       "manage:voting",
     ])
+  })
+
+  // Same longest-match split as Teams: the member page is where a team files,
+  // the manage page is where an organiser sees every team.
+  it("lights Submissions on the member page and Manage Submissions on its own", () => {
+    const items = [
+      ...memberNav("hack-1", [], false, false, 2),
+      ...manageNav("hack-1", owner, false),
+    ]
+
+    expect(activeNavId("/my/hackathon/hack-1/submissions", items)).toBe(
+      "member:submissions",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/submissions/manage", items)).toBe(
+      "manage:submissions",
+    )
   })
 
   // Same gate as the participant Timeline entry, and the reason it matters more
