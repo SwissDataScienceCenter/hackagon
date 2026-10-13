@@ -70,6 +70,10 @@ func (s *UserService) Edit(
 		return nil, err
 	}
 
+	if sub == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot edit profiles")
+	}
+
 	isAdmin, err := s.enforcer.Enforce(ctx, "", m.User, m.Write)
 	if err != nil {
 		slog.Error("Could not enforce permission.", "error", err.Error())
