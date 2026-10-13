@@ -86,23 +86,26 @@ func (s *UserService) Edit(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
-	updateQuery := s.dbClient.User.UpdateOneID(id)
+	linkedin, err := linkUsername(linkedInUsername, req.LinkedinUrl, "LinkedIn")
+	if err != nil {
+		return nil, err
+	}
+	github, err := linkUsername(githubUsername, req.GithubUrl, "GitHub")
+	if err != nil {
+		return nil, err
+	}
+	renku, err := linkUsername(renkuUsername, req.RenkuUrl, "Renku")
+	if err != nil {
+		return nil, err
+	}
+
+	updateQuery := s.dbClient.User.UpdateOneID(id).
+		SetNillableLinkedin(linkedin).
+		SetNillableGithub(github).
+		SetNillableRenku(renku)
 	if !isAdmin {
 		// Non-admins can only edit their own user.
 		updateQuery = updateQuery.Where(entuser.KeycloakIDEQ(sub))
-	}
-
-	updateQuery, err = updateLinkedin(updateQuery, req.LinkedinUrl)
-	if err != nil {
-		return nil, err
-	}
-	updateQuery, err = updateGithub(updateQuery, req.GithubUrl)
-	if err != nil {
-		return nil, err
-	}
-	updateQuery, err = updateRenku(updateQuery, req.RenkuUrl)
-	if err != nil {
-		return nil, err
 	}
 
 	u, err := updateQuery.Save(ctx)

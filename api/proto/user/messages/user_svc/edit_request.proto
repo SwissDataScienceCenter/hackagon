@@ -8,7 +8,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message EditRequest {
   string user_id = 1 [(buf.validate.field).string.uuid = true];
-  optional string renku_url = 2;
-  optional string github_url = 3;
-  optional string linkedin_url = 4;
+  optional string renku_url = 2 [(buf.validate.field).string.max_len = 2048];
+  optional string github_url = 3 [(buf.validate.field).string.max_len = 2048];
+  optional string linkedin_url = 4 [(buf.validate.field).string.max_len = 2048];
 }

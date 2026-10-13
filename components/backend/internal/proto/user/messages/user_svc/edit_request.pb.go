@@ -94,13 +94,13 @@ var File_user_messages_user_svc_edit_request_proto protoreflect.FileDescriptor
 
 const file_user_messages_user_svc_edit_request_proto_rawDesc = "" +
 	"\n" +
-	")user/messages/user_svc/edit_request.proto\x12\x16user.messages.user_svc\x1a\x1bbuf/validate/validate.proto\"\xcc\x01\n" +
+	")user/messages/user_svc/edit_request.proto\x12\x16user.messages.user_svc\x1a\x1bbuf/validate/validate.proto\"\xea\x01\n" +
 	"\vEditRequest\x12!\n" +
-	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12 \n" +
-	"\trenku_url\x18\x02 \x01(\tH\x00R\brenkuUrl\x88\x01\x01\x12\"\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12*\n" +
+	"\trenku_url\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x00R\brenkuUrl\x88\x01\x01\x12,\n" +
 	"\n" +
-	"github_url\x18\x03 \x01(\tH\x01R\tgithubUrl\x88\x01\x01\x12&\n" +
-	"\flinkedin_url\x18\x04 \x01(\tH\x02R\vlinkedinUrl\x88\x01\x01B\f\n" +
+	"github_url\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x01R\tgithubUrl\x88\x01\x01\x120\n" +
+	"\flinkedin_url\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x02R\vlinkedinUrl\x88\x01\x01B\f\n" +
 	"\n" +
 	"_renku_urlB\r\n" +
 	"\v_github_urlB\x0f\n" +

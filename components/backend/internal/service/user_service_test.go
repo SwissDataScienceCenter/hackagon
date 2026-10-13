@@ -5,6 +5,7 @@ package service_test
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,7 +21,6 @@ import (
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 )
 
@@ -75,9 +75,9 @@ var _ = Describe("UserService", func() {
 			Expect(u.GetUsername()).To(Equal("get-target-username"))
 			Expect(u.GetDisplayName()).To(Equal("Get Target"))
 			Expect(u.GetEmail()).To(Equal("get@example.com"))
-			Expect(u.GetRenkuUrl()).To(Equal(service.RenkuPrefix + "bob-renku"))
-			Expect(u.GetLinkedinUrl()).To(Equal(service.LinkedInPrefix + "bob-linkedin"))
-			Expect(u.GetGithubUrl()).To(Equal(service.GithubPrefix + "bob-github"))
+			Expect(u.GetRenkuUrl()).To(Equal("https://renkulab.io/u/bob-renku"))
+			Expect(u.GetLinkedinUrl()).To(Equal("https://linkedin.com/in/bob-linkedin"))
+			Expect(u.GetGithubUrl()).To(Equal("https://github.com/bob-github"))
 			Expect(u.GetKeycloakId()).To(Equal("get-target"))
 			Expect(u.GetCreatedAt()).NotTo(BeNil())
 			Expect(u.GetModifiedAt()).NotTo(BeNil())
@@ -983,6 +983,22 @@ var _ = Describe("UserService", func() {
 			Expect(u.Renku).To(Equal(oldRenkuUsr))
 			Expect(u.Github).To(Equal(oldGithubUsr))
 			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
+		})
+
+		It("rejects a URL longer than 2048 characters", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			// The regex accepts any query string, so only max_len rejects this.
+			longGithub := "https://github.com/bob?" + strings.Repeat("a", 2048)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    targetUser.ID.String(),
+				GithubUrl: &longGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
 		})
 
 		It("rejects a malformed user_id", func() {
