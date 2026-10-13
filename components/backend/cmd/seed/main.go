@@ -29,7 +29,7 @@ const (
 	yukiKeycloakID = "seed-yuki" // team seat in H2
 )
 
-// The five hackathons the fixture is made of. Their presence is what makes a
+// The six hackathons the fixture is made of. Their presence is what makes a
 // second seed run a no-op, and a partial set is what says a run died partway.
 //
 // Adding one to this list makes every database holding the previous set look
@@ -41,6 +41,7 @@ const (
 	sprintHackathon   = "Internal Product Sprint"
 	dataForGood       = "Data for Good Hackathon 2026"
 	partnerSprint     = "Partner Data Sprint 2026"
+	openScience       = "Open Science Hackathon 2026"
 )
 
 func seededHackathonNames() []string {
@@ -50,6 +51,7 @@ func seededHackathonNames() []string {
 		sprintHackathon,
 		dataForGood,
 		partnerSprint,
+		openScience,
 	}
 }
 
@@ -208,6 +210,11 @@ func seedAll(
 	// participants have no Keycloak account and cannot log in.
 	if err := h.seedH4(now, alice, bob, charles); err != nil {
 		return fmt.Errorf("h4: %w", err)
+	}
+	// H6, the voting fixture: alice runs it, bob and charles have every ballot
+	// still to fill in, and thirty more who cannot log in have cast the rest.
+	if err := h.seedH6(now, alice, bob, charles); err != nil {
+		return fmt.Errorf("h6: %w", err)
 	}
 	// And H5, the invitation fixture. Last, because it prints the links it mints
 	// and they are the most useful thing in the seed's output — worth having at
