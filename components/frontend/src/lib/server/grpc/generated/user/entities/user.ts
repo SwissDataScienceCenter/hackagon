@@ -18,6 +18,9 @@ export interface User {
   createdAt: Date | undefined;
   displayName: string;
   email: string;
+  renku: string;
+  github: string;
+  linkedin: string;
   /** Populated from casbin on fetch; not persisted in ent DB. */
   roles: GlobalRole[];
   modifiedAt: Date | undefined;
@@ -31,6 +34,9 @@ function createBaseUser(): User {
     createdAt: undefined,
     displayName: "",
     email: "",
+    renku: "",
+    github: "",
+    linkedin: "",
     roles: [],
     modifiedAt: undefined,
   };
@@ -56,13 +62,22 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       writer.uint32(50).string(message.email);
     }
-    writer.uint32(58).fork();
+    if (message.renku !== "") {
+      writer.uint32(58).string(message.renku);
+    }
+    if (message.github !== "") {
+      writer.uint32(66).string(message.github);
+    }
+    if (message.linkedin !== "") {
+      writer.uint32(74).string(message.linkedin);
+    }
+    writer.uint32(82).fork();
     for (const v of message.roles) {
       writer.int32(v);
     }
     writer.join();
     if (message.modifiedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.modifiedAt), writer.uint32(66).fork()).join();
+      Timestamp.encode(toTimestamp(message.modifiedAt), writer.uint32(90).fork()).join();
     }
     return writer;
   },
@@ -123,13 +138,37 @@ export const User: MessageFns<User> = {
           continue;
         }
         case 7: {
-          if (tag === 56) {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.renku = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.github = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.linkedin = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag === 80) {
             message.roles.push(reader.int32() as any);
 
             continue;
           }
 
-          if (tag === 58) {
+          if (tag === 82) {
             const end2 = reader.uint32() + reader.pos;
             while (reader.pos < end2) {
               message.roles.push(reader.int32() as any);
@@ -140,8 +179,8 @@ export const User: MessageFns<User> = {
 
           break;
         }
-        case 8: {
-          if (tag !== 66) {
+        case 11: {
+          if (tag !== 90) {
             break;
           }
 
@@ -177,6 +216,9 @@ export const User: MessageFns<User> = {
         ? globalThis.String(object.display_name)
         : "",
       email: isSet(object.email) ? globalThis.String(object.email) : "",
+      renku: isSet(object.renku) ? globalThis.String(object.renku) : "",
+      github: isSet(object.github) ? globalThis.String(object.github) : "",
+      linkedin: isSet(object.linkedin) ? globalThis.String(object.linkedin) : "",
       roles: globalThis.Array.isArray(object?.roles) ? object.roles.map((e: any) => globalRoleFromJSON(e)) : [],
       modifiedAt: isSet(object.modifiedAt)
         ? fromJsonTimestamp(object.modifiedAt)
@@ -206,6 +248,15 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       obj.email = message.email;
     }
+    if (message.renku !== "") {
+      obj.renku = message.renku;
+    }
+    if (message.github !== "") {
+      obj.github = message.github;
+    }
+    if (message.linkedin !== "") {
+      obj.linkedin = message.linkedin;
+    }
     if (message.roles?.length) {
       obj.roles = message.roles.map((e) => globalRoleToJSON(e));
     }
@@ -226,6 +277,9 @@ export const User: MessageFns<User> = {
     message.createdAt = object.createdAt ?? undefined;
     message.displayName = object.displayName ?? "";
     message.email = object.email ?? "";
+    message.renku = object.renku ?? "";
+    message.github = object.github ?? "";
+    message.linkedin = object.linkedin ?? "";
     message.roles = object.roles?.map((e) => e) || [];
     message.modifiedAt = object.modifiedAt ?? undefined;
     return message;

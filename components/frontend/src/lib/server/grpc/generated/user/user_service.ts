@@ -8,6 +8,8 @@
 import type { CallContext, CallOptions } from "nice-grpc-common";
 import { AddRoleRequest } from "./messages/user_svc/add_role_request";
 import { AddRoleResponse } from "./messages/user_svc/add_role_response";
+import { EditRequest } from "./messages/user_svc/edit_request";
+import { EditResponse } from "./messages/user_svc/edit_response";
 import { GetRequest } from "./messages/user_svc/get_request";
 import { GetResponse } from "./messages/user_svc/get_response";
 import { ListRequest } from "./messages/user_svc/list_request";
@@ -39,6 +41,14 @@ export const UserServiceDefinition = {
       requestType: GetRequest as typeof GetRequest,
       requestStream: false,
       responseType: GetResponse as typeof GetResponse,
+      responseStream: false,
+      options: {},
+    },
+    edit: {
+      name: "Edit",
+      requestType: EditRequest as typeof EditRequest,
+      requestStream: false,
+      responseType: EditResponse as typeof EditResponse,
       responseStream: false,
       options: {},
     },
@@ -80,6 +90,7 @@ export const UserServiceDefinition = {
 export interface UserServiceImplementation<CallContextExt = {}> {
   list(request: ListRequest, context: CallContext & CallContextExt): Promise<DeepPartial<ListResponse>>;
   get(request: GetRequest, context: CallContext & CallContextExt): Promise<DeepPartial<GetResponse>>;
+  edit(request: EditRequest, context: CallContext & CallContextExt): Promise<DeepPartial<EditResponse>>;
   whoAmI(request: WhoAmIRequest, context: CallContext & CallContextExt): Promise<DeepPartial<WhoAmIResponse>>;
   register(request: RegisterRequest, context: CallContext & CallContextExt): Promise<DeepPartial<RegisterResponse>>;
   addRole(request: AddRoleRequest, context: CallContext & CallContextExt): Promise<DeepPartial<AddRoleResponse>>;
@@ -92,6 +103,7 @@ export interface UserServiceImplementation<CallContextExt = {}> {
 export interface UserServiceClient<CallOptionsExt = {}> {
   list(request: DeepPartial<ListRequest>, options?: CallOptions & CallOptionsExt): Promise<ListResponse>;
   get(request: DeepPartial<GetRequest>, options?: CallOptions & CallOptionsExt): Promise<GetResponse>;
+  edit(request: DeepPartial<EditRequest>, options?: CallOptions & CallOptionsExt): Promise<EditResponse>;
   whoAmI(request: DeepPartial<WhoAmIRequest>, options?: CallOptions & CallOptionsExt): Promise<WhoAmIResponse>;
   register(request: DeepPartial<RegisterRequest>, options?: CallOptions & CallOptionsExt): Promise<RegisterResponse>;
   addRole(request: DeepPartial<AddRoleRequest>, options?: CallOptions & CallOptionsExt): Promise<AddRoleResponse>;

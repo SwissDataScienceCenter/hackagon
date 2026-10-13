@@ -14,7 +14,10 @@ message User {
   google.protobuf.Timestamp created_at = 4;
   string display_name = 5;
   string email = 6;
+  string renku = 7;
+  string github = 8;
+  string linkedin = 9;
   // Populated from casbin on fetch; not persisted in ent DB.
-  repeated GlobalRole roles = 7;
-  google.protobuf.Timestamp modified_at = 8;
+  repeated GlobalRole roles = 10;
+  google.protobuf.Timestamp modified_at = 11;
 }
