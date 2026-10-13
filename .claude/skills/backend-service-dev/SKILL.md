@@ -170,12 +170,11 @@ auto-enable or disable any capability."_ `SetCurrentPhase` sets
 and never touches state or casbin. Advancing a phase changes what the UI
 displays, not what anyone may do.
 
-**`cmd/seed` writes both halves itself.** `seedCapabilities`
-(`cmd/seed/main.go:67`) creates each hackathon's `HackathonState` row _and_ the
-casbin rows that go with it, copying the role each capability grants to from
-`SetCapabilities` — plus one row `SetCapabilities` does not write: team
-preferences to `Owner` as well as `Member`, so the fixture shows the intended
-behaviour ahead of the handler (see
+**`cmd/seed` goes through the handler.** It drives the real server in-process
+and sets each hackathon's capabilities with `SetCapabilities` (`setCaps` in
+`cmd/seed/steps.go`), so seeded state and casbin rows are exactly what the API
+writes — including the gap that an owner holding no `Member` row cannot set a
+team preference (see
 `mydocs/docs/backend-tickets/project-preferences-capability.md`). The set
 differs per hackathon, so a `PermissionDenied` in seeded data means that
 capability is off in _that_ hackathon — read `state` from `HackathonService.Get`

@@ -2,181 +2,163 @@
 name: backend-seeding
 description:
   Adapting the Hackagon dev seed fixture (components/backend/cmd/seed) — adding
-  or changing hackathons, users, projects, teams, submissions and phases, the
-  casbin roles that must accompany every DB row, the sentinel-based idempotency
-  and how to force a re-seed, and the HackathonState plus casbin rows that
-  decide what participants may actually do in each seeded hackathon. Use when
-  asked to add or change dev/test data, make a scenario reproducible locally, or
-  fix a seeded hackathon that nobody can act in.
+  or changing hackathons, users, projects, teams, submissions, phases and votes
+  through the in-process gRPC harness, the step helpers in steps.go,
+  capabilities that must be on when they are used, synthetic users who cannot
+  log in, idempotency and re-seeding (locally and on the dev cluster), and how
+  to verify a change without wiping local state. Use when asked to add or change
+  dev/test data, make a scenario reproducible locally, pick which seeded
+  hackathon to test something in, or fix a seeded hackathon nobody can act in.
 ---
 
 # Adapting the seed
 
-`components/backend/cmd/seed/main.go` (~880 lines) builds the dev fixture
-directly through ent — it does **not** go through the gRPC handlers. That's why
-it can produce states the API never would, and why it can equally produce
-_broken_ states the API never would. See the trap below.
+`components/backend/cmd/seed` builds the dev fixture by **calling the real gRPC
+handlers**, not by writing rows. What is in the fixture — which hackathon is
+frozen in which phase, who can sign in, which one to test what in, and when it
+needs re-seeding — is documented in `components/backend/cmd/seed/README.md`.
+Read its first sections before changing anything; this skill is how to change
+it, not what it contains.
 
-Run it with `just db::seed`. The fixture itself is documented in
-`components/backend/cmd/seed/README.md` — three hackathons (upcoming public,
-ongoing public, past private), four users, teams, submissions and a waitlisted
-participant, all with timestamps relative to `time.Now()` so re-seeding keeps
-the ongoing one ongoing.
+## How it works
 
-## Shape of the file
+[harness.go](../../../components/backend/cmd/seed/harness.go) stands the actual
+server up in-process on an in-memory pipe — protovalidate and the auth
+interceptor included — and signs its own JWTs with a throwaway key the server
+trusts for that run. So the seed can act as any identity, including the ones
+with no Keycloak account, and needs neither the stack nor Keycloak running. Its
+header comment says why calling handler functions directly would not do.
+
+Consequences that shape every change:
+
+- **The rows are whatever the handlers write.** Casbin roles come from the
+  handlers too: `Join` + `ApproveParticipant` grants `Member`, `Propose` grants
+  the project-scoped `Owner`, `AssignUser` grants the team-scoped `Member`.
+  **Never write casbin rows or ent rows by hand** — that is the drift this
+  design removed. The one exception is registration answers, stored directly
+  while `SubmitAnswers` is broken (see `submitAnswers` in steps.go).
+- **A move the API refuses, the seed cannot make.** If a step fails with
+  `PermissionDenied` or `InvalidArgument`, the fixture is asking for a state the
+  application could not produce — fix the fixture, not the handler.
+- **Not atomic.** Several handlers open their own transaction, so a run that
+  dies partway leaves some hackathons behind. `main.go` detects that rather than
+  preventing it.
+
+## Shape of the package
 
 ```
-main()          flags, config, ent.Open, schema migrate,
-                sentinel check, grant alice the global HackathonOrganizer role
-  └ seed()      wraps everything in one transaction
-      └ withTx()      commit on success, rollback on error, rollback+re-panic on panic
-          └ seedInTx()    getOrCreateUser × 4, then:
-              ├ seedH1()  AI Innovation Challenge 2026 — upcoming, public,  alice owns
-              ├ seedH2()  Climate Tech Hackathon 2026  — ongoing,  public,  admin owns
-              └ seedH3()  Internal Product Sprint      — past,     private, admin owns
+main.go     users, then seedH1 … seedH6 in order; the hackathon-name list
+            that makes a re-run a no-op
+harness.go  the in-process server and token minting
+actors.go   register (a user, as themselves), makeOrganizer
+steps.go    the moves a hackathon is built from — setCaps, joinAndApprove,
+            createPhases, proposeProjects, createTeams, createSubmissions,
+            createVoteCategory, submit*Vote, createVoteResult, …
+h1.go … h6.go   one hackathon each, top comment says what it is for
+            and what is deliberately absent
 ```
-
-Everything is one transaction: a failure anywhere leaves the DB untouched.
-
-## Idempotency and re-seeding
-
-`sentinelHackathon = "AI Innovation Challenge 2026"`. If a hackathon with that
-name exists, `main` logs `seed data already present, skipping` and exits 0.
-
-**Consequence: editing the seed and re-running does nothing.** To pick up
-changes you must clear state first:
-
-```bash
-just clean::state    # wipes postgres + keycloak state
-just start
-just db::seed
-```
-
-If you rename H1, you rename the sentinel — update the constant to match or the
-guard stops working.
-
-## The trap: DB rows and casbin roles are separate writes
-
-Permissions do **not** come from the database. A `Participant` row makes someone
-a participant in the data; it does not give them any permission. The casbin role
-is a second, independent write, and the seed does both by hand:
-
-```go
-// DB: who is in the hackathon (and whether they're waitlisted)
-db.Participant.Create().SetHackathon(h).SetUser(u).SetIsWaiting(false).Save(ctx)
-
-// casbin: what they may do — a SEPARATE write, easy to forget
-enf.AddRole(u.KeycloakID, middleware.Owner, h.ID.String())
-```
-
-Note `AddRole` takes the **Keycloak ID**, not the DB UUID — the JWT `sub` is the
-casbin subject.
-
-Scoped variants exist for sub-resources:
-
-```go
-enf.AddRole(u.KeycloakID, middleware.Owner,  h.ID.String(), middleware.WithProject(p.ID.String()))
-enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(t.ID.String()))
-```
-
-**If you add a participant and forget the role, they exist but can do nothing**
-— and it looks exactly like a handler bug. The existing code pairs them
-consistently: project creation is always followed by an `Owner` grant scoped to
-that project; team membership by a `Member` grant scoped to that team. Follow
-the pairing.
-
-Deliberate exception worth preserving: `charles` is waitlisted in H1
-(`SetIsWaiting(true)`) and gets **no** casbin role. He's the fixture for testing
-refusals — don't "fix" him.
 
 ## Adding to the fixture
 
-Match the surrounding style: build entities with ent's fluent API, wrap each
-error with context (`fmt.Errorf("team Alpha: %w", err)`), and use table-driven
-loops for repetitive rows:
+Build from the helpers in `steps.go`; add one there when a move is needed twice.
+Match the existing style: spec structs filled in completely (the `exhaustruct`
+linter runs on this package, so unset fields are written out as `nil` / `0` /
+`""`), errors wrapped with what failed (`fmt.Errorf("team %q: %w", name, err)`),
+and a comment on anything deliberate that looks like a mistake.
 
-```go
-for _, p := range []struct {
-    u         *ent.User
-    isWaiting bool
-}{
-    {admin, false},
-    {alice, false},
-    {charles, true},
-} {
-    if _, err := db.Participant.Create().
-        SetHackathon(h).SetUser(p.u).SetIsWaiting(p.isWaiting).Save(ctx); err != nil {
-        return fmt.Errorf("participant %s: %w", p.u.Username, err)
-    }
-}
+**Capabilities must be on at the moment they are used.** Joining needs
+`register`, proposing needs `propose projects`, submitting needs
+`project submissions`, voting needs `vote`. So each hackathon calls `setCaps`
+early with everything its history needs, and ends with a second `setCaps`
+declaring the state it is left in. `setCaps` always states all capabilities, so
+each call is a declaration rather than a patch. Voting also needs `view teams`
+on — the voting page builds the ballot from the teams.
+
+**Order matters** in ways the handlers enforce:
+
+- Signups before the registration form, if anyone is meant to have answered
+  nothing — `Join` refuses to skip a mandatory question.
+- Approval before proposing — proposing needs `Member`.
+- Teams are created and staffed by an owner — no participant can do it.
+- A past hackathon is built with a live window and moved back last with
+  `backdate`, because `Join` refuses a hackathon that has ended.
+- A private hackathon is joined with an invite: `createInvite` then
+  `joinAndApproveWithInvite`.
+
+**Voting rules the handler enforces:** nobody can vote on their own team's
+submission; a jury category refuses anyone off its roster; a points category
+needs `maxPoints`, and a points vote cannot be changed — cast each voter's whole
+ballot in one `submitPointsVote`.
+
+**Timestamps are always relative** to `now` (`now.AddDate(0, 0, 5)`), never
+literal dates, so a fresh seed puts each hackathon back where it belongs.
+
+**Randomness comes from a constant seed** (`rand.New(rand.NewSource(…))`), never
+the clock, so re-seeding reproduces the same fixture. Give each new random
+stream its own constant, so adding draws cannot shift existing ones.
+
+### Users
+
+The four that can sign in — `hackagon-admin`, `alice`, `bob`, `charles` — exist
+in the Keycloak dev realm (`tools/configs/keycloak/realm-hackagon.json`) with
+matching IDs in `main.go`. Anyone else is created with `h.register` and a
+`seed-…` Keycloak ID and **cannot log in** (dana, yuki, H4's hundred, H6's
+thirty). That is the right choice for bulk; add a Keycloak user only when a
+person has to drive the UI as them.
+
+Conventions worth keeping: `hackagon-admin` takes part in nothing (so the
+global-admin escape hatch is tested from outside); no owner takes part in the
+hackathon they run; leave a login-able account untouched wherever a flow needs
+somebody to try it fresh (bob and charles have no votes in H6 and are not in
+H5).
+
+### A new hackathon
+
+Add its name to the constants and `seededHackathonNames()` in `main.go`, write
+`hN.go`, call it from `seedAll`. Every existing database then holds a _partial_
+set and `just db::seed` stops with `partial seed data found` — that is by
+design, and the README's **When to re-seed** section says so; existing databases
+need `just clean::state`.
+
+## Verifying a change
+
+Build and lint inside the Nix shell (the system Go is too old for this repo):
+
+```bash
+just nix::develop default bash -c 'cd components/backend && go build -o /dev/null ./cmd/seed/ && \
+  golangci-lint run --config ../../tools/configs/golangci-lint/golangci.yaml ./cmd/seed/...'
 ```
 
-Timestamps are always **relative** — `now.AddDate(0, 0, 19)`, not a literal date
-— so the fixture keeps its past/ongoing/upcoming shape whenever it's run. Keep
-it that way.
+Run it **without wiping local state** by seeding a throwaway database next to
+`hackagon` — `HACKAGON_DATABASE_DBNAME` overrides the config. Put the whole
+cycle in one script and run it with one call; querying the result with `psql` is
+cheaper than going through the API:
 
-New users need a Keycloak ID that matches the dev realm. The three non-admin IDs
-are hardcoded constants at the top of the file; the admin's comes from config.
-Adding a genuinely new user means adding them to Keycloak too
-(`tools/configs/keycloak/`), not just here.
+```bash
+psql -h 127.0.0.1 -U postgres -d postgres -c 'CREATE DATABASE hackagon_seedtest'
+cd components/backend && HACKAGON_DATABASE_DBNAME=hackagon_seedtest \
+  go run ./cmd/seed/ --config-dir ./data/test/config/       # run twice: 2nd must skip
+psql -h 127.0.0.1 -U postgres -d hackagon_seedtest -c '…'   # check what you added
+psql -h 127.0.0.1 -U postgres -d postgres -c 'DROP DATABASE hackagon_seedtest'
+```
 
-## Capabilities: every hackathon needs `seedCapabilities`
+Table and column names are ent's (`team_submissions`, `vote_category_votes`, …);
+read them from `ent/migrate/schema.go` with grep rather than guessing.
 
-A capability is **two writes, not one**: the boolean on `HackathonState` and a
-casbin policy row. The enforcer only ever reads the policy, so a state row on
-its own grants nothing and a hackathon without both is one nobody can act in —
-this used to be the single biggest reason a seeded hackathon felt broken.
+To use the new fixture locally for real: `just clean::state && just start`,
+`just db::seed`, then **restart the backend**
+(`just deploy::down && just deploy::up`) — the running server loaded its casbin
+policy before the seed wrote any, and until it restarts, owners are refused
+their own hackathons.
 
-`seedCapabilities` (`main.go:67`) does both, and every hackathon must call it.
-It copies the role each capability grants to from `SetCapabilities`
-(`hackathon_service.go:616-653`) so seeded hackathons behave like ones created
-through the API — registration granting to `*` rather than a role, since the
-point is that a non-member can join, and `vote` writing **two** rows
-(`Vote:Create` plus `VoteCategory:Read`, without which a member cannot see what
-there is to vote on). It also takes the phase an organizer has declared current,
-or nil.
-
-One row goes **beyond** the handler on purpose: team preferences are granted to
-`Owner` as well as `Member`. The handler grants `Member` only and the model has
-no inheritance, so an owner cannot express a preference — judged wrong and
-tracked in `mydocs/docs/backend-tickets/project-preferences-capability.md`
-(which also documents a partial-write bug in `SetCapabilities` when the state
-row is missing). Drop that row if you would rather the fixture mirror the
-handler exactly.
-
-The sets are chosen per hackathon so the fixture spans the interesting states:
-
-| Hackathon               | On                                          | Current phase |
-| ----------------------- | ------------------------------------------- | ------------- |
-| AI Innovation 2026      | register, propose, preferences, submissions | none          |
-| Climate Tech 2026       | propose, preferences, submissions           | Hacking       |
-| Internal Product Sprint | vote, view-results                          | Demo          |
-
-So "capability-gated mutation refuses" is now a question about _which_
-hackathon, not about the seed as a whole. Phase tags stay decorative: a phase
-tagged `vote` in a hackathon whose `voting_enabled` is false is a legitimate
-fixture — it says when voting is meant to happen, not that it is open.
+On the dev cluster, `just cluster::reseed <context>` backs up, wipes the app
+database, seeds from your checkout and restarts the backend. It refuses unless
+`components/backend` matches `origin/main`, so it runs after merging.
 
 ## After changing the seed
 
-- Update `components/backend/cmd/seed/README.md` — it documents the fixture in
-  detail (user table, hackathon table, timeline, per-hackathon sections) and is
-  the thing people read instead of the Go file.
-- Re-seed from clean state and verify over the wire with the
-  **backend-api-explore** skill, e.g.
-  `just rpc::as alice aliceandbob hackathon.HackathonService/List '{}'`.
-
-Chain the re-seed and its verification into **one** tool call — a
-wipe/seed/check cycle run as separate calls re-bills the whole context window
-each time (see the context budget in `CLAUDE.md`), and the intermediate output
-tells you nothing:
-
-```bash
-just clean::state && just db::seed && just db::summary && \
-  just rpc::as alice aliceandbob hackathon.HackathonService/List '{}' \
-    | jq -r '.hackathons[] | "\(.id)  \(.name)"'
-```
-
-Reach for `jq` to project just the fields you're checking rather than letting a
-full `Get` tree — which returns projects, tracks, pages, phases and members —
-land in the window whole.
+Update `cmd/seed/README.md` in the same commit: the at-a-glance tables, the
+**Which hackathon for which test** table if a test moved, and the hackathon's
+own section. When the seed is the cause of a stale number elsewhere (a count in
+a comment, an identity total in `harness.go`), fix it too. Seed data is not
+user-visible, so it needs no `CHANGELOG.md` entry.
