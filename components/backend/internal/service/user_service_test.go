@@ -865,6 +865,14 @@ var _ = Describe("UserService", func() {
 
 		var targetUser *ent.User
 
+		oldRenkuUsr := "bob-renku"
+		oldLinkedinUsr := "bob-linkedin"
+		oldGithubUsr := "bob-github"
+
+		oldRenku := "https://renkulab.io/u/" + oldRenkuUsr
+		oldGithub := "https://github.com/" + oldGithubUsr
+		oldLinkedin := "https://linkedin.com/in/" + oldLinkedinUsr
+
 		newRenku := "https://renkulab.io/u/bob-renku-new"
 		newGithub := "https://github.com/bob-github-new"
 		newLinkedin := "https://linkedin.com/in/bob-linkedin-new"
@@ -879,9 +887,9 @@ var _ = Describe("UserService", func() {
 				SetUsername("get-target-username").
 				SetDisplayName("Get Target").
 				SetEmail("get@example.com").
-				SetRenku("bob-renku").
-				SetLinkedin("bob-linkedin").
-				SetGithub("bob-github").
+				SetRenku(oldRenkuUsr).
+				SetLinkedin(oldLinkedinUsr).
+				SetGithub(oldGithubUsr).
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -906,6 +914,93 @@ var _ = Describe("UserService", func() {
 			Expect(u.GetRenkuUrl()).To(Equal(newRenku))
 			Expect(u.GetGithubUrl()).To(Equal(newGithub))
 			Expect(u.GetLinkedinUrl()).To(Equal(newLinkedin))
+		})
+
+		It("lets admins edit users profiles", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			u := resp.GetUser()
+
+			Expect(u.GetRenkuUrl()).To(Equal(newRenku))
+			Expect(u.GetGithubUrl()).To(Equal(newGithub))
+			Expect(u.GetLinkedinUrl()).To(Equal(newLinkedin))
+		})
+
+		It("doesn't let users edit another user's profile", func() {
+			token := testutils.CreateTestJWTToken("another-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("removes empty string params but ignores nil params", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			inputMatrix := []struct {
+				renku    *string
+				github   *string
+				linkedin *string
+			}{
+				{renku: nil, github: nil, linkedin: nil},
+				{renku: &newRenku, github: nil, linkedin: nil},
+				{renku: nil, github: &newGithub, linkedin: nil},
+				{renku: nil, github: nil, linkedin: &newLinkedin},
+			}
+
+			expectedMatrix := []struct {
+				renku    string
+				github   string
+				linkedin string
+			}{
+				{renku: oldRenku, github: oldGithub, linkedin: oldLinkedin},
+				{renku: newRenku, github: oldGithub, linkedin: oldLinkedin},
+				{renku: newRenku, github: newGithub, linkedin: oldLinkedin},
+				{renku: newRenku, github: newGithub, linkedin: newLinkedin},
+			}
+
+			for i := range inputMatrix {
+				resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+					UserId:      targetUser.ID.String(),
+					RenkuUrl:    inputMatrix[i].renku,
+					GithubUrl:   inputMatrix[i].github,
+					LinkedinUrl: inputMatrix[i].linkedin,
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+
+				u := resp.GetUser()
+
+				Expect(u.GetRenkuUrl()).To(Equal(expectedMatrix[i].renku))
+				Expect(u.GetGithubUrl()).To(Equal(expectedMatrix[i].github))
+				Expect(u.GetLinkedinUrl()).To(Equal(expectedMatrix[i].linkedin))
+			}
 		})
 	})
 })
