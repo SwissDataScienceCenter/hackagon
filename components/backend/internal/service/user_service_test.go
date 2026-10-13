@@ -962,6 +962,67 @@ var _ = Describe("UserService", func() {
 			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
 		})
 
+		It("rejects an invalid URL without writing any link", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			badLinkedin := "https://example.com/in/bob"
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &badLinkedin,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+
+			// The valid github_url must not be saved either.
+			u, err := dbClient.User.Get(context.Background(), targetUser.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(u.Renku).To(Equal(oldRenkuUsr))
+			Expect(u.Github).To(Equal(oldGithubUsr))
+			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
+		})
+
+		It("rejects a malformed user_id", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    "not-a-uuid",
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("rejects anonymous requests", func() {
+			_, err := userClient.Edit(context.Background(), &msgs.EditRequest{
+				UserId:    targetUser.ID.String(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+		})
+
+		It("returns NotFound for a non-existent user", func() {
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    uuid.NewString(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
 		type input struct {
 			renku    *string
 			github   *string
