@@ -953,54 +953,70 @@ var _ = Describe("UserService", func() {
 				LinkedinUrl: &newLinkedin,
 			})
 
-			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+
+			u, err := dbClient.User.Get(context.Background(), targetUser.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(u.Renku).To(Equal(oldRenkuUsr))
+			Expect(u.Github).To(Equal(oldGithubUsr))
+			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
 		})
 
-		It("removes empty string params but ignores nil params", func() {
-			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(
-				context.Background(),
-				metadata.Pairs("authorization", "Bearer "+token),
-			)
+		type input struct {
+			renku    *string
+			github   *string
+			linkedin *string
+		}
 
-			inputMatrix := []struct {
-				renku    *string
-				github   *string
-				linkedin *string
-			}{
-				{renku: nil, github: nil, linkedin: nil},
-				{renku: &newRenku, github: nil, linkedin: nil},
-				{renku: nil, github: &newGithub, linkedin: nil},
-				{renku: nil, github: nil, linkedin: &newLinkedin},
-			}
+		type expected struct {
+			renku    string
+			github   string
+			linkedin string
+		}
 
-			expectedMatrix := []struct {
-				renku    string
-				github   string
-				linkedin string
-			}{
-				{renku: oldRenku, github: oldGithub, linkedin: oldLinkedin},
-				{renku: newRenku, github: oldGithub, linkedin: oldLinkedin},
-				{renku: newRenku, github: newGithub, linkedin: oldLinkedin},
-				{renku: newRenku, github: newGithub, linkedin: newLinkedin},
-			}
+		emptyString := ""
 
-			for i := range inputMatrix {
+		DescribeTable(
+			"removes empty string params but ignores nil params",
+			func(in input, want expected) {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
 				resp, err := userClient.Edit(ctx, &msgs.EditRequest{
 					UserId:      targetUser.ID.String(),
-					RenkuUrl:    inputMatrix[i].renku,
-					GithubUrl:   inputMatrix[i].github,
-					LinkedinUrl: inputMatrix[i].linkedin,
+					RenkuUrl:    in.renku,
+					GithubUrl:   in.github,
+					LinkedinUrl: in.linkedin,
 				})
 
 				Expect(err).NotTo(HaveOccurred())
 
 				u := resp.GetUser()
 
-				Expect(u.GetRenkuUrl()).To(Equal(expectedMatrix[i].renku))
-				Expect(u.GetGithubUrl()).To(Equal(expectedMatrix[i].github))
-				Expect(u.GetLinkedinUrl()).To(Equal(expectedMatrix[i].linkedin))
-			}
-		})
+				Expect(u.GetRenkuUrl()).To(Equal(want.renku))
+				Expect(u.GetGithubUrl()).To(Equal(want.github))
+				Expect(u.GetLinkedinUrl()).To(Equal(want.linkedin))
+			},
+			Entry("all nil", input{}, expected{oldRenku, oldGithub, oldLinkedin}),
+			Entry("clears renku", input{renku: &emptyString}, expected{"", oldGithub, oldLinkedin}),
+			Entry(
+				"clears github",
+				input{github: &emptyString},
+				expected{oldRenku, "", oldLinkedin},
+			),
+			Entry(
+				"clears linkedin",
+				input{linkedin: &emptyString},
+				expected{oldRenku, oldGithub, ""},
+			),
+			Entry("sets, clears and keeps in one request",
+				input{renku: &newRenku, github: &emptyString},
+				expected{newRenku, "", oldLinkedin},
+			),
+		)
+
 	})
 })
