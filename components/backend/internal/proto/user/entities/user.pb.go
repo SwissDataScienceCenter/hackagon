@@ -30,12 +30,13 @@ type User struct {
 	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	DisplayName string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Email       string                 `protobuf:"bytes,6,opt,name=email,proto3" json:"email,omitempty"`
-	RenkuUrl    string                 `protobuf:"bytes,7,opt,name=renku_url,json=renkuUrl,proto3" json:"renku_url,omitempty"`
-	GithubUrl   string                 `protobuf:"bytes,8,opt,name=github_url,json=githubUrl,proto3" json:"github_url,omitempty"`
-	LinkedinUrl string                 `protobuf:"bytes,9,opt,name=linkedin_url,json=linkedinUrl,proto3" json:"linkedin_url,omitempty"`
 	// Populated from casbin on fetch; not persisted in ent DB.
-	Roles         []GlobalRole           `protobuf:"varint,10,rep,packed,name=roles,proto3,enum=user.entities.GlobalRole" json:"roles,omitempty"`
-	ModifiedAt    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
+	Roles      []GlobalRole           `protobuf:"varint,7,rep,packed,name=roles,proto3,enum=user.entities.GlobalRole" json:"roles,omitempty"`
+	ModifiedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
+	// User accounts links.
+	RenkuUrl      string `protobuf:"bytes,9,opt,name=renku_url,json=renkuUrl,proto3" json:"renku_url,omitempty"`
+	GithubUrl     string `protobuf:"bytes,10,opt,name=github_url,json=githubUrl,proto3" json:"github_url,omitempty"`
+	LinkedinUrl   string `protobuf:"bytes,11,opt,name=linkedin_url,json=linkedinUrl,proto3" json:"linkedin_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,6 +113,20 @@ func (x *User) GetEmail() string {
 	return ""
 }
 
+func (x *User) GetRoles() []GlobalRole {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+func (x *User) GetModifiedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ModifiedAt
+	}
+	return nil
+}
+
 func (x *User) GetRenkuUrl() string {
 	if x != nil {
 		return x.RenkuUrl
@@ -133,20 +148,6 @@ func (x *User) GetLinkedinUrl() string {
 	return ""
 }
 
-func (x *User) GetRoles() []GlobalRole {
-	if x != nil {
-		return x.Roles
-	}
-	return nil
-}
-
-func (x *User) GetModifiedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ModifiedAt
-	}
-	return nil
-}
-
 var File_user_entities_user_proto protoreflect.FileDescriptor
 
 const file_user_entities_user_proto_rawDesc = "" +
@@ -160,15 +161,15 @@ const file_user_entities_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12!\n" +
 	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\x12\x14\n" +
-	"\x05email\x18\x06 \x01(\tR\x05email\x12\x1b\n" +
-	"\trenku_url\x18\a \x01(\tR\brenkuUrl\x12\x1d\n" +
+	"\x05email\x18\x06 \x01(\tR\x05email\x12/\n" +
+	"\x05roles\x18\a \x03(\x0e2\x19.user.entities.GlobalRoleR\x05roles\x12;\n" +
+	"\vmodified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"modifiedAt\x12\x1b\n" +
+	"\trenku_url\x18\t \x01(\tR\brenkuUrl\x12\x1d\n" +
 	"\n" +
-	"github_url\x18\b \x01(\tR\tgithubUrl\x12!\n" +
-	"\flinkedin_url\x18\t \x01(\tR\vlinkedinUrl\x12/\n" +
-	"\x05roles\x18\n" +
-	" \x03(\x0e2\x19.user.entities.GlobalRoleR\x05roles\x12;\n" +
-	"\vmodified_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"modifiedAtB\\ZZgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entitiesb\x06proto3"
+	"github_url\x18\n" +
+	" \x01(\tR\tgithubUrl\x12!\n" +
+	"\flinkedin_url\x18\v \x01(\tR\vlinkedinUrlB\\ZZgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entitiesb\x06proto3"
 
 var (
 	file_user_entities_user_proto_rawDescOnce sync.Once

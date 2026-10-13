@@ -18,12 +18,15 @@ export interface User {
   createdAt: Date | undefined;
   displayName: string;
   email: string;
+  /** Populated from casbin on fetch; not persisted in ent DB. */
+  roles: GlobalRole[];
+  modifiedAt:
+    | Date
+    | undefined;
+  /** User accounts links. */
   renkuUrl: string;
   githubUrl: string;
   linkedinUrl: string;
-  /** Populated from casbin on fetch; not persisted in ent DB. */
-  roles: GlobalRole[];
-  modifiedAt: Date | undefined;
 }
 
 function createBaseUser(): User {
@@ -34,11 +37,11 @@ function createBaseUser(): User {
     createdAt: undefined,
     displayName: "",
     email: "",
+    roles: [],
+    modifiedAt: undefined,
     renkuUrl: "",
     githubUrl: "",
     linkedinUrl: "",
-    roles: [],
-    modifiedAt: undefined,
   };
 }
 
@@ -62,22 +65,22 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       writer.uint32(50).string(message.email);
     }
-    if (message.renkuUrl !== "") {
-      writer.uint32(58).string(message.renkuUrl);
-    }
-    if (message.githubUrl !== "") {
-      writer.uint32(66).string(message.githubUrl);
-    }
-    if (message.linkedinUrl !== "") {
-      writer.uint32(74).string(message.linkedinUrl);
-    }
-    writer.uint32(82).fork();
+    writer.uint32(58).fork();
     for (const v of message.roles) {
       writer.int32(v);
     }
     writer.join();
     if (message.modifiedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.modifiedAt), writer.uint32(90).fork()).join();
+      Timestamp.encode(toTimestamp(message.modifiedAt), writer.uint32(66).fork()).join();
+    }
+    if (message.renkuUrl !== "") {
+      writer.uint32(74).string(message.renkuUrl);
+    }
+    if (message.githubUrl !== "") {
+      writer.uint32(82).string(message.githubUrl);
+    }
+    if (message.linkedinUrl !== "") {
+      writer.uint32(90).string(message.linkedinUrl);
     }
     return writer;
   },
@@ -138,37 +141,13 @@ export const User: MessageFns<User> = {
           continue;
         }
         case 7: {
-          if (tag !== 58) {
-            break;
-          }
-
-          message.renkuUrl = reader.string();
-          continue;
-        }
-        case 8: {
-          if (tag !== 66) {
-            break;
-          }
-
-          message.githubUrl = reader.string();
-          continue;
-        }
-        case 9: {
-          if (tag !== 74) {
-            break;
-          }
-
-          message.linkedinUrl = reader.string();
-          continue;
-        }
-        case 10: {
-          if (tag === 80) {
+          if (tag === 56) {
             message.roles.push(reader.int32() as any);
 
             continue;
           }
 
-          if (tag === 82) {
+          if (tag === 58) {
             const end2 = reader.uint32() + reader.pos;
             while (reader.pos < end2) {
               message.roles.push(reader.int32() as any);
@@ -179,12 +158,36 @@ export const User: MessageFns<User> = {
 
           break;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.modifiedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.renkuUrl = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.githubUrl = reader.string();
+          continue;
+        }
         case 11: {
           if (tag !== 90) {
             break;
           }
 
-          message.modifiedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.linkedinUrl = reader.string();
           continue;
         }
       }
@@ -216,6 +219,12 @@ export const User: MessageFns<User> = {
         ? globalThis.String(object.display_name)
         : "",
       email: isSet(object.email) ? globalThis.String(object.email) : "",
+      roles: globalThis.Array.isArray(object?.roles) ? object.roles.map((e: any) => globalRoleFromJSON(e)) : [],
+      modifiedAt: isSet(object.modifiedAt)
+        ? fromJsonTimestamp(object.modifiedAt)
+        : isSet(object.modified_at)
+        ? fromJsonTimestamp(object.modified_at)
+        : undefined,
       renkuUrl: isSet(object.renkuUrl)
         ? globalThis.String(object.renkuUrl)
         : isSet(object.renku_url)
@@ -231,14 +240,6 @@ export const User: MessageFns<User> = {
         : isSet(object.linkedin_url)
         ? globalThis.String(object.linkedin_url)
         : "",
-      roles: globalThis.Array.isArray(object?.roles)
-        ? object.roles.map((e: any) => globalRoleFromJSON(e))
-        : [],
-      modifiedAt: isSet(object.modifiedAt)
-        ? fromJsonTimestamp(object.modifiedAt)
-        : isSet(object.modified_at)
-        ? fromJsonTimestamp(object.modified_at)
-        : undefined,
     };
   },
 
@@ -262,6 +263,12 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       obj.email = message.email;
     }
+    if (message.roles?.length) {
+      obj.roles = message.roles.map((e) => globalRoleToJSON(e));
+    }
+    if (message.modifiedAt !== undefined) {
+      obj.modifiedAt = message.modifiedAt.toISOString();
+    }
     if (message.renkuUrl !== "") {
       obj.renkuUrl = message.renkuUrl;
     }
@@ -270,12 +277,6 @@ export const User: MessageFns<User> = {
     }
     if (message.linkedinUrl !== "") {
       obj.linkedinUrl = message.linkedinUrl;
-    }
-    if (message.roles?.length) {
-      obj.roles = message.roles.map((e) => globalRoleToJSON(e));
-    }
-    if (message.modifiedAt !== undefined) {
-      obj.modifiedAt = message.modifiedAt.toISOString();
     }
     return obj;
   },
@@ -291,11 +292,11 @@ export const User: MessageFns<User> = {
     message.createdAt = object.createdAt ?? undefined;
     message.displayName = object.displayName ?? "";
     message.email = object.email ?? "";
+    message.roles = object.roles?.map((e) => e) || [];
+    message.modifiedAt = object.modifiedAt ?? undefined;
     message.renkuUrl = object.renkuUrl ?? "";
     message.githubUrl = object.githubUrl ?? "";
     message.linkedinUrl = object.linkedinUrl ?? "";
-    message.roles = object.roles?.map((e) => e) || [];
-    message.modifiedAt = object.modifiedAt ?? undefined;
     return message;
   },
 };

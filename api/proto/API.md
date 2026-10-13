@@ -793,11 +793,11 @@ See components/backend/internal/middleware/rbac.go.
 | created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | display_name | [string](#string) |  |  |
 | email | [string](#string) |  |  |
-| renku_url | [string](#string) |  |  |
-| github_url | [string](#string) |  |  |
-| linkedin_url | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| renku_url | [string](#string) |  | User accounts links. |
+| github_url | [string](#string) |  |  |
+| linkedin_url | [string](#string) |  |  |
 
 
 

@@ -14,10 +14,12 @@ message User {
   google.protobuf.Timestamp created_at = 4;
   string display_name = 5;
   string email = 6;
-  string renku_url = 7;
-  string github_url = 8;
-  string linkedin_url = 9;
   // Populated from casbin on fetch; not persisted in ent DB.
-  repeated GlobalRole roles = 10;
-  google.protobuf.Timestamp modified_at = 11;
+  repeated GlobalRole roles = 7;
+  google.protobuf.Timestamp modified_at = 8;
+
+  // User accounts links.
+  string renku_url = 9;
+  string github_url = 10;
+  string linkedin_url = 11;
 }

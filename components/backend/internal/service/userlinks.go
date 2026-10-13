@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/url"
 	"regexp"
+	"strings"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"google.golang.org/grpc/codes"
@@ -17,35 +18,50 @@ const (
 	RenkuPrefix    = "https://renkulab.io/u/"
 )
 
+// Accept what users actually paste: http(s), any host case, an optional
+// subdomain (www., LinkedIn country codes like ch.), a trailing slash and
+// a query string or fragment.
 var (
-	linkedInRe = regexp.MustCompile(`^https://linkedin\.com/in/([A-Za-z0-9-]{3,100})/?$`)
-	githubRe   = regexp.MustCompile(`^https://github\.com/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/?$`)
-	renkuRe    = regexp.MustCompile(
-		`^https://renkulab\.io/u/([A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)/?$`,
+	linkedInRe = regexp.MustCompile(
+		`(?i)^https?://(?:[a-z]{2,3}\.)?linkedin\.com/in/([\p{L}\p{N}-]{3,100})/?(?:[?#].*)?$`,
+	)
+	githubRe = regexp.MustCompile(
+		`(?i)^https?://(?:www\.)?github\.com/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/?(?:[?#].*)?$`,
+	)
+	renkuRe = regexp.MustCompile(
+		`(?i)^https?://(?:www\.)?renkulab\.io/u/([A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)/?(?:[?#].*)?$`,
 	)
 )
 
-func linkedInUsername(url string) (string, error) {
-	m := linkedInRe.FindStringSubmatch(url)
+func linkedInUsername(link string) (string, error) {
+	link = strings.TrimSpace(link)
+
+	if s, err := url.PathUnescape(link); err == nil {
+		link = s
+	}
+
+	m := linkedInRe.FindStringSubmatch(link)
 	if m == nil {
-		return "", fmt.Errorf("url '%s' does not match regexp", url)
+		return "", fmt.Errorf("url '%s' does not match regexp", link)
 	}
 
 	return m[1], nil
 }
 
-func githubUsername(url string) (string, error) {
-	m := githubRe.FindStringSubmatch(url)
+func githubUsername(link string) (string, error) {
+	link = strings.TrimSpace(link)
+	m := githubRe.FindStringSubmatch(link)
 	if m == nil || len(m[1]) > 39 {
-		return "", fmt.Errorf("url '%s' does not match regexp", url)
+		return "", fmt.Errorf("url '%s' does not match regexp", link)
 	}
 	return m[1], nil
 }
 
-func renkuUsername(url string) (string, error) {
-	m := renkuRe.FindStringSubmatch(url)
+func renkuUsername(link string) (string, error) {
+	link = strings.TrimSpace(link)
+	m := renkuRe.FindStringSubmatch(link)
 	if m == nil {
-		return "", fmt.Errorf("url '%s' does not match regexp", url)
+		return "", fmt.Errorf("url '%s' does not match regexp", link)
 	}
 	return m[1], nil
 }
