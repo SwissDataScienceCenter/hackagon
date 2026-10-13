@@ -228,10 +228,10 @@ row-count overview.
   2. **Is it capability-gated, and is that capability on _in this hackathon_?**
      `SetPreference`, `RemovePreference`, `Propose` and the submission RPCs are
      gated on a capability, which is really a casbin row written alongside a
-     `HackathonState` boolean. `cmd/seed` writes both (`seedCapabilities`) with
-     a **different set per hackathon**, so the same call succeeds in one seeded
-     hackathon and is refused in the next — configuration, not a bug. Read the
-     set instead of guessing:
+     `HackathonState` boolean. `cmd/seed` sets both through `SetCapabilities`
+     with a **different set per hackathon**, so the same call succeeds in one
+     seeded hackathon and is refused in the next — configuration, not a bug.
+     Read the set instead of guessing:
      ```
      just rpc::as alice aliceandbob hackathon.HackathonService/Get \
        '{"hackathonId":"<uuid>"}' | jq '.hackathon.state'

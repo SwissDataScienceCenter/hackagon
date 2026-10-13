@@ -243,6 +243,8 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 		description: "Vote for the project you found most interesting or useful.",
 		method:      voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE,
 		voterType:   voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
+		maxPoints:   0,
+		jury:        nil,
 	})
 	if err != nil {
 		return err
@@ -279,8 +281,9 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 	}
 
 	// Over a month past: nothing left to do but look at what happened. Voting
-	// stays on with the results, which is how the fixture used to read; what
-	// actually stops a late vote now is the sprint being over.
+	// stays on with the results, which is how the fixture used to read. Nothing
+	// else stops a late vote either — SubmitVote does not look at the dates — so
+	// alice can still change hers. H6 is the hackathon for testing voting itself.
 	if err := h.setCaps(admin, id,
 		hackEnts.Capability_CAPABILITY_VOTE,
 		hackEnts.Capability_CAPABILITY_VIEW_RESULTS,

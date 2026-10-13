@@ -1,19 +1,116 @@
 # Seed Data
 
-`just db::seed` populates the database with a fixture designed to exercise the
-UI across past / ongoing / upcoming hackathons, public and private visibility,
-approved and proposed projects, draft and final submissions, a waitlisted
-participant, invitation links in all three of their states, and — in H4 — a
-hundred-person hackathon waiting for its teams to be formed. All timestamps are
-relative to `time.Now()` at seed time, so re-seeding keeps the ongoing hackathon
-ongoing. Each hackathon also gets the capabilities its phase calls for — see
-[Capabilities](#capabilities).
+`just db::seed` populates the database with six hackathons, each frozen at a
+different point in a hackathon's life, so every phase can be tested without
+first playing the earlier ones through by hand. All timestamps are relative to
+`time.Now()` at seed time, so a fresh seed always puts each hackathon back where
+it belongs — see [When to re-seed](#when-to-re-seed) for what that means for
+data that has been sitting for a while.
 
-Running again when all five hackathons already exist is a no-op. Finding _some_
+You can sign in as `hackagon-admin`, `alice`, `bob` and `charles` (password
+`aliceandbob` for all). Everyone else in the fixture exists in Postgres only and
+cannot log in — see [Users](#users).
+
+## Which hackathon for which phase
+
+| Phase being tested             | Hackathon                           | State it is frozen in                                                        |
+| ------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------- |
+| Registration (public)          | **H1** AI Innovation Challenge 2026 | Upcoming, sign-up open, a form with mandatory questions, charles waitlisted  |
+| Registration (private, invite) | **H5** Partner Data Sprint 2026     | Upcoming, private, a live, a revoked and an expired invitation link          |
+| Team formation                 | **H4** Data for Good Hackathon 2026 | 102 confirmed, 15 projects, 258 preferences, **no teams yet**                |
+| Hacking and submissions        | **H2** Climate Tech Hackathon 2026  | Ongoing, current phase Hacking, submissions open                             |
+| Voting                         | **H6** Open Science Hackathon 2026  | Ongoing, current phase Demo & Voting, 8 final submissions, votes half-way in |
+| Over, results published        | **H3** Internal Product Sprint      | Past, private, two submissions, results recorded                             |
+
+## Which hackathon for which test
+
+| To test                                                | Use            | Sign in as           | What is there                                                                                                               |
+| ------------------------------------------------------ | -------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Approving a waitlisted participant                     | H1, H5         | alice                | charles waits in H1, dana in H5                                                                                             |
+| What a waitlisted participant sees                     | H1             | charles              |                                                                                                                             |
+| Joining a public hackathon with its form               | H1             | hackagon-admin       | The only login not already in H1. Mandatory questions refuse an empty sign-up                                               |
+| Joining refused because sign-up closed                 | H4             | hackagon-admin       | `register` is off                                                                                                           |
+| Invitation links: redeem, revoked, expired             | H5             | bob or charles       | Links are printed at the end of the seed log; see [H5](#h5--partner-data-sprint-2026)                                       |
+| Managing invitations as an organizer                   | H5             | alice                |                                                                                                                             |
+| A private hackathon you cannot see                     | H3, H5         | bob or charles       | Neither is in H3 or H5                                                                                                      |
+| Proposing a project                                    | H1, H2         | bob, alice           |                                                                                                                             |
+| Reviewing proposals                                    | H1             | alice                | Two of bob's are still proposed                                                                                             |
+| Team preferences, small                                | H2             | bob or alice         |                                                                                                                             |
+| Team preferences and forming teams at volume           | H4             | alice (bob, charles) | One project wanted by 42 people, one by 2                                                                                   |
+| Registration answers as a roster                       | H4             | alice                | About one in seven never answered                                                                                           |
+| Submitting as a team member                            | H2, H1         | bob                  | H2 Team Gamma has a final; H1 Team Beta has nothing yet                                                                     |
+| Manage Submissions (organizer overview)                | H6             | alice                | 9 teams: drafts before finals, one team with only a draft. H1 (2 teams) and H2 (1 team) for small cases                     |
+| Casting a vote: single choice, points                  | H6             | charles              | Every final submission on his ballot, nothing cast yet                                                                      |
+| Refusal to vote for your own team                      | H6             | bob                  | bob is on Team Zeta, the favourite; the voting page leaves it off his ballot, so the refusal itself shows only over the API |
+| Points cannot be changed once given                    | H6             | bob or charles       | Best Use of Open Data, 10 points each — each account gets one try per seed                                                  |
+| Jury voting                                            | H6             | bob (jury), charles  | bob sees and can score Jury Prize; charles does not see it                                                                  |
+| Tallies, suggesting and publishing results, exports    | H6             | alice                | All four categories have votes and none has results. Audience Favourite has a tie for first                                 |
+| Ranked voting                                          | H6             | alice                | Most Reproducible — organizer side only: the voting page has no ranked control yet                                          |
+| Results as a participant                               | H6, H3         | bob, charles / alice | H6 shows results once alice publishes some; H3 has them already, but alice is its only login                                |
+| A hackathon with no tracks                             | H4, H6         |                      | H1–H3 have tracks                                                                                                           |
+| Phases: none current, agreeing, disagreeing with dates | H1, H2, H3     |                      | See [Phases](#phases). H5 has no phases at all                                                                              |
+| The global-admin escape hatch                          | any            | hackagon-admin       | He takes part in nothing, so every success he has is the escape hatch                                                       |
+| An organizer who is not an admin                       | H1, H4, H5, H6 | alice                | alice holds `Owner` and nothing global beyond being allowed to create hackathons                                            |
+
+## When to re-seed
+
+**Nothing re-seeds automatically.** The backend never runs `cmd/seed`: a deploy,
+a restart or a new image only migrates the schema and keeps every row. So the
+dev cluster holds whatever the last manual re-seed wrote, plus everything people
+have done to it since; production is never seeded at all. CI does run the seed,
+but against a throwaway stack, to prove it still works — nothing it writes
+survives the job.
+
+Re-seed when one of these is true:
+
+- **The dates have run out.** The fixture is relative to the moment it was
+  seeded, and from then on it ages like real data. The shortest clocks:
+
+  | Days after seeding | What stops being true                                                       |
+  | ------------------ | --------------------------------------------------------------------------- |
+  | 2                  | H2 is over — no ongoing hackathon to submit in                              |
+  | 4                  | H6 is over — no ongoing hackathon to vote in; H4's team formation has ended |
+  | 5                  | H4 starts                                                                   |
+  | 14                 | H5 is over and its live invitation has expired                              |
+  | 19                 | H1 starts — no upcoming public hackathon to join                            |
+
+  To see when the data you are looking at was seeded: Climate Tech Hackathon
+  2026 (H2) starts two days before the seed ran.
+
+- **The seed itself changed** — for example, a hackathon was added. The seed
+  refuses to run on a database holding only some of its hackathons, so after
+  such a change `just db::seed` stops with `partial seed data found` until the
+  old data is wiped.
+- **The DB schema changed.**
+- **Testing used up the fixture.** Some things can only be done once per seed: a
+  points vote cannot be changed, a redeemed invitation has made somebody a
+  member, an approved participant stays approved.
+
+How:
+
+```bash
+# Locally — wipes Postgres and Keycloak state
+just clean::state && just start      # then, in another shell:
+just db::seed
+just deploy::down && just deploy::up # reload the casbin policy, see below
+
+# Or all of that at once, regenerating code too
+just schema-change
+
+# The dev cluster — backs up, wipes the app database (Keycloak is kept),
+# seeds from your checkout and restarts the backend. Refuses unless
+# components/backend matches origin/main.
+just cluster::reseed <kube-context>
+```
+
+## Running the seed
+
+Running again when all six hackathons already exist is a no-op. Finding _some_
 of them is an error rather than either a skip or a re-seed: it means a previous
-run died partway, and the fix is `just clean::state`. The seed is not atomic —
-it drives the API, and several handlers open a transaction of their own, which
-rules out wrapping the run in one.
+run died partway, or the seed has gained a hackathon since, and the fix is
+`just clean::state`. The seed is not atomic — it drives the API, and several
+handlers open a transaction of their own, which rules out wrapping the run in
+one.
 
 ## How the fixture is built
 
@@ -73,15 +170,15 @@ it needs no manual restart.
 Seeded via Keycloak IDs that match the dev realm. The admin's Keycloak ID comes
 from config; the others are hardcoded constants in [main.go](main.go).
 
-`bob` and `charles` take part in H4, so signing in as either lands you inside
-the large fixture; `alice` lands there as its organizer.
+`bob` and `charles` take part in H4 and H6, so signing in as either lands you
+inside the two large fixtures; `alice` runs both.
 
 | Username         | Display name      | Role across the seed                                | Can log in |
 | ---------------- | ----------------- | --------------------------------------------------- | ---------- |
 | `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3        | yes        |
-| `alice`          | Alice Wonderland  | Creator of H1, H4 and H5; participant in H1, H2, H3 | yes        |
-| `bob`            | Bob Henderson     | Participant in H1, H2, H4; Teams Beta, Gamma        | yes        |
-| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed participant in H4      | yes        |
+| `alice`          | Alice Wonderland  | Creator of H1, H4, H5, H6; participant in H1–H3     | yes        |
+| `bob`            | Bob Henderson     | In H1, H2, H4, H6; Teams Beta, Gamma, Zeta; H6 jury | yes        |
+| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed in H4 and H6           | yes        |
 | `dana`           | Dana Okonkwo      | Participant in H1 and H3; waitlisted in H5          | **no**     |
 | `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                       | **no**     |
 
@@ -111,15 +208,24 @@ them, or as `alice`, who runs it.
 They hold the casbin `Member` role in H4 and nothing else. No hackathon `Owner`,
 no project-scoped `Owner`.
 
+### The thirty in H6
+
+H6 adds **30 more** the same way — Keycloak IDs `seed-osh-001` … `seed-osh-030`,
+names from the same two lists, picked from a range H4 does not use, so no
+username collides (`amara.keller`, `bruno.keller`, …). Twenty-seven of them
+staff H6's nine teams, three to a team; the last three are on no team and sit on
+its jury. They cast every vote H6 holds.
+
 ## Hackathons at a glance
 
-| #   | Name                         | Visibility | Timing   | Span (days from seed)  | Creator        | Teams | Submissions                         |
-| --- | ---------------------------- | ---------- | -------- | ---------------------- | -------------- | ----- | ----------------------------------- |
-| H1  | AI Innovation Challenge 2026 | public     | upcoming | `+19` to `+21`         | alice          | 2     | Alpha: draft, final                 |
-| H2  | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`           | hackagon-admin | 1     | Gamma: final                        |
-| H3  | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 2     | Delta: draft, final; Epsilon: final |
-| H4  | Data for Good Hackathon 2026 | public     | upcoming | `+5` to `+8`           | alice          | **0** | —                                   |
-| H5  | Partner Data Sprint 2026     | private    | upcoming | `+12` to `+14`         | alice          | **0** | —                                   |
+| #   | Name                         | Visibility | Timing   | Span (days from seed)  | Creator        | Teams | Submissions                             |
+| --- | ---------------------------- | ---------- | -------- | ---------------------- | -------------- | ----- | --------------------------------------- |
+| H1  | AI Innovation Challenge 2026 | public     | upcoming | `+19` to `+21`         | alice          | 2     | Alpha: draft, final                     |
+| H2  | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`           | hackagon-admin | 1     | Gamma: final                            |
+| H3  | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 2     | Delta: draft, final; Epsilon: final     |
+| H4  | Data for Good Hackathon 2026 | public     | upcoming | `+5` to `+8`           | alice          | **0** | —                                       |
+| H5  | Partner Data Sprint 2026     | private    | upcoming | `+12` to `+14`         | alice          | **0** | —                                       |
+| H6  | Open Science Hackathon 2026  | public     | ongoing  | `-3` to `+4`           | alice          | 9     | 8 final (3 after a draft); 1 draft only |
 
 ## Timeline
 
@@ -137,6 +243,7 @@ gantt
 
     section Ongoing
     H2 Climate Tech (public)        :active, 2026-04-20, 5d
+    H6 Open Science (public)        :active, 2026-04-19, 8d
 
     section Upcoming
     H4 Data for Good (public)        :2026-04-27, 4d
@@ -158,14 +265,15 @@ reads, and the casbin policy, which is the only thing the enforcer reads. The
 seed states all six on every call, so the set below is a declaration rather than
 a patch on whatever was there before.
 
-|                     | H1 upcoming | H2 ongoing | H3 past | H4 forming teams | H5 invite-only |
-| ------------------- | ----------- | ---------- | ------- | ---------------- | -------------- |
-| Register            | ✅          | —          | —       | —                | ✅             |
-| Propose projects    | ✅          | ✅         | —       | ✅               | —              |
-| Team preferences    | ✅          | ✅         | —       | ✅               | —              |
-| Project submissions | ✅          | ✅         | —       | —                | —              |
-| Vote                | —           | —          | ✅      | —                | —              |
-| View results        | —           | —          | ✅      | —                | —              |
+|                     | H1 upcoming | H2 ongoing | H3 past | H4 forming teams | H5 invite-only | H6 voting |
+| ------------------- | ----------- | ---------- | ------- | ---------------- | -------------- | --------- |
+| Register            | ✅          | —          | —       | —                | ✅             | —         |
+| Propose projects    | ✅          | ✅         | —       | ✅               | —              | —         |
+| Team preferences    | ✅          | ✅         | —       | ✅               | —              | —         |
+| Project submissions | ✅          | ✅         | —       | —                | —              | —         |
+| Vote                | —           | —          | ✅      | —                | —              | ✅        |
+| View results        | —           | —          | ✅      | —                | —              | ✅        |
+| View teams          | ✅          | ✅         | ✅      | —                | —              | ✅        |
 
 Chosen to match each hackathon's phase: H1 is taking sign-ups and proposals, H2
 is running, H3 is over, H4 has closed its doors and is sorting people into
@@ -176,8 +284,15 @@ private hackathon with `register` on), and **H4 is where a refused `Join` is the
 correct answer** rather than a misconfiguration. H5 carries `register` and
 nothing else because it is the fixture for the door rather than the room: the
 sprint has not started, so there is nothing inside for a confirmed member to do
-yet. Voting is on in H3 only, which is where it belongs — you vote once the
-building has stopped. **H3 is therefore the only place voting is testable.**
+yet. Voting is on in H3 and H6, where it belongs — you vote once the building
+has stopped. **H6 is where voting is tested**: it is still running, and bob and
+charles have every ballot to fill in. H3 keeps voting on beside its published
+results, and alice, its only login, has already voted.
+
+**View teams goes with voting.** The voting page builds its ballot from the
+hackathon's teams, which a member can only read while `view teams` is on. With
+it off, voting opens on an empty ballot. Nothing in the backend ties the two
+together, so every hackathon that votes has both on.
 
 `vote` writes **three** casbin rows, not one: `Vote:Create`, `VoteCategory:Read`
 and `Submission:Read`. The second is the one that looks redundant and is not —
@@ -219,8 +334,8 @@ exactly that failure. Two consequences while the ticket is open:
 ## Registration questions
 
 Organizer-defined questions answered at sign-up — read with `ListQuestions`,
-answered through `Join` or later revised with `SubmitAnswers`. Four of the five
-hackathons ask something; **H3 asks nothing**, which is the fixture for a
+answered through `Join` or later revised with `SubmitAnswers`. Four of the six
+hackathons ask something; **H3 and H6 ask nothing**, which is the fixture for a
 hackathon with no form at all.
 
 | #   | Questions                                                                              | Mandatory              | Answered by                                  |
@@ -230,12 +345,13 @@ hackathon with no form at all.
 | H3  | —                                                                                      | —                      | —                                            |
 | H4  | `affiliation` (text), `tshirt_size` (enum), `remote` (bool)                            | all but `remote`       | roughly 6 in 7 of the hundred                |
 | H5  | `affiliation` (text), `data_agreement` (bool), `access_needs` (text)                   | all but `access_needs` | nobody — dana joined before the form existed |
+| H6  | —                                                                                      | —                      | —                                            |
 
-H1 is where the sign-up flow is exercised: it is the only hackathon with
-`register` on, so a newcomer reads the questions before joining and sends the
-answers along with `Join`. Its mandatory questions are what make `Join` refuse
-an empty sign-up. H2's form is closed by contrast — `register` is off and
-everyone has already answered.
+H1 is where the public sign-up flow is exercised: `register` is on, so a
+newcomer reads the questions before joining and sends the answers along with
+`Join`. Its mandatory questions are what make `Join` refuse an empty sign-up.
+H2's form is closed by contrast — `register` is off and everyone has already
+answered.
 
 **Only people who answered have rows at all.** `charles` in H1 is waitlisted and
 has answered nothing, and about one in seven of H4's hundred never answered
@@ -255,9 +371,10 @@ own, so adding or changing them cannot shift the preference draw that follows.
 
 ## Phases
 
-Every phase carries **capability tags** and every hackathon but H1 has a
-**current phase**. Both are set by `seedPhases` / `seedCapabilities` in
-[main.go](main.go).
+Every phase carries **capability tags**, and every hackathon but H1 and H5 has a
+**current phase** — H5 has no phases at all. Both are set in each hackathon's
+own file ([h1.go](h1.go) … [h6.go](h6.go)), through `createPhases` and
+`setCurrentPhase`.
 
 The two are unrelated to the table above, and that is the point:
 
@@ -286,8 +403,10 @@ correct fixture, not a contradiction — H1's Judging phase is exactly that.
 | H4        | Team Formation | propose projects, team preferences | ✅      |
 | H4        | Hacking        | project submissions                | —       |
 | H4        | Demo           | vote, view results                 | —       |
+| H6        | Hacking        | project submissions                | —       |
+| H6        | Demo & Voting  | vote, view results                 | ✅      |
 
-Four states worth having, one per hackathon:
+The states worth having, one per hackathon:
 
 - **H1 has no current phase** — the doors have not opened, so it is not "in" any
   phase. Exercises an empty `current_phase_id`.
@@ -301,21 +420,24 @@ Four states worth having, one per hackathon:
   own start date. The declared phase and the dates agree, while the hackathon
   itself is still upcoming — the case where "which phase are we in" and "has it
   started" have different answers.
+- **H6's current phase is Demo & Voting**, which today falls inside, after a
+  Hacking phase that has already ended — the one hackathon with a completed
+  phase behind the current one while it is still running.
 
-`register` is tagged on exactly one phase, H4's `Registration`. None of H1–H3's
-nine phases is a sign-up window, so tagging one of those would misdescribe the
+`register` is tagged on exactly one phase, H4's `Registration`. None of the
+other phases is a sign-up window, so tagging one of those would misdescribe the
 fixture.
 
 ## User involvement
 
-| User           | H1 AI Innovation                  | H2 Climate Tech                            | H3 Internal Sprint                         | H4 Data for Good                           | H5 Partner Sprint                          |
-| -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        | _not a participant_                        |
-| alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant |
-| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects | — left free to redeem a link by hand       |
-| charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    | — left free to redeem a link by hand       |
-| dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          | _waitlisted_, via the live invitation      |
-| yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          | —                                          |
+| User           | H1 AI Innovation                  | H2 Climate Tech                            | H3 Internal Sprint                         | H4 Data for Good                           | H5 Partner Sprint                          | H6 Open Science                            |
+| -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        | _not a participant_                        | _not a participant_                        |
+| alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant |
+| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects | — left free to redeem a link by hand       | member of Team Zeta; on the jury; no votes |
+| charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    | — left free to redeem a link by hand       | participant, on no team; no votes          |
+| dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          | _waitlisted_, via the live invitation      | —                                          |
+| yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          | —                                          | —                                          |
 
 **Nobody belongs to two teams in the same hackathon.** A person works on one
 project, so `alice` holds Team Alpha and `bob` holds Team Beta rather than alice
@@ -426,10 +548,10 @@ Pages: `Overview`, `Technical Specs`, `Timeline` (all visible).
 
 ### Voting
 
-H3 is the only hackathon with voting on, so it is the only place the voting UI
-can be exercised. One category, `Best Project` — single choice, all participants
-— with two votes already cast and a two-way tie for first place recorded as
-results.
+One category, `Best Project` — single choice, all participants — with two votes
+already cast and a two-way tie for first place recorded as results. This is the
+finished state: for voting while it is open, use
+[H6](#h6--open-science-hackathon-2026).
 
 **The one-member-per-team split above is what makes voting work at all.**
 `SubmitVote` refuses a vote on a submission by a team you belong to, so a
@@ -440,9 +562,9 @@ exactly that. It is also why H3 needed a second participant once
 cast the other vote. Put both people back on both teams and H3 goes back to
 having voting enabled and nothing votable in it.
 
-Votes and results here are written straight through ent, not through
-`SubmitVote`, so no handler validates them — the cross-team property has to be
-kept true by hand if you add more.
+Both votes go through `SubmitVote`, so the handler — not this fixture — is what
+keeps them off the voter's own team. `SubmitVote` does not look at the dates
+either, so alice can still change hers although the sprint ended weeks ago.
 
 ---
 
@@ -611,3 +733,88 @@ the sprint, same as in H4.
   private hackathon that asked nothing could be joined by posting an empty form,
   and then an invitation page would only ever need a button. The mandatory
   questions are what make it have to carry the form.
+
+## H6 — Open Science Hackathon 2026
+
+The voting fixture: building is over, every team has demoed, and voting is open
+**now**. H3 votes too, but it is over and nobody who can sign in has a ballot
+left there. Here bob and charles have every ballot still to fill in, while
+thirty participants who cannot log in have already cast enough votes for the
+tallies to mean something.
+
+Phases:
+
+- Hacking — days `-3` to `-1`
+- Demo & Voting — days `-1` to `+4` — **current phase**
+
+No tracks, no registration form.
+
+| Team        | Project                     | Members     | Submissions        |
+| ----------- | --------------------------- | ----------- | ------------------ |
+| Team Zeta   | Reproducibility Checker     | **bob** + 3 | v1 draft, v2 final |
+| Team Eta    | Dataset Citation Graph      | 3           | v1 final           |
+| Team Theta  | Open Peer Review Feed       | 3           | v1 final           |
+| Team Iota   | Lab Notebook to Paper       | 3           | v1 draft, v2 final |
+| Team Kappa  | FAIR Metadata Linter        | 3           | v1 final           |
+| Team Lambda | Plain-Language Preprints    | 3           | v1 final           |
+| Team Mu     | Research Software Directory | 3           | v1 draft, v2 final |
+| Team Nu     | Retraction Alerts           | 3           | v1 final           |
+| Team Xi     | Grant Data Explorer         | 3           | v1 draft **only**  |
+
+Every project is alice's, approved. Finals link to
+`github.com/open-science-hack/<project>`; drafts carry no link. **Team Xi never
+finalized**, so it is on no ballot and has no votes — the team an organizer
+looking at submissions should notice, and a voter should not see.
+
+Pages: `About`, `How voting works` (both visible).
+
+### The four categories
+
+| Category              | Method        | Who votes         | Budget | Cast so far                        |
+| --------------------- | ------------- | ----------------- | -----: | ---------------------------------- |
+| Audience Favourite    | single choice | all participants  |      — | 25 voters                          |
+| Best Use of Open Data | points        | all participants  |     10 | 21 voters, 1–3 projects each       |
+| Most Reproducible     | ranked        | all participants  |      — | 22 voters, top three each          |
+| Jury Prize            | points        | jury: bob + three |     20 | 2 of the 4 jurors, 4 projects each |
+
+Who votes for what is drawn from a fixed PRNG seed (`openScienceVoteSeed`),
+weighted towards some projects, so the same tallies come back on every re-seed.
+What they come to:
+
+- **Audience Favourite has a tie for first** — Team Theta and Team Zeta, six
+  votes each — which is the case suggesting results has to handle.
+- **Best Use of Open Data has a clear order**, from Team Zeta's 48 points down
+  to Team Lambda's 6. Not every voter spent their whole 10.
+- **Jury Prize** is led by Team Iota, with Team Theta and Team Eta tied at the
+  bottom.
+- **Most Reproducible** can only be voted in over the API: the voting page has
+  no ranked control yet and leaves the category off every ballot. Its seeded
+  votes are there for the organizer's side — tallies, suggesting results and the
+  exports.
+
+**No results are recorded in any category.** Going from tallies to published
+results is the organizer flow this fixture is for, so it starts at the
+beginning; H3 is the one whose results are already published. `view results` is
+on, so once alice publishes a result, bob and charles can see it.
+
+### Who to sign in as
+
+- **charles** — the plain voter. On no team and not on the jury: every final
+  submission is on his ballot, and Jury Prize is not shown to him.
+- **bob** — on Team Zeta, the favourite, so his own team is left off his ballot
+  (`SubmitVote` refuses it if asked over the API). He is also on the jury, so
+  Jury Prize is his to score.
+- **alice** — the organizer: tallies, results, exports, and Manage Submissions
+  with nine teams in it.
+
+Points cannot be changed once given, so each account gets **one** go at each
+points category per seed. Single choice can be changed as often as you like.
+
+### Deliberately absent — do not "fix"
+
+- **bob and charles have voted in nothing.** A ballot somebody else has already
+  filled in tests nothing.
+- **No results.** See above.
+- **alice and hackagon-admin take no part**, as in every hackathon here.
+- **Sign-up, proposals and submissions are closed.** Building is over; the
+  submissions are what they will be.

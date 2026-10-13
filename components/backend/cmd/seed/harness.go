@@ -18,7 +18,7 @@ package main
 // and takes no actor argument, and a user's display name can only ever come
 // from JWT claims. The seed therefore signs its own tokens with a throwaway key
 // this process generates and the server is told to trust for this run only, so
-// it can act as all 106 fixture identities — only four of which exist in
+// it can act as all 136 fixture identities — only four of which exist in
 // Keycloak.
 
 import (
