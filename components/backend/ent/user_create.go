@@ -78,6 +78,48 @@ func (_c *UserCreate) SetNillableEmail(v *string) *UserCreate {
 	return _c
 }
 
+// SetRenku sets the "renku" field.
+func (_c *UserCreate) SetRenku(v string) *UserCreate {
+	_c.mutation.SetRenku(v)
+	return _c
+}
+
+// SetNillableRenku sets the "renku" field if the given value is not nil.
+func (_c *UserCreate) SetNillableRenku(v *string) *UserCreate {
+	if v != nil {
+		_c.SetRenku(*v)
+	}
+	return _c
+}
+
+// SetGithub sets the "github" field.
+func (_c *UserCreate) SetGithub(v string) *UserCreate {
+	_c.mutation.SetGithub(v)
+	return _c
+}
+
+// SetNillableGithub sets the "github" field if the given value is not nil.
+func (_c *UserCreate) SetNillableGithub(v *string) *UserCreate {
+	if v != nil {
+		_c.SetGithub(*v)
+	}
+	return _c
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (_c *UserCreate) SetLinkedin(v string) *UserCreate {
+	_c.mutation.SetLinkedin(v)
+	return _c
+}
+
+// SetNillableLinkedin sets the "linkedin" field if the given value is not nil.
+func (_c *UserCreate) SetNillableLinkedin(v *string) *UserCreate {
+	if v != nil {
+		_c.SetLinkedin(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserCreate) SetCreatedAt(v time.Time) *UserCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -553,6 +595,18 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultEmail
 		_c.mutation.SetEmail(v)
 	}
+	if _, ok := _c.mutation.Renku(); !ok {
+		v := user.DefaultRenku
+		_c.mutation.SetRenku(v)
+	}
+	if _, ok := _c.mutation.Github(); !ok {
+		v := user.DefaultGithub
+		_c.mutation.SetGithub(v)
+	}
+	if _, ok := _c.mutation.Linkedin(); !ok {
+		v := user.DefaultLinkedin
+		_c.mutation.SetLinkedin(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := user.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -637,6 +691,18 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Email(); ok {
 		_spec.SetField(user.FieldEmail, field.TypeString, value)
 		_node.Email = value
+	}
+	if value, ok := _c.mutation.Renku(); ok {
+		_spec.SetField(user.FieldRenku, field.TypeString, value)
+		_node.Renku = value
+	}
+	if value, ok := _c.mutation.Github(); ok {
+		_spec.SetField(user.FieldGithub, field.TypeString, value)
+		_node.Github = value
+	}
+	if value, ok := _c.mutation.Linkedin(); ok {
+		_spec.SetField(user.FieldLinkedin, field.TypeString, value)
+		_node.Linkedin = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)
@@ -1182,6 +1248,60 @@ func (u *UserUpsert) ClearEmail() *UserUpsert {
 	return u
 }
 
+// SetRenku sets the "renku" field.
+func (u *UserUpsert) SetRenku(v string) *UserUpsert {
+	u.Set(user.FieldRenku, v)
+	return u
+}
+
+// UpdateRenku sets the "renku" field to the value that was provided on create.
+func (u *UserUpsert) UpdateRenku() *UserUpsert {
+	u.SetExcluded(user.FieldRenku)
+	return u
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (u *UserUpsert) ClearRenku() *UserUpsert {
+	u.SetNull(user.FieldRenku)
+	return u
+}
+
+// SetGithub sets the "github" field.
+func (u *UserUpsert) SetGithub(v string) *UserUpsert {
+	u.Set(user.FieldGithub, v)
+	return u
+}
+
+// UpdateGithub sets the "github" field to the value that was provided on create.
+func (u *UserUpsert) UpdateGithub() *UserUpsert {
+	u.SetExcluded(user.FieldGithub)
+	return u
+}
+
+// ClearGithub clears the value of the "github" field.
+func (u *UserUpsert) ClearGithub() *UserUpsert {
+	u.SetNull(user.FieldGithub)
+	return u
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (u *UserUpsert) SetLinkedin(v string) *UserUpsert {
+	u.Set(user.FieldLinkedin, v)
+	return u
+}
+
+// UpdateLinkedin sets the "linkedin" field to the value that was provided on create.
+func (u *UserUpsert) UpdateLinkedin() *UserUpsert {
+	u.SetExcluded(user.FieldLinkedin)
+	return u
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (u *UserUpsert) ClearLinkedin() *UserUpsert {
+	u.SetNull(user.FieldLinkedin)
+	return u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (u *UserUpsert) SetModifiedAt(v time.Time) *UserUpsert {
 	u.Set(user.FieldModifiedAt, v)
@@ -1312,6 +1432,69 @@ func (u *UserUpsertOne) UpdateEmail() *UserUpsertOne {
 func (u *UserUpsertOne) ClearEmail() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearEmail()
+	})
+}
+
+// SetRenku sets the "renku" field.
+func (u *UserUpsertOne) SetRenku(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetRenku(v)
+	})
+}
+
+// UpdateRenku sets the "renku" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateRenku() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateRenku()
+	})
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (u *UserUpsertOne) ClearRenku() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearRenku()
+	})
+}
+
+// SetGithub sets the "github" field.
+func (u *UserUpsertOne) SetGithub(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetGithub(v)
+	})
+}
+
+// UpdateGithub sets the "github" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateGithub() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateGithub()
+	})
+}
+
+// ClearGithub clears the value of the "github" field.
+func (u *UserUpsertOne) ClearGithub() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearGithub()
+	})
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (u *UserUpsertOne) SetLinkedin(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLinkedin(v)
+	})
+}
+
+// UpdateLinkedin sets the "linkedin" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateLinkedin() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLinkedin()
+	})
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (u *UserUpsertOne) ClearLinkedin() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLinkedin()
 	})
 }
 
@@ -1614,6 +1797,69 @@ func (u *UserUpsertBulk) UpdateEmail() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearEmail() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearEmail()
+	})
+}
+
+// SetRenku sets the "renku" field.
+func (u *UserUpsertBulk) SetRenku(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetRenku(v)
+	})
+}
+
+// UpdateRenku sets the "renku" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateRenku() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateRenku()
+	})
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (u *UserUpsertBulk) ClearRenku() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearRenku()
+	})
+}
+
+// SetGithub sets the "github" field.
+func (u *UserUpsertBulk) SetGithub(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetGithub(v)
+	})
+}
+
+// UpdateGithub sets the "github" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateGithub() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateGithub()
+	})
+}
+
+// ClearGithub clears the value of the "github" field.
+func (u *UserUpsertBulk) ClearGithub() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearGithub()
+	})
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (u *UserUpsertBulk) SetLinkedin(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLinkedin(v)
+	})
+}
+
+// UpdateLinkedin sets the "linkedin" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateLinkedin() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLinkedin()
+	})
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (u *UserUpsertBulk) ClearLinkedin() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLinkedin()
 	})
 }
 

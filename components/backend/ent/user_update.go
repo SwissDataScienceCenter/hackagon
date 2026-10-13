@@ -111,6 +111,66 @@ func (_u *UserUpdate) ClearEmail() *UserUpdate {
 	return _u
 }
 
+// SetRenku sets the "renku" field.
+func (_u *UserUpdate) SetRenku(v string) *UserUpdate {
+	_u.mutation.SetRenku(v)
+	return _u
+}
+
+// SetNillableRenku sets the "renku" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableRenku(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetRenku(*v)
+	}
+	return _u
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (_u *UserUpdate) ClearRenku() *UserUpdate {
+	_u.mutation.ClearRenku()
+	return _u
+}
+
+// SetGithub sets the "github" field.
+func (_u *UserUpdate) SetGithub(v string) *UserUpdate {
+	_u.mutation.SetGithub(v)
+	return _u
+}
+
+// SetNillableGithub sets the "github" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableGithub(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetGithub(*v)
+	}
+	return _u
+}
+
+// ClearGithub clears the value of the "github" field.
+func (_u *UserUpdate) ClearGithub() *UserUpdate {
+	_u.mutation.ClearGithub()
+	return _u
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (_u *UserUpdate) SetLinkedin(v string) *UserUpdate {
+	_u.mutation.SetLinkedin(v)
+	return _u
+}
+
+// SetNillableLinkedin sets the "linkedin" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableLinkedin(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetLinkedin(*v)
+	}
+	return _u
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (_u *UserUpdate) ClearLinkedin() *UserUpdate {
+	_u.mutation.ClearLinkedin()
+	return _u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (_u *UserUpdate) SetModifiedAt(v time.Time) *UserUpdate {
 	_u.mutation.SetModifiedAt(v)
@@ -1133,6 +1193,24 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.EmailCleared() {
 		_spec.ClearField(user.FieldEmail, field.TypeString)
+	}
+	if value, ok := _u.mutation.Renku(); ok {
+		_spec.SetField(user.FieldRenku, field.TypeString, value)
+	}
+	if _u.mutation.RenkuCleared() {
+		_spec.ClearField(user.FieldRenku, field.TypeString)
+	}
+	if value, ok := _u.mutation.Github(); ok {
+		_spec.SetField(user.FieldGithub, field.TypeString, value)
+	}
+	if _u.mutation.GithubCleared() {
+		_spec.ClearField(user.FieldGithub, field.TypeString)
+	}
+	if value, ok := _u.mutation.Linkedin(); ok {
+		_spec.SetField(user.FieldLinkedin, field.TypeString, value)
+	}
+	if _u.mutation.LinkedinCleared() {
+		_spec.ClearField(user.FieldLinkedin, field.TypeString)
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(user.FieldModifiedAt, field.TypeTime, value)
@@ -2419,6 +2497,66 @@ func (_u *UserUpdateOne) ClearEmail() *UserUpdateOne {
 	return _u
 }
 
+// SetRenku sets the "renku" field.
+func (_u *UserUpdateOne) SetRenku(v string) *UserUpdateOne {
+	_u.mutation.SetRenku(v)
+	return _u
+}
+
+// SetNillableRenku sets the "renku" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableRenku(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetRenku(*v)
+	}
+	return _u
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (_u *UserUpdateOne) ClearRenku() *UserUpdateOne {
+	_u.mutation.ClearRenku()
+	return _u
+}
+
+// SetGithub sets the "github" field.
+func (_u *UserUpdateOne) SetGithub(v string) *UserUpdateOne {
+	_u.mutation.SetGithub(v)
+	return _u
+}
+
+// SetNillableGithub sets the "github" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableGithub(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetGithub(*v)
+	}
+	return _u
+}
+
+// ClearGithub clears the value of the "github" field.
+func (_u *UserUpdateOne) ClearGithub() *UserUpdateOne {
+	_u.mutation.ClearGithub()
+	return _u
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (_u *UserUpdateOne) SetLinkedin(v string) *UserUpdateOne {
+	_u.mutation.SetLinkedin(v)
+	return _u
+}
+
+// SetNillableLinkedin sets the "linkedin" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableLinkedin(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetLinkedin(*v)
+	}
+	return _u
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (_u *UserUpdateOne) ClearLinkedin() *UserUpdateOne {
+	_u.mutation.ClearLinkedin()
+	return _u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (_u *UserUpdateOne) SetModifiedAt(v time.Time) *UserUpdateOne {
 	_u.mutation.SetModifiedAt(v)
@@ -3471,6 +3609,24 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.EmailCleared() {
 		_spec.ClearField(user.FieldEmail, field.TypeString)
+	}
+	if value, ok := _u.mutation.Renku(); ok {
+		_spec.SetField(user.FieldRenku, field.TypeString, value)
+	}
+	if _u.mutation.RenkuCleared() {
+		_spec.ClearField(user.FieldRenku, field.TypeString)
+	}
+	if value, ok := _u.mutation.Github(); ok {
+		_spec.SetField(user.FieldGithub, field.TypeString, value)
+	}
+	if _u.mutation.GithubCleared() {
+		_spec.ClearField(user.FieldGithub, field.TypeString)
+	}
+	if value, ok := _u.mutation.Linkedin(); ok {
+		_spec.SetField(user.FieldLinkedin, field.TypeString, value)
+	}
+	if _u.mutation.LinkedinCleared() {
+		_spec.ClearField(user.FieldLinkedin, field.TypeString)
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(user.FieldModifiedAt, field.TypeTime, value)

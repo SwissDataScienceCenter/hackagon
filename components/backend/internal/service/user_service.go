@@ -61,6 +61,55 @@ func (s *UserService) List(
 	return &msgs.ListResponse{Users: entries}, nil
 }
 
+func (s *UserService) Edit(
+	ctx context.Context,
+	req *msgs.EditRequest,
+) (*msgs.EditResponse, error) {
+	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	updateQuery := s.dbClient.User.UpdateOneID(id)
+	updateQuery, err = updateLinkedin(updateQuery, req.Linkedin)
+	if err != nil {
+		return nil, err
+	}
+	updateQuery, err = updateGithub(updateQuery, req.Linkedin)
+	if err != nil {
+		return nil, err
+	}
+	updateQuery, err = updateRenku(updateQuery, req.Linkedin)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := updateQuery.Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return &msgs.EditResponse{User: entry}, nil
+}
+
 func (s *UserService) Get(
 	ctx context.Context,
 	req *msgs.GetRequest,

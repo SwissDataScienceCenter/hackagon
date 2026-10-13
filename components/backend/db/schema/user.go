@@ -32,6 +32,12 @@ func (User) Fields() []ent.Field {
 			Comment("Preferred display name of the user."),
 		field.String("email").Optional().Default("").
 			Comment("Email of the user, same as in Keycloak"),
+		field.String("renku").Optional().Default("").
+			Comment("Renku account of the user."),
+		field.String("github").Optional().Default("").
+			Comment("Github account of the user."),
+		field.String("linkedin").Optional().Default("").
+			Comment("LinkedIn account of the user."),
 		field.Time("created_at").Immutable().Default(time.Now).
 			Comment("Timestamp when the user was first seen."),
 		field.Time("modified_at").
