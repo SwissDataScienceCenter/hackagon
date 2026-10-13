@@ -869,10 +869,13 @@ var _ = Describe("UserService", func() {
 		newGithub := "https://github.com/bob-github-new"
 		newLinkedin := "https://linkedin.com/in/bob-linkedin-new"
 
+		keycloakID := "new-user"
+		token := testutils.CreateTestJWTToken(keycloakID)
+
 		BeforeEach(func() {
 			var err error
 			targetUser, err = dbClient.User.Create().
-				SetKeycloakID("get-target").
+				SetKeycloakID(keycloakID).
 				SetUsername("get-target-username").
 				SetDisplayName("Get Target").
 				SetEmail("get@example.com").
@@ -884,7 +887,6 @@ var _ = Describe("UserService", func() {
 		})
 
 		It("correctly changes the links values", func() {
-			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),

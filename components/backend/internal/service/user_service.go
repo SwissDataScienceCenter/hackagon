@@ -65,8 +65,16 @@ func (s *UserService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,
 ) (*msgs.EditResponse, error) {
-	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+	sub, _, err := m.RequireSubject(ctx)
+	if err != nil {
 		return nil, err
+	}
+
+	isAdmin, err := s.enforcer.Enforce(ctx, "", m.User, m.Write)
+	if err != nil {
+		slog.Error("Could not enforce permission.", "error", err.Error())
+
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	id, err := uuid.Parse(req.GetUserId())
@@ -75,6 +83,11 @@ func (s *UserService) Edit(
 	}
 
 	updateQuery := s.dbClient.User.UpdateOneID(id)
+	if !isAdmin {
+		// Non-admins can only edit their own user.
+		updateQuery.Where(entuser.KeycloakIDEQ(sub))
+	}
+
 	updateQuery, err = updateLinkedin(updateQuery, req.LinkedinUrl)
 	if err != nil {
 		return nil, err
