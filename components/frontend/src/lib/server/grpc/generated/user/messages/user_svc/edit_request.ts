@@ -11,13 +11,13 @@ export const protobufPackage = "user.messages.user_svc";
 
 export interface EditRequest {
   userId: string;
-  renku?: string | undefined;
-  github?: string | undefined;
-  linkedin?: string | undefined;
+  renkuUrl?: string | undefined;
+  githubUrl?: string | undefined;
+  linkedinUrl?: string | undefined;
 }
 
 function createBaseEditRequest(): EditRequest {
-  return { userId: "", renku: undefined, github: undefined, linkedin: undefined };
+  return { userId: "", renkuUrl: undefined, githubUrl: undefined, linkedinUrl: undefined };
 }
 
 export const EditRequest: MessageFns<EditRequest> = {
@@ -25,14 +25,14 @@ export const EditRequest: MessageFns<EditRequest> = {
     if (message.userId !== "") {
       writer.uint32(10).string(message.userId);
     }
-    if (message.renku !== undefined) {
-      writer.uint32(18).string(message.renku);
+    if (message.renkuUrl !== undefined) {
+      writer.uint32(18).string(message.renkuUrl);
     }
-    if (message.github !== undefined) {
-      writer.uint32(26).string(message.github);
+    if (message.githubUrl !== undefined) {
+      writer.uint32(26).string(message.githubUrl);
     }
-    if (message.linkedin !== undefined) {
-      writer.uint32(34).string(message.linkedin);
+    if (message.linkedinUrl !== undefined) {
+      writer.uint32(34).string(message.linkedinUrl);
     }
     return writer;
   },
@@ -57,7 +57,7 @@ export const EditRequest: MessageFns<EditRequest> = {
             break;
           }
 
-          message.renku = reader.string();
+          message.renkuUrl = reader.string();
           continue;
         }
         case 3: {
@@ -65,7 +65,7 @@ export const EditRequest: MessageFns<EditRequest> = {
             break;
           }
 
-          message.github = reader.string();
+          message.githubUrl = reader.string();
           continue;
         }
         case 4: {
@@ -73,7 +73,7 @@ export const EditRequest: MessageFns<EditRequest> = {
             break;
           }
 
-          message.linkedin = reader.string();
+          message.linkedinUrl = reader.string();
           continue;
         }
       }
@@ -92,9 +92,21 @@ export const EditRequest: MessageFns<EditRequest> = {
         : isSet(object.user_id)
         ? globalThis.String(object.user_id)
         : "",
-      renku: isSet(object.renku) ? globalThis.String(object.renku) : undefined,
-      github: isSet(object.github) ? globalThis.String(object.github) : undefined,
-      linkedin: isSet(object.linkedin) ? globalThis.String(object.linkedin) : undefined,
+      renkuUrl: isSet(object.renkuUrl)
+        ? globalThis.String(object.renkuUrl)
+        : isSet(object.renku_url)
+        ? globalThis.String(object.renku_url)
+        : undefined,
+      githubUrl: isSet(object.githubUrl)
+        ? globalThis.String(object.githubUrl)
+        : isSet(object.github_url)
+        ? globalThis.String(object.github_url)
+        : undefined,
+      linkedinUrl: isSet(object.linkedinUrl)
+        ? globalThis.String(object.linkedinUrl)
+        : isSet(object.linkedin_url)
+        ? globalThis.String(object.linkedin_url)
+        : undefined,
     };
   },
 
@@ -103,14 +115,14 @@ export const EditRequest: MessageFns<EditRequest> = {
     if (message.userId !== "") {
       obj.userId = message.userId;
     }
-    if (message.renku !== undefined) {
-      obj.renku = message.renku;
+    if (message.renkuUrl !== undefined) {
+      obj.renkuUrl = message.renkuUrl;
     }
-    if (message.github !== undefined) {
-      obj.github = message.github;
+    if (message.githubUrl !== undefined) {
+      obj.githubUrl = message.githubUrl;
     }
-    if (message.linkedin !== undefined) {
-      obj.linkedin = message.linkedin;
+    if (message.linkedinUrl !== undefined) {
+      obj.linkedinUrl = message.linkedinUrl;
     }
     return obj;
   },
@@ -121,9 +133,9 @@ export const EditRequest: MessageFns<EditRequest> = {
   fromPartial(object: DeepPartial<EditRequest>): EditRequest {
     const message = createBaseEditRequest();
     message.userId = object.userId ?? "";
-    message.renku = object.renku ?? undefined;
-    message.github = object.github ?? undefined;
-    message.linkedin = object.linkedin ?? undefined;
+    message.renkuUrl = object.renkuUrl ?? undefined;
+    message.githubUrl = object.githubUrl ?? undefined;
+    message.linkedinUrl = object.linkedinUrl ?? undefined;
     return message;
   },
 };

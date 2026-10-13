@@ -22,9 +22,9 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 		KeycloakId:  u.KeycloakID,
 		DisplayName: u.DisplayName,
 		Email:       u.Email,
-		Renku:       u.Renku,
-		Github:      u.Github,
-		Linkedin:    u.Linkedin,
+		RenkuUrl:    renderRenkuURL(u.Renku),
+		GithubUrl:   renderGithubURL(u.Github),
+		LinkedinUrl: renderLinkedinURL(u.Linkedin),
 		CreatedAt:   timestamppb.New(u.CreatedAt),
 		ModifiedAt:  timestamppb.New(u.ModifiedAt),
 	}

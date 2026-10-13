@@ -24,9 +24,9 @@ const (
 type EditRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Renku         *string                `protobuf:"bytes,2,opt,name=renku,proto3,oneof" json:"renku,omitempty"`
-	Github        *string                `protobuf:"bytes,3,opt,name=github,proto3,oneof" json:"github,omitempty"`
-	Linkedin      *string                `protobuf:"bytes,4,opt,name=linkedin,proto3,oneof" json:"linkedin,omitempty"`
+	RenkuUrl      *string                `protobuf:"bytes,2,opt,name=renku_url,json=renkuUrl,proto3,oneof" json:"renku_url,omitempty"`
+	GithubUrl     *string                `protobuf:"bytes,3,opt,name=github_url,json=githubUrl,proto3,oneof" json:"github_url,omitempty"`
+	LinkedinUrl   *string                `protobuf:"bytes,4,opt,name=linkedin_url,json=linkedinUrl,proto3,oneof" json:"linkedin_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,23 +68,23 @@ func (x *EditRequest) GetUserId() string {
 	return ""
 }
 
-func (x *EditRequest) GetRenku() string {
-	if x != nil && x.Renku != nil {
-		return *x.Renku
+func (x *EditRequest) GetRenkuUrl() string {
+	if x != nil && x.RenkuUrl != nil {
+		return *x.RenkuUrl
 	}
 	return ""
 }
 
-func (x *EditRequest) GetGithub() string {
-	if x != nil && x.Github != nil {
-		return *x.Github
+func (x *EditRequest) GetGithubUrl() string {
+	if x != nil && x.GithubUrl != nil {
+		return *x.GithubUrl
 	}
 	return ""
 }
 
-func (x *EditRequest) GetLinkedin() string {
-	if x != nil && x.Linkedin != nil {
-		return *x.Linkedin
+func (x *EditRequest) GetLinkedinUrl() string {
+	if x != nil && x.LinkedinUrl != nil {
+		return *x.LinkedinUrl
 	}
 	return ""
 }
@@ -93,15 +93,17 @@ var File_user_messages_user_svc_edit_request_proto protoreflect.FileDescriptor
 
 const file_user_messages_user_svc_edit_request_proto_rawDesc = "" +
 	"\n" +
-	")user/messages/user_svc/edit_request.proto\x12\x16user.messages.user_svc\"\xa1\x01\n" +
+	")user/messages/user_svc/edit_request.proto\x12\x16user.messages.user_svc\"\xc2\x01\n" +
 	"\vEditRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
-	"\x05renku\x18\x02 \x01(\tH\x00R\x05renku\x88\x01\x01\x12\x1b\n" +
-	"\x06github\x18\x03 \x01(\tH\x01R\x06github\x88\x01\x01\x12\x1f\n" +
-	"\blinkedin\x18\x04 \x01(\tH\x02R\blinkedin\x88\x01\x01B\b\n" +
-	"\x06_renkuB\t\n" +
-	"\a_githubB\v\n" +
-	"\t_linkedinBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12 \n" +
+	"\trenku_url\x18\x02 \x01(\tH\x00R\brenkuUrl\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"github_url\x18\x03 \x01(\tH\x01R\tgithubUrl\x88\x01\x01\x12&\n" +
+	"\flinkedin_url\x18\x04 \x01(\tH\x02R\vlinkedinUrl\x88\x01\x01B\f\n" +
+	"\n" +
+	"_renku_urlB\r\n" +
+	"\v_github_urlB\x0f\n" +
+	"\r_linkedin_urlBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
 
 var (
 	file_user_messages_user_svc_edit_request_proto_rawDescOnce sync.Once

@@ -18,9 +18,9 @@ export interface User {
   createdAt: Date | undefined;
   displayName: string;
   email: string;
-  renku: string;
-  github: string;
-  linkedin: string;
+  renkuUrl: string;
+  githubUrl: string;
+  linkedinUrl: string;
   /** Populated from casbin on fetch; not persisted in ent DB. */
   roles: GlobalRole[];
   modifiedAt: Date | undefined;
@@ -34,9 +34,9 @@ function createBaseUser(): User {
     createdAt: undefined,
     displayName: "",
     email: "",
-    renku: "",
-    github: "",
-    linkedin: "",
+    renkuUrl: "",
+    githubUrl: "",
+    linkedinUrl: "",
     roles: [],
     modifiedAt: undefined,
   };
@@ -62,14 +62,14 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       writer.uint32(50).string(message.email);
     }
-    if (message.renku !== "") {
-      writer.uint32(58).string(message.renku);
+    if (message.renkuUrl !== "") {
+      writer.uint32(58).string(message.renkuUrl);
     }
-    if (message.github !== "") {
-      writer.uint32(66).string(message.github);
+    if (message.githubUrl !== "") {
+      writer.uint32(66).string(message.githubUrl);
     }
-    if (message.linkedin !== "") {
-      writer.uint32(74).string(message.linkedin);
+    if (message.linkedinUrl !== "") {
+      writer.uint32(74).string(message.linkedinUrl);
     }
     writer.uint32(82).fork();
     for (const v of message.roles) {
@@ -142,7 +142,7 @@ export const User: MessageFns<User> = {
             break;
           }
 
-          message.renku = reader.string();
+          message.renkuUrl = reader.string();
           continue;
         }
         case 8: {
@@ -150,7 +150,7 @@ export const User: MessageFns<User> = {
             break;
           }
 
-          message.github = reader.string();
+          message.githubUrl = reader.string();
           continue;
         }
         case 9: {
@@ -158,7 +158,7 @@ export const User: MessageFns<User> = {
             break;
           }
 
-          message.linkedin = reader.string();
+          message.linkedinUrl = reader.string();
           continue;
         }
         case 10: {
@@ -216,10 +216,24 @@ export const User: MessageFns<User> = {
         ? globalThis.String(object.display_name)
         : "",
       email: isSet(object.email) ? globalThis.String(object.email) : "",
-      renku: isSet(object.renku) ? globalThis.String(object.renku) : "",
-      github: isSet(object.github) ? globalThis.String(object.github) : "",
-      linkedin: isSet(object.linkedin) ? globalThis.String(object.linkedin) : "",
-      roles: globalThis.Array.isArray(object?.roles) ? object.roles.map((e: any) => globalRoleFromJSON(e)) : [],
+      renkuUrl: isSet(object.renkuUrl)
+        ? globalThis.String(object.renkuUrl)
+        : isSet(object.renku_url)
+        ? globalThis.String(object.renku_url)
+        : "",
+      githubUrl: isSet(object.githubUrl)
+        ? globalThis.String(object.githubUrl)
+        : isSet(object.github_url)
+        ? globalThis.String(object.github_url)
+        : "",
+      linkedinUrl: isSet(object.linkedinUrl)
+        ? globalThis.String(object.linkedinUrl)
+        : isSet(object.linkedin_url)
+        ? globalThis.String(object.linkedin_url)
+        : "",
+      roles: globalThis.Array.isArray(object?.roles)
+        ? object.roles.map((e: any) => globalRoleFromJSON(e))
+        : [],
       modifiedAt: isSet(object.modifiedAt)
         ? fromJsonTimestamp(object.modifiedAt)
         : isSet(object.modified_at)
@@ -248,14 +262,14 @@ export const User: MessageFns<User> = {
     if (message.email !== "") {
       obj.email = message.email;
     }
-    if (message.renku !== "") {
-      obj.renku = message.renku;
+    if (message.renkuUrl !== "") {
+      obj.renkuUrl = message.renkuUrl;
     }
-    if (message.github !== "") {
-      obj.github = message.github;
+    if (message.githubUrl !== "") {
+      obj.githubUrl = message.githubUrl;
     }
-    if (message.linkedin !== "") {
-      obj.linkedin = message.linkedin;
+    if (message.linkedinUrl !== "") {
+      obj.linkedinUrl = message.linkedinUrl;
     }
     if (message.roles?.length) {
       obj.roles = message.roles.map((e) => globalRoleToJSON(e));
@@ -277,9 +291,9 @@ export const User: MessageFns<User> = {
     message.createdAt = object.createdAt ?? undefined;
     message.displayName = object.displayName ?? "";
     message.email = object.email ?? "";
-    message.renku = object.renku ?? "";
-    message.github = object.github ?? "";
-    message.linkedin = object.linkedin ?? "";
+    message.renkuUrl = object.renkuUrl ?? "";
+    message.githubUrl = object.githubUrl ?? "";
+    message.linkedinUrl = object.linkedinUrl ?? "";
     message.roles = object.roles?.map((e) => e) || [];
     message.modifiedAt = object.modifiedAt ?? undefined;
     return message;

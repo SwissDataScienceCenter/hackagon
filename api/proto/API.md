@@ -793,9 +793,9 @@ See components/backend/internal/middleware/rbac.go.
 | created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | display_name | [string](#string) |  |  |
 | email | [string](#string) |  |  |
-| renku | [string](#string) |  |  |
-| github | [string](#string) |  |  |
-| linkedin | [string](#string) |  |  |
+| renku_url | [string](#string) |  |  |
+| github_url | [string](#string) |  |  |
+| linkedin_url | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 
@@ -5771,9 +5771,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | user_id | [string](#string) |  |  |
-| renku | [string](#string) | optional |  |
-| github | [string](#string) | optional |  |
-| linkedin | [string](#string) | optional |  |
+| renku_url | [string](#string) | optional |  |
+| github_url | [string](#string) | optional |  |
+| linkedin_url | [string](#string) | optional |  |
 
 
 

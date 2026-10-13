@@ -20,6 +20,7 @@ import (
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 )
 
@@ -51,6 +52,9 @@ var _ = Describe("UserService", func() {
 				SetUsername("get-target-username").
 				SetDisplayName("Get Target").
 				SetEmail("get@example.com").
+				SetRenku("bob-renku").
+				SetLinkedin("bob-linkedin").
+				SetGithub("bob-github").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -71,6 +75,9 @@ var _ = Describe("UserService", func() {
 			Expect(u.GetUsername()).To(Equal("get-target-username"))
 			Expect(u.GetDisplayName()).To(Equal("Get Target"))
 			Expect(u.GetEmail()).To(Equal("get@example.com"))
+			Expect(u.GetRenkuUrl()).To(Equal(service.RenkuPrefix + "bob-renku"))
+			Expect(u.GetLinkedinUrl()).To(Equal(service.LinkedInPrefix + "bob-linkedin"))
+			Expect(u.GetGithubUrl()).To(Equal(service.GithubPrefix + "bob-github"))
 			Expect(u.GetKeycloakId()).To(Equal("get-target"))
 			Expect(u.GetCreatedAt()).NotTo(BeNil())
 			Expect(u.GetModifiedAt()).NotTo(BeNil())
@@ -851,6 +858,52 @@ var _ = Describe("UserService", func() {
 			Expect(err).To(HaveOccurred())
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("Edit", func() {
+
+		var targetUser *ent.User
+
+		newRenku := "https://renkulab.io/u/bob-renku-new"
+		newGithub := "https://github.com/bob-github-new"
+		newLinkedin := "https://linkedin.com/in/bob-linkedin-new"
+
+		BeforeEach(func() {
+			var err error
+			targetUser, err = dbClient.User.Create().
+				SetKeycloakID("get-target").
+				SetUsername("get-target-username").
+				SetDisplayName("Get Target").
+				SetEmail("get@example.com").
+				SetRenku("bob-renku").
+				SetLinkedin("bob-linkedin").
+				SetGithub("bob-github").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("correctly changes the links values", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			u := resp.GetUser()
+
+			Expect(u.GetRenkuUrl()).To(Equal(newRenku))
+			Expect(u.GetGithubUrl()).To(Equal(newGithub))
+			Expect(u.GetLinkedinUrl()).To(Equal(newLinkedin))
 		})
 	})
 })

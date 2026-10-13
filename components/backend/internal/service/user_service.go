@@ -75,15 +75,15 @@ func (s *UserService) Edit(
 	}
 
 	updateQuery := s.dbClient.User.UpdateOneID(id)
-	updateQuery, err = updateLinkedin(updateQuery, req.Linkedin)
+	updateQuery, err = updateLinkedin(updateQuery, req.LinkedinUrl)
 	if err != nil {
 		return nil, err
 	}
-	updateQuery, err = updateGithub(updateQuery, req.Linkedin)
+	updateQuery, err = updateGithub(updateQuery, req.GithubUrl)
 	if err != nil {
 		return nil, err
 	}
-	updateQuery, err = updateRenku(updateQuery, req.Linkedin)
+	updateQuery, err = updateRenku(updateQuery, req.RenkuUrl)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message EditRequest {
   string user_id = 1;
-  optional string renku = 2;
-  optional string github = 3;
-  optional string linkedin = 4;
+  optional string renku_url = 2;
+  optional string github_url = 3;
+  optional string linkedin_url = 4;
 }

@@ -3,11 +3,18 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"regexp"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	LinkedInPrefix = "https://linkedin.com/in/"
+	GithubPrefix   = "https://github.com/"
+	RenkuPrefix    = "https://renkulab.io/u/"
 )
 
 var (
@@ -110,4 +117,39 @@ func updateRenku(updateQuery *ent.UserUpdateOne, req *string) (*ent.UserUpdateOn
 	}
 
 	return updateQuery.SetRenku(username), nil
+}
+
+func renderLinkedinURL(username string) string {
+	return renderLink(LinkedInPrefix, username)
+}
+
+func renderGithubURL(username string) string {
+	return renderLink(GithubPrefix, username)
+}
+
+func renderRenkuURL(username string) string {
+	return renderLink(RenkuPrefix, username)
+}
+
+func renderLink(prefix, username string) string {
+	if username == "" {
+		return ""
+	}
+
+	u, err := url.JoinPath(prefix, username)
+	if err != nil {
+		slog.Error(
+			"Could not create link URL.",
+			"error",
+			err.Error(),
+			"prefix",
+			prefix,
+			"username",
+			username,
+		)
+
+		return ""
+	}
+
+	return u
 }
