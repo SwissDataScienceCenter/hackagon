@@ -79,7 +79,7 @@ var File_user_messages_user_svc_add_role_request_proto protoreflect.FileDescript
 
 const file_user_messages_user_svc_add_role_request_proto_rawDesc = "" +
 	"\n" +
-	"-user/messages/user_svc/add_role_request.proto\x12\x16user.messages.user_svc\x1a\x1fuser/entities/global_role.proto\x1a\x1bbuf/validate/validate.proto\"b\n" +
+	"-user/messages/user_svc/add_role_request.proto\x12\x16user.messages.user_svc\x1a\x1bbuf/validate/validate.proto\x1a\x1fuser/entities/global_role.proto\"b\n" +
 	"\x0eAddRoleRequest\x12!\n" +
 	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12-\n" +
 	"\x04role\x18\x02 \x01(\x0e2\x19.user.entities.GlobalRoleR\x04roleBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
