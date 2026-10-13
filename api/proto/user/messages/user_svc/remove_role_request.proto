@@ -3,10 +3,11 @@ syntax = "proto3";
 package user.messages.user_svc;
 
 import "user/entities/global_role.proto";
+import "buf/validate/validate.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc";
 
 message RemoveRoleRequest {
-  string user_id = 1;
+  string user_id = 1 [(buf.validate.field).string.uuid = true];
   user.entities.GlobalRole role = 2;
 }
