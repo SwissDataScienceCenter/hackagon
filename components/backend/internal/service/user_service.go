@@ -86,14 +86,17 @@ func (s *UserService) Edit(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
 	linkedin, err := linkUsername(linkedInUsername, req.LinkedinUrl, "LinkedIn")
 	if err != nil {
 		return nil, err
 	}
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
 	github, err := linkUsername(githubUsername, req.GithubUrl, "GitHub")
 	if err != nil {
 		return nil, err
 	}
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
 	renku, err := linkUsername(renkuUsername, req.RenkuUrl, "Renku")
 	if err != nil {
 		return nil, err
