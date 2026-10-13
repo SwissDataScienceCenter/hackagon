@@ -111,14 +111,10 @@ func (s *UserService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.EditResponse{User: entry}, nil
 }
@@ -143,14 +139,11 @@ func (s *UserService) Get(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
-	if err != nil {
-		slog.Error("get global roles", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	entry, err := s.userWithRoles(u)
+	if err != nil {
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.GetResponse{User: entry}, nil
 }
@@ -190,14 +183,10 @@ func (s *UserService) WhoAmI(
 		}
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.WhoAmIResponse{User: entry}, nil
 }
@@ -239,14 +228,10 @@ func (s *UserService) AddRole(
 		return nil, status.Error(codes.Internal, "couldn't assign role")
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.AddRoleResponse{User: entry}, nil
 }
@@ -294,14 +279,10 @@ func (s *UserService) RemoveRole(
 		return nil, status.Errorf(codes.Internal, "couldn't remove user roles: %v", err)
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.RemoveRoleResponse{User: entry}, nil
 }
@@ -369,4 +350,17 @@ func (s *UserService) Register(
 	}
 
 	return &msgs.RegisterResponse{User: userEntryFromEnt(u)}, nil
+}
+
+func (s *UserService) userWithRoles(u *ent.User) (*ents.User, error) {
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return entry, nil
 }
