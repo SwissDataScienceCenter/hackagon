@@ -85,7 +85,7 @@ func (s *UserService) Edit(
 	updateQuery := s.dbClient.User.UpdateOneID(id)
 	if !isAdmin {
 		// Non-admins can only edit their own user.
-		updateQuery.Where(entuser.KeycloakIDEQ(sub))
+		updateQuery = updateQuery.Where(entuser.KeycloakIDEQ(sub))
 	}
 
 	updateQuery, err = updateLinkedin(updateQuery, req.LinkedinUrl)

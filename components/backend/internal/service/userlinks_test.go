@@ -50,3 +50,15 @@ func TestLinkUsernames(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderLink(t *testing.T) {
+	if got := renderLinkedinURL("jörg-müller"); got != "https://linkedin.com/in/j%C3%B6rg-m%C3%BCller" {
+		t.Errorf("got %q", got)
+	}
+	if got := renderRenkuURL("jane.doe_1"); got != "https://renkulab.io/u/jane.doe_1" {
+		t.Errorf("got %q", got)
+	}
+	if got := renderGithubURL(""); got != "" {
+		t.Errorf("got %q", got)
+	}
+}

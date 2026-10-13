@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -69,8 +68,6 @@ func updateLinkedin(updateQuery *ent.UserUpdateOne, req *string) (*ent.UserUpdat
 	} else if u, err := linkedInUsername(*req); err == nil {
 		username = u
 	} else {
-		slog.Error("Couldn't get LinkedIn username.", "error", err.Error())
-
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid LinkedIn URL '%s'",
@@ -92,8 +89,6 @@ func updateGithub(updateQuery *ent.UserUpdateOne, req *string) (*ent.UserUpdateO
 	} else if u, err := githubUsername(*req); err == nil {
 		username = u
 	} else {
-		slog.Error("Couldn't get GitHub username.", "error", err.Error())
-
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid GitHub URL '%s'",
@@ -115,8 +110,6 @@ func updateRenku(updateQuery *ent.UserUpdateOne, req *string) (*ent.UserUpdateOn
 	} else if u, err := renkuUsername(*req); err == nil {
 		username = u
 	} else {
-		slog.Error("Couldn't get Renku username.", "error", err.Error())
-
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid Renku URL '%s'",
@@ -144,20 +137,5 @@ func renderLink(prefix, username string) string {
 		return ""
 	}
 
-	u, err := url.JoinPath(prefix, username)
-	if err != nil {
-		slog.Error(
-			"Could not create link URL.",
-			"error",
-			err.Error(),
-			"prefix",
-			prefix,
-			"username",
-			username,
-		)
-
-		return ""
-	}
-
-	return u
+	return prefix + url.PathEscape(username)
 }
