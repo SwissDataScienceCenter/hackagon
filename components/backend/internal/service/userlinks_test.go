@@ -30,13 +30,21 @@ func TestLinkUsernames(t *testing.T) {
 		{githubUsername, "https://notgithub.com/octo-cat", ""},
 		{githubUsername, "https://github.com/bad-", ""},
 		{githubUsername, "https://github.com/a", "a"},
-		{githubUsername, "https://github.com/" + strings.Repeat("a", 100), strings.Repeat("a", 100)},
+		{
+			githubUsername,
+			"https://github.com/" + strings.Repeat("a", 100),
+			strings.Repeat("a", 100),
+		},
 		{githubUsername, "https://github.com/" + strings.Repeat("a", 101), ""},
 		{renkuUsername, "https://renkulab.io/u/jane.doe", "jane.doe"},
 		{renkuUsername, "https://renkulab.io/u/jane.doe/?x=1", "jane.doe"},
 		{renkuUsername, "https://renkulab.io/u/jane/projects", ""},
 		{renkuUsername, "https://renkulab.io/u/.jane", ""},
-		{renkuUsername, "https://renkulab.io/u/" + strings.Repeat("a", 100), strings.Repeat("a", 100)},
+		{
+			renkuUsername,
+			"https://renkulab.io/u/" + strings.Repeat("a", 100),
+			strings.Repeat("a", 100),
+		},
 		{renkuUsername, "https://renkulab.io/u/" + strings.Repeat("a", 101), ""},
 	}
 	for _, c := range cases {
@@ -52,7 +60,9 @@ func TestLinkUsernames(t *testing.T) {
 }
 
 func TestRenderLink(t *testing.T) {
-	if got := renderLinkedinURL("jörg-müller"); got != "https://linkedin.com/in/j%C3%B6rg-m%C3%BCller" {
+	if got := renderLinkedinURL(
+		"jörg-müller",
+	); got != "https://linkedin.com/in/j%C3%B6rg-m%C3%BCller" {
 		t.Errorf("got %q", got)
 	}
 	if got := renderRenkuURL("jane.doe_1"); got != "https://renkulab.io/u/jane.doe_1" {

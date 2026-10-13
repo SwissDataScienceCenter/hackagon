@@ -4,10 +4,10 @@ package user;
 
 import "user/messages/user_svc/add_role_request.proto";
 import "user/messages/user_svc/add_role_response.proto";
-import "user/messages/user_svc/get_request.proto";
-import "user/messages/user_svc/get_response.proto";
 import "user/messages/user_svc/edit_request.proto";
 import "user/messages/user_svc/edit_response.proto";
+import "user/messages/user_svc/get_request.proto";
+import "user/messages/user_svc/get_response.proto";
 import "user/messages/user_svc/list_request.proto";
 import "user/messages/user_svc/list_response.proto";
 import "user/messages/user_svc/register_request.proto";
