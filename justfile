@@ -114,6 +114,12 @@ schema-change:
     echo "==> Seeding database..."
     just db::seed
 
+    # The backend loads its casbin policy once at startup, so it has not seen
+    # the roles the seed just wrote. See cmd/seed/README.md.
+    echo "==> Restarting services so the backend loads the seeded policy..."
+    just deploy::down
+    just deploy::up
+
     echo "==> Done! Attaching to TUI..."
     just deploy::attach
 
