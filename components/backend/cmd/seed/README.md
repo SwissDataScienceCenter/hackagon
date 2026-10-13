@@ -65,7 +65,8 @@ just deploy::down && just deploy::up   # keeps the data, reloads the policy
 
 This applies to the documented order too
 (`just clean::state && just start && just db::seed`), since the backend is up
-before the seed runs.
+before the seed runs. `just schema-change` restarts the stack after seeding, so
+it needs no manual restart.
 
 ## Users
 
