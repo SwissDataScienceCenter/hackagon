@@ -105,6 +105,10 @@ func (s *UserService) Edit(
 		SetNillableRenku(renku)
 	if !isAdmin {
 		// Non-admins can only edit their own user.
+		// NOTE: Here the ownership is only checked in the database and Casbin is only used to allow admin override.
+		// We do this on purpose, because using Casbin to tell whether a user can edit its info would introduce a lot
+		// of complexity and potential security issues (e.g., users would be able to change their own role, since
+		// AddRole/RemoveRole check the same User/Write permission).
 		updateQuery = updateQuery.Where(entuser.KeycloakIDEQ(sub))
 	}
 
