@@ -18,51 +18,43 @@ const (
 	RenkuPrefix    = "https://renkulab.io/u/"
 )
 
-// Accept what users actually paste: http(s), any host case, an optional
-// subdomain (www., LinkedIn country codes like ch.), a trailing slash and
-// a query string or fragment.
 var (
 	linkedInRe = regexp.MustCompile(
 		`(?i)^https?://(?:[a-z]{2,3}\.)?linkedin\.com/in/([\p{L}\p{N}-]{3,100})/?(?:[?#].*)?$`,
 	)
 	githubRe = regexp.MustCompile(
-		`(?i)^https?://(?:www\.)?github\.com/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/?(?:[?#].*)?$`,
+		`(?i)^https?://(?:www\.)?github\.com/([A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?)/?(?:[?#].*)?$`,
 	)
 	renkuRe = regexp.MustCompile(
-		`(?i)^https?://(?:www\.)?renkulab\.io/u/([A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)/?(?:[?#].*)?$`,
+		`(?i)^https?://(?:www\.)?renkulab\.io/u/([A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?)/?(?:[?#].*)?$`,
 	)
 )
 
 func linkedInUsername(link string) (string, error) {
-	link = strings.TrimSpace(link)
-
+	// We need to PathUnescape because LinkedIn allows some non-ASCII characters for usernames.
 	if s, err := url.PathUnescape(link); err == nil {
 		link = s
 	}
 
-	m := linkedInRe.FindStringSubmatch(link)
-	if m == nil {
-		return "", fmt.Errorf("url '%s' does not match regexp", link)
-	}
-
-	return m[1], nil
+	return parseLink(linkedInRe, link)
 }
 
 func githubUsername(link string) (string, error) {
-	link = strings.TrimSpace(link)
-	m := githubRe.FindStringSubmatch(link)
-	if m == nil || len(m[1]) > 39 {
-		return "", fmt.Errorf("url '%s' does not match regexp", link)
-	}
-	return m[1], nil
+	return parseLink(githubRe, link)
 }
 
 func renkuUsername(link string) (string, error) {
+	return parseLink(renkuRe, link)
+}
+
+func parseLink(re *regexp.Regexp, link string) (string, error) {
 	link = strings.TrimSpace(link)
-	m := renkuRe.FindStringSubmatch(link)
+
+	m := re.FindStringSubmatch(link)
 	if m == nil {
 		return "", fmt.Errorf("url '%s' does not match regexp", link)
 	}
+
 	return m[1], nil
 }
 

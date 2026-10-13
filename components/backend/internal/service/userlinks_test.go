@@ -2,7 +2,10 @@
 
 package service
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLinkUsernames(t *testing.T) {
 	cases := []struct {
@@ -25,9 +28,16 @@ func TestLinkUsernames(t *testing.T) {
 		{githubUsername, "https://github.com/octo-cat/repo", ""},
 		{githubUsername, "https://github.com/-bad", ""},
 		{githubUsername, "https://notgithub.com/octo-cat", ""},
+		{githubUsername, "https://github.com/bad-", ""},
+		{githubUsername, "https://github.com/a", "a"},
+		{githubUsername, "https://github.com/" + strings.Repeat("a", 100), strings.Repeat("a", 100)},
+		{githubUsername, "https://github.com/" + strings.Repeat("a", 101), ""},
 		{renkuUsername, "https://renkulab.io/u/jane.doe", "jane.doe"},
 		{renkuUsername, "https://renkulab.io/u/jane.doe/?x=1", "jane.doe"},
 		{renkuUsername, "https://renkulab.io/u/jane/projects", ""},
+		{renkuUsername, "https://renkulab.io/u/.jane", ""},
+		{renkuUsername, "https://renkulab.io/u/" + strings.Repeat("a", 100), strings.Repeat("a", 100)},
+		{renkuUsername, "https://renkulab.io/u/" + strings.Repeat("a", 101), ""},
 	}
 	for _, c := range cases {
 		got, err := c.parse(c.in)
