@@ -118,6 +118,14 @@ func (s *UserService) Edit(
 	u, err := updateQuery.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			if !isAdmin {
+				// We return permission denied whether the user exists or not to avoid leaking which user IDs exist.
+				return nil, status.Error(
+					codes.PermissionDenied,
+					"you can only edit your own profile",
+				)
+			}
+
 			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 		}
 		slog.Error("query user", "err", err)
