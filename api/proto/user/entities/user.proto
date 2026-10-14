@@ -18,7 +18,7 @@ message User {
   repeated GlobalRole roles = 7;
   google.protobuf.Timestamp modified_at = 8;
 
-  // User accounts links.
+  // /Profile links, rendered by the backend from stored usernames. Empty string when unset.
   string renku_url = 9;
   string github_url = 10;
   string linkedin_url = 11;

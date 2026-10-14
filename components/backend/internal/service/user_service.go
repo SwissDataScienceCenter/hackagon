@@ -128,9 +128,9 @@ func (s *UserService) Edit(
 
 			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 		}
-		slog.Error("query user", "err", err)
+		slog.Error("update user", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't query database")
+		return nil, status.Error(codes.Internal, "couldn't update database")
 	}
 
 	entry, err := s.userWithRoles(u)

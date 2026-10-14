@@ -63,9 +63,13 @@ func linkUsername(
 	link *string,
 	label string,
 ) (*string, error) {
-	if link == nil || *link == "" {
-		return link, nil
-	}
+      if link == nil {
+          return nil, nil
+      }
+      trimmed := strings.TrimSpace(*link)
+      if trimmed == "" {
+          return &trimmed, nil
+      }
 
 	username, err := parse(*link)
 	if err != nil {
