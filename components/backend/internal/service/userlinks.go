@@ -63,13 +63,14 @@ func linkUsername(
 	link *string,
 	label string,
 ) (*string, error) {
-      if link == nil {
-          return nil, nil
-      }
-      trimmed := strings.TrimSpace(*link)
-      if trimmed == "" {
-          return &trimmed, nil
-      }
+	if link == nil {
+		//nolint:nilnil // This is not an error. Returning nil,nil is the expected behavior.
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*link)
+	if trimmed == "" {
+		return &trimmed, nil
+	}
 
 	username, err := parse(*link)
 	if err != nil {

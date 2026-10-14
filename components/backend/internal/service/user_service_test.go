@@ -953,7 +953,7 @@ var _ = Describe("UserService", func() {
 				LinkedinUrl: &newLinkedin,
 			})
 
-			Expect(status.Code(err)).To(Equal(codes.NotFound))
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 
 			u, err := dbClient.User.Get(context.Background(), targetUser.ID)
 			Expect(err).NotTo(HaveOccurred())
@@ -1024,7 +1024,7 @@ var _ = Describe("UserService", func() {
 			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 
-		It("returns NotFound for a non-existent user", func() {
+		It("returns NotFound to admins for a non-existent user", func() {
 			adminToken := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
@@ -1037,6 +1037,21 @@ var _ = Describe("UserService", func() {
 			})
 
 			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("returns PermissionDenied to non-admins for a non-existent user", func() {
+			// Same code as for an existing user they don't own, so non-admins can't probe which IDs exist.
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    uuid.NewString(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 
 		type input struct {
