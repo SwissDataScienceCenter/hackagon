@@ -33,7 +33,7 @@ type User struct {
 	// Populated from casbin on fetch; not persisted in ent DB.
 	Roles      []GlobalRole           `protobuf:"varint,7,rep,packed,name=roles,proto3,enum=user.entities.GlobalRole" json:"roles,omitempty"`
 	ModifiedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
-	// User accounts links.
+	// /Profile links, rendered by the backend from stored usernames. Empty string when unset.
 	RenkuUrl      string `protobuf:"bytes,9,opt,name=renku_url,json=renkuUrl,proto3" json:"renku_url,omitempty"`
 	GithubUrl     string `protobuf:"bytes,10,opt,name=github_url,json=githubUrl,proto3" json:"github_url,omitempty"`
 	LinkedinUrl   string `protobuf:"bytes,11,opt,name=linkedin_url,json=linkedinUrl,proto3" json:"linkedin_url,omitempty"`

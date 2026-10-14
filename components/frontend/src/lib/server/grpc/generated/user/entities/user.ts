@@ -23,7 +23,7 @@ export interface User {
   modifiedAt:
     | Date
     | undefined;
-  /** User accounts links. */
+  /** /Profile links, rendered by the backend from stored usernames. Empty string when unset. */
   renkuUrl: string;
   githubUrl: string;
   linkedinUrl: string;

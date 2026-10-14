@@ -26,11 +26,11 @@ type User struct {
 	DisplayName string `json:"display_name,omitempty"`
 	// Email of the user, same as in Keycloak
 	Email string `json:"email,omitempty"`
-	// Renku account of the user.
+	// Renku username (not a URL), the service renders the link.
 	Renku string `json:"renku,omitempty"`
-	// Github account of the user.
+	// Github username (not a URL), the service renders the link.
 	Github string `json:"github,omitempty"`
-	// LinkedIn account of the user.
+	// LinkedIn username (not a URL), the service renders the link.
 	Linkedin string `json:"linkedin,omitempty"`
 	// Timestamp when the user was first seen.
 	CreatedAt time.Time `json:"created_at,omitempty"`

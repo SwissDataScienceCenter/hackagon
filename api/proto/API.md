@@ -795,7 +795,7 @@ See components/backend/internal/middleware/rbac.go.
 | email | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
-| renku_url | [string](#string) |  | User accounts links. |
+| renku_url | [string](#string) |  | Profile links, rendered by the backend from stored usernames. Empty string when unset. |
 | github_url | [string](#string) |  |  |
 | linkedin_url | [string](#string) |  |  |
 
