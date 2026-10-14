@@ -5,7 +5,12 @@ vi.mock("@auth/sveltekit/client", () => ({
   signIn: (...a: unknown[]) => signIn(...a),
 }))
 
-import { startPasswordChange, UPDATE_PASSWORD_ACTION } from "./account"
+import {
+  startEmailChange,
+  startPasswordChange,
+  UPDATE_PASSWORD_ACTION,
+  UPDATE_PROFILE_ACTION,
+} from "./account"
 
 /*
  * The shape of the call is the whole mechanism, and every part of it is load
@@ -43,5 +48,26 @@ describe("startPasswordChange", () => {
   // parameter and the redirect degrades to a plain sign-in.
   it("names the action Keycloak actually registers", () => {
     expect(UPDATE_PASSWORD_ACTION).toBe("UPDATE_PASSWORD")
+  })
+})
+
+describe("startEmailChange", () => {
+  beforeEach(() => signIn.mockClear())
+
+  it("asks Keycloak for the update-profile action, in the third argument", () => {
+    startEmailChange("/account")
+
+    expect(signIn).toHaveBeenCalledTimes(1)
+    expect(signIn).toHaveBeenCalledWith(
+      "keycloak",
+      { callbackUrl: "/account" },
+      { kc_action: "UPDATE_PROFILE" },
+    )
+  })
+
+  // UPDATE_PROFILE, not UPDATE_EMAIL: the realm registers only the former, and
+  // an unregistered action degrades to a plain sign-in.
+  it("names the action Keycloak actually registers", () => {
+    expect(UPDATE_PROFILE_ACTION).toBe("UPDATE_PROFILE")
   })
 })

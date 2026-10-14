@@ -1,10 +1,10 @@
-// Changing a password is an OIDC round trip, not a form we post.
+// Changing a password or an email is an OIDC round trip, not a form we post.
 //
 // The Go backend has no password surface at all — nothing in `api/proto` names
 // a credential, and it holds no Keycloak admin client — so there is no RPC to
-// call here and never will be. Keycloak owns the credential, and the way to ask
-// it for its own update-password screen is `kc_action` on the authorization
-// endpoint.
+// call here and never will be. Keycloak owns the credential and the email, and
+// the way to ask it for its own update screens is `kc_action` on the
+// authorization endpoint.
 //
 // Auth.js's third `signIn` argument is what carries that: `@auth/core` merges
 // the signin request's query into the authorization URL's parameters, so
@@ -41,9 +41,35 @@ export const UPDATE_PASSWORD_ACTION = "UPDATE_PASSWORD"
  * is the only thing proving it is really them.
  */
 export function startPasswordChange(returnTo: string): void {
-  signIn(
-    "keycloak",
-    { callbackUrl: returnTo },
-    { kc_action: UPDATE_PASSWORD_ACTION },
-  )
+  startAction(UPDATE_PASSWORD_ACTION, returnTo)
+}
+
+/**
+ * Keycloak's application-initiated action for editing the profile: email,
+ * first name and last name on one form. The username is shown but locked,
+ * because the realm sets editUsernameAllowed false.
+ *
+ * Not `UPDATE_EMAIL`, which would be the narrower fit: that action is not
+ * registered on the realm, so Keycloak would ignore it, and it is built around
+ * mailing a verification link, which the realm has no mail server to send.
+ * `UPDATE_PROFILE` is registered already, so this needs no Keycloak change.
+ */
+export const UPDATE_PROFILE_ACTION = "UPDATE_PROFILE"
+
+/**
+ * Send the user to Keycloak to change their email, and back to `returnTo`.
+ *
+ * The backend needs no telling. Every request to a protected route runs WhoAmI
+ * (see `hooks.server.ts`), which copies the email off the fresh token into the
+ * backend's own user row — so landing back on a protected `returnTo` is
+ * already enough for organizers to see the new address. Keycloak refuses an
+ * address another account already holds; nothing checks that the user owns the
+ * one they type.
+ */
+export function startEmailChange(returnTo: string): void {
+  startAction(UPDATE_PROFILE_ACTION, returnTo)
+}
+
+function startAction(action: string, returnTo: string): void {
+  signIn("keycloak", { callbackUrl: returnTo }, { kc_action: action })
 }

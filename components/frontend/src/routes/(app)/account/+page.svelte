@@ -1,7 +1,8 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import KeyRound from 'lucide-svelte/icons/key-round';
-    import { startPasswordChange } from '$lib/utils/account';
+    import Mail from 'lucide-svelte/icons/mail';
+    import { startEmailChange, startPasswordChange } from '$lib/utils/account';
     import type { PageData } from './$types';
 
     // No loader of its own: everything shown here is already on the session that
@@ -18,6 +19,7 @@
     // password or cancels — which is also why there is no confirmation banner
     // below: nothing here can tell those two apart.
     const changePassword = () => startPasswordChange(resolve('/(app)/account'));
+    const changeEmail = () => startEmailChange(resolve('/(app)/account'));
 </script>
 
 <svelte:head>
@@ -35,7 +37,7 @@
         <h1 class="m-0 text-title text-ink">Account</h1>
     </div>
 
-    <!-- Which account, before the one control that changes it. The monogram is
+    <!-- Which account, before the controls that change it. The monogram is
          the header's, at the header's size, so the row reads as the same
          identity rather than a second one. -->
     <section class="card flex items-center gap-3 p-4">
@@ -91,6 +93,41 @@
         <p class="prose m-0 text-xs text-ink-3">
             Forgotten your password? There is no self-service reset yet — ask a platform
             administrator to set a new one for you.
+        </p>
+    </section>
+
+    <section class="card flex flex-col gap-3 p-4">
+        <div class="flex items-center gap-3">
+            <span
+                class="flex size-9 shrink-0 items-center justify-center rounded-field
+                       bg-info/10 text-info-ink"
+                aria-hidden="true"
+            >
+                <Mail class="h-4 w-4" />
+            </span>
+            <h2 class="m-0 text-section">Email</h2>
+        </div>
+
+        <!-- Same trip as the password above, onto Keycloak's profile form,
+             which also holds the name — so it says so, rather than surprising
+             the user with two more fields. -->
+        <p class="prose m-0 text-sm text-ink-2">
+            Your email is held by the sign-in service too. Changing it takes you there and asks
+            you to sign in once more first; the same form also lets you correct your name.
+        </p>
+
+        <div>
+            <!-- Outline, not solid: the page's one solid action is the password. -->
+            <button onclick={changeEmail} class="btn btn-outline">Change email</button>
+        </div>
+
+        <!-- The gap named rather than hidden. With no mail server the realm
+             cannot send a confirmation, so a mistyped address is simply saved —
+             and it is the one organizers will write to, and one the user can
+             sign in with. -->
+        <p class="prose m-0 text-xs text-ink-3">
+            Nothing is sent to the new address to confirm it, so check it carefully: it is
+            where hackathon organizers will reach you, and you can sign in with it.
         </p>
     </section>
 </div>
