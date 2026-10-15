@@ -18,6 +18,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- You can change your email from your Account page: "Change email" takes you to
+  the sign-in service, where the same form also lets you correct your name, and
+  the new address is what hackathon organizers see as soon as you are back.
+  Nothing is sent to the new address to confirm it, so a typo is saved as typed.
 - A user profile can hold links to the person's GitHub, LinkedIn and Renku
   accounts. People can set their own links and administrators can set anyone's;
   only links to those three sites are accepted. No page shows or edits them yet.
