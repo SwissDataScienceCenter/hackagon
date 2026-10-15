@@ -1,5 +1,7 @@
 <script lang="ts">
+    import ProfileLinksRow from '$lib/components/hackathon/ProfileLinks.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import type { ProfileLinks } from '$lib/utils/profileLinks';
     import type { Snippet } from 'svelte';
 
     let {
@@ -8,23 +10,24 @@
         avatarUrl,
         role: roleProp,
         skills = [],
-        linkedinUrl,
+        links,
         actions,
     }: {
         name: string;
         /**
          * TODO(backend: user-profile-fields): unset by the participants page —
          * User carries only username, displayName, email and keycloakId, so
-         * there is no affiliation to pass. Same for `avatarUrl`, `skills` and
-         * `linkedinUrl`: the card simply omits those lines until the fields
-         * exist, at which point the page passes them straight through.
+         * there is no affiliation to pass. Same for `avatarUrl` and `skills`:
+         * the card simply omits those lines until the fields exist, at which
+         * point the page passes them straight through.
          */
         affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
         skills?: string[];
-        linkedinUrl?: string;
+        /** The person's own GitHub, LinkedIn and Renku links; omitted, or all empty, shows none. */
+        links?: ProfileLinks;
         /**
          * The card's controls — e.g. an owner's Approve/Remove buttons. Left to
          * the caller so this card stays ignorant of hackathon roles and
@@ -73,18 +76,8 @@
                     {#if affiliation}
                         <p class="m-0 text-xs leading-snug text-ink-3">{affiliation}</p>
                     {/if}
-                    {#if linkedinUrl}
-                        <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
-                        <a
-                            href={linkedinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="w-fit text-xs leading-snug text-accent-ink
-                                   hover:underline"
-                        >
-                            LinkedIn Profile
-                        </a>
-                        <!-- eslint-enable svelte/no-navigation-without-resolve -->
+                    {#if links}
+                        <ProfileLinksRow {links} />
                     {/if}
                 </div>
             </div>

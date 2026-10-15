@@ -124,7 +124,11 @@
             </p>
         {:else}
             {#each filtered as participant (participant.id)}
-                <ParticipantCard name={participant.name} role={participant.roleLabel}>
+                <ParticipantCard
+                    name={participant.name}
+                    role={participant.roleLabel}
+                    links={participant.links}
+                >
                     {#snippet actions()}
                         <!-- Marked, not counted: the summary above says how many
                              are missing, this says who — and it is quiet, because

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
+    import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -56,7 +57,9 @@
 
   Email is deliberately absent. `User` carries one, but today it is shown only on
   the platform admin page (/manage/users) — never to a peer — and this page is
-  readable by every confirmed member of the hackathon.
+  readable by every confirmed member of the hackathon. Profile links are the
+  opposite case: the person set them on their Account page, which tells them
+  that other participants will see them.
 
   Registration answers keep that promise rather than breaking it. You see your
   own whole form; everyone else — an organizer included — sees only the questions
@@ -68,10 +71,9 @@
   asks for them by name and gets the whole form. This one stays the participant
   view whoever opens it.
 
-  TODO(backend: user-profile-fields): name, role, join date and teams are all
-  there is to show. `User` carries only username, displayName, email and
-  keycloakId, so there is no affiliation, bio, avatar, skill list or LinkedIn URL
-  to put here. Sections for those go in below the header once the fields land;
+  TODO(backend: user-profile-fields): name, role, join date, profile links and
+  teams are all there is to show. `User` carries nothing else a peer may see, so
+  there is no affiliation, bio, avatar or skill list to put here. Sections for those go in below the header once the fields land;
   nothing is stubbed in the meantime, because an empty "About" card tells a
   reader this person filled nothing in rather than that the platform cannot ask.
 -->
@@ -96,6 +98,7 @@
                 <div class="flex min-w-0 flex-1 flex-col gap-1.5">
                     <h2 class="m-0 text-title leading-snug text-ink">{data.participant.name}</h2>
                     <p class="m-0 text-xs leading-snug text-ink-3">@{data.participant.username}</p>
+                    <ProfileLinks links={data.participant.links} />
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Always the confirmed variant: a waitlisted member never
                              resolves to this page at all. -->
