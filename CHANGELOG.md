@@ -25,9 +25,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   the sign-in service, where the same form also lets you correct your name, and
   the new address is what hackathon organizers see as soon as you are back.
   Nothing is sent to the new address to confirm it, so a typo is saved as typed.
-- A user profile can hold links to the person's GitHub, LinkedIn and Renku
-  accounts. People can set their own links and administrators can set anyone's;
-  only links to those three sites are accepted. No page shows or edits them yet.
+- You can add links to your GitHub, LinkedIn and Renku profiles on your Account
+  page; leave a box empty to remove that link. Other participants see them on
+  the Participants page and on your profile there. Only links to those three
+  sites are accepted, and each is saved in a tidied form, so a link may look
+  slightly different from what you typed.
 - Organizers have a Manage Submissions page: every team and where it stands with
   its submission — nothing yet, drafts only, or final — with the teams still
   owing an entry first. Tabs filter by standing, a search finds a team by its
