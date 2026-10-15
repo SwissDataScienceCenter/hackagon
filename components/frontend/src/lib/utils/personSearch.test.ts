@@ -1,5 +1,21 @@
 import { describe, it, expect } from "vitest"
-import { nameSegments, stepMatch } from "./personSearch"
+import { matchesAny, nameSegments, stepMatch } from "./personSearch"
+
+describe("matchesAny", () => {
+  it("matches when any one field contains the query", () => {
+    expect(matchesAny(["Climate Hack", "Alice", "alice"], "ali")).toBe(true)
+    expect(matchesAny(["Climate Hack", "Alice", "alice"], "bob")).toBe(false)
+  })
+
+  it("ignores case, accents and the spaces around the query", () => {
+    expect(matchesAny(["José Núñez"], "  NUNEZ ")).toBe(true)
+  })
+
+  it("matches everything on a blank query", () => {
+    expect(matchesAny(["Climate Hack"], "   ")).toBe(true)
+    expect(matchesAny([], "")).toBe(true)
+  })
+})
 
 /** The name with each marked piece in brackets, for readable expectations. */
 const marked = (name: string, query: string) =>

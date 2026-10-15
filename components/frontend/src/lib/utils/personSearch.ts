@@ -22,6 +22,19 @@ function fold(text: string): string {
 }
 
 /**
+ * Whether any of `fields` contains the query, under the same folding as
+ * `nameSegments`. For a search that filters rather than marks — the admin
+ * Hackathons page, where a row stays if its name or one of its owners matches.
+ * A blank query matches everything, so an empty search box hides nothing.
+ */
+export function matchesAny(fields: readonly string[], query: string): boolean {
+  const needle = fold(query.trim())
+  if (needle === "") return true
+
+  return fields.some((f) => fold(f).includes(needle))
+}
+
+/**
  * The name split into marked and unmarked pieces, or null when the query is
  * blank or not in the name. Matches anywhere in the name, ignoring case,
  * accents and the spaces around the query, and marks every occurrence.

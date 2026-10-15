@@ -18,6 +18,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Administrators' Hackathons page is now one searchable table, like the Users
+  page, and shows who owns each hackathon. Search finds a hackathon by its name
+  or by an owner's name, and each name still opens the hackathon.
 - You can change your email from your Account page: "Change email" takes you to
   the sign-in service, where the same form also lets you correct your name, and
   the new address is what hackathon organizers see as soon as you are back.
