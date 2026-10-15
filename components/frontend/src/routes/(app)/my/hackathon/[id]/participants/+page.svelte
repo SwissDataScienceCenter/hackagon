@@ -69,7 +69,11 @@
             </p>
         {:else}
             {#each filtered as participant (participant.id)}
-                <ParticipantCard name={participant.name} role={participant.roleLabel}>
+                <ParticipantCard
+                    name={participant.name}
+                    role={participant.roleLabel}
+                    links={participant.links}
+                >
                     {#snippet actions()}
                         <a
                             href={resolve(

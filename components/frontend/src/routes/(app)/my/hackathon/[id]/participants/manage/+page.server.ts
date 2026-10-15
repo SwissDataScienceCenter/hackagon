@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
+import { profileLinksOf } from "$lib/server/user/profileLinks"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { answeredParticipantIds } from "$lib/server/hackathon/registrationForm"
 import { requireGrpc } from "$lib/server/grpc/client"
@@ -104,6 +105,7 @@ export const load: PageServerLoad = async (event) => {
     id: m.user!.id,
     name: m.user!.displayName || m.user!.username,
     roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
+    links: profileLinksOf(m.user),
     // Read through the roster rather than off the answer list, which can hold
     // answers from people since removed — `RemoveParticipant` drops the
     // participant row and nothing drops their answers, so counting it directly

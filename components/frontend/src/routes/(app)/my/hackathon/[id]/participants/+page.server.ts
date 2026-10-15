@@ -1,5 +1,6 @@
 import type { PageServerLoad } from "./$types"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
+import { profileLinksOf } from "$lib/server/user/profileLinks"
 
 // No owner/admin check here: the way into participant management is the
 // sidebar's Manage section, which gates itself on the same subjects (see
@@ -25,6 +26,7 @@ export const load: PageServerLoad = async (event) => {
       id: m.user!.id,
       name: m.user!.displayName || m.user!.username,
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
+      links: profileLinksOf(m.user),
     }))
 
   // The route id is returned rather than read from `$page` in the component, so

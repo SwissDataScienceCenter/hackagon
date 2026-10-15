@@ -6,6 +6,7 @@ import {
   type ParticipantAnswer,
 } from "$lib/server/hackathon/registrationForm"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
+import { profileLinksOf } from "$lib/server/user/profileLinks"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { error } from "@sveltejs/kit"
 
@@ -182,6 +183,7 @@ export const load: PageServerLoad = async (event) => {
       username: user.username,
       roleLabel: membershipBadgeLabel(member.isWaiting, member.role),
       joinedAt: member.joinedAt,
+      links: profileLinksOf(user),
     },
     teams,
     teamsPublished,
