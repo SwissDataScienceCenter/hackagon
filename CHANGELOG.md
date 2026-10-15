@@ -18,6 +18,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- A user profile can hold links to the person's GitHub, LinkedIn and Renku
+  accounts. People can set their own links and administrators can set anyone's;
+  only links to those three sites are accepted. No page shows or edits them yet.
 - Organizers have a Manage Submissions page: every team and where it stands with
   its submission — nothing yet, drafts only, or final — with the teams still
   owing an entry first. Tabs filter by standing, a search finds a team by its

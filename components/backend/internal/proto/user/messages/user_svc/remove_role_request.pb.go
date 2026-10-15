@@ -7,6 +7,7 @@
 package user_svc
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	entities "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -78,9 +79,9 @@ var File_user_messages_user_svc_remove_role_request_proto protoreflect.FileDescr
 
 const file_user_messages_user_svc_remove_role_request_proto_rawDesc = "" +
 	"\n" +
-	"0user/messages/user_svc/remove_role_request.proto\x12\x16user.messages.user_svc\x1a\x1fuser/entities/global_role.proto\"[\n" +
-	"\x11RemoveRoleRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12-\n" +
+	"0user/messages/user_svc/remove_role_request.proto\x12\x16user.messages.user_svc\x1a\x1bbuf/validate/validate.proto\x1a\x1fuser/entities/global_role.proto\"e\n" +
+	"\x11RemoveRoleRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12-\n" +
 	"\x04role\x18\x02 \x01(\x0e2\x19.user.entities.GlobalRoleR\x04roleBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
 
 var (

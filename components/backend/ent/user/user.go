@@ -23,6 +23,12 @@ const (
 	FieldDisplayName = "display_name"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
+	// FieldRenku holds the string denoting the renku field in the database.
+	FieldRenku = "renku"
+	// FieldGithub holds the string denoting the github field in the database.
+	FieldGithub = "github"
+	// FieldLinkedin holds the string denoting the linkedin field in the database.
+	FieldLinkedin = "linkedin"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldModifiedAt holds the string denoting the modified_at field in the database.
@@ -280,6 +286,9 @@ var Columns = []string{
 	FieldKeycloakID,
 	FieldDisplayName,
 	FieldEmail,
+	FieldRenku,
+	FieldGithub,
+	FieldLinkedin,
 	FieldCreatedAt,
 	FieldModifiedAt,
 }
@@ -319,6 +328,12 @@ var (
 	DefaultDisplayName string
 	// DefaultEmail holds the default value on creation for the "email" field.
 	DefaultEmail string
+	// DefaultRenku holds the default value on creation for the "renku" field.
+	DefaultRenku string
+	// DefaultGithub holds the default value on creation for the "github" field.
+	DefaultGithub string
+	// DefaultLinkedin holds the default value on creation for the "linkedin" field.
+	DefaultLinkedin string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the "modified_at" field.
@@ -355,6 +370,21 @@ func ByDisplayName(opts ...sql.OrderTermOption) OrderOption {
 // ByEmail orders the results by the email field.
 func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByRenku orders the results by the renku field.
+func ByRenku(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRenku, opts...).ToFunc()
+}
+
+// ByGithub orders the results by the github field.
+func ByGithub(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGithub, opts...).ToFunc()
+}
+
+// ByLinkedin orders the results by the linkedin field.
+func ByLinkedin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinkedin, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

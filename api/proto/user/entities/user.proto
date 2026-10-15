@@ -17,4 +17,9 @@ message User {
   // Populated from casbin on fetch; not persisted in ent DB.
   repeated GlobalRole roles = 7;
   google.protobuf.Timestamp modified_at = 8;
+
+  // /Profile links, rendered by the backend from stored usernames. Empty string when unset.
+  string renku_url = 9;
+  string github_url = 10;
+  string linkedin_url = 11;
 }

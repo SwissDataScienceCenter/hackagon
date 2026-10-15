@@ -26,6 +26,12 @@ type User struct {
 	DisplayName string `json:"display_name,omitempty"`
 	// Email of the user, same as in Keycloak
 	Email string `json:"email,omitempty"`
+	// Renku username (not a URL), the service renders the link.
+	Renku string `json:"renku,omitempty"`
+	// Github username (not a URL), the service renders the link.
+	Github string `json:"github,omitempty"`
+	// LinkedIn username (not a URL), the service renders the link.
+	Linkedin string `json:"linkedin,omitempty"`
 	// Timestamp when the user was first seen.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last profile update.
@@ -356,7 +362,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldUsername, user.FieldKeycloakID, user.FieldDisplayName, user.FieldEmail:
+		case user.FieldUsername, user.FieldKeycloakID, user.FieldDisplayName, user.FieldEmail, user.FieldRenku, user.FieldGithub, user.FieldLinkedin:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
@@ -406,6 +412,24 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
 			} else if value.Valid {
 				_m.Email = value.String
+			}
+		case user.FieldRenku:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field renku", values[i])
+			} else if value.Valid {
+				_m.Renku = value.String
+			}
+		case user.FieldGithub:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field github", values[i])
+			} else if value.Valid {
+				_m.Github = value.String
+			}
+		case user.FieldLinkedin:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field linkedin", values[i])
+			} else if value.Valid {
+				_m.Linkedin = value.String
 			}
 		case user.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -606,6 +630,15 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("email=")
 	builder.WriteString(_m.Email)
+	builder.WriteString(", ")
+	builder.WriteString("renku=")
+	builder.WriteString(_m.Renku)
+	builder.WriteString(", ")
+	builder.WriteString("github=")
+	builder.WriteString(_m.Github)
+	builder.WriteString(", ")
+	builder.WriteString("linkedin=")
+	builder.WriteString(_m.Linkedin)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

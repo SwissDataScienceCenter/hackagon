@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	UserService_List_FullMethodName       = "/user.UserService/List"
 	UserService_Get_FullMethodName        = "/user.UserService/Get"
+	UserService_Edit_FullMethodName       = "/user.UserService/Edit"
 	UserService_WhoAmI_FullMethodName     = "/user.UserService/WhoAmI"
 	UserService_Register_FullMethodName   = "/user.UserService/Register"
 	UserService_AddRole_FullMethodName    = "/user.UserService/AddRole"
@@ -34,6 +35,7 @@ const (
 type UserServiceClient interface {
 	List(ctx context.Context, in *user_svc.ListRequest, opts ...grpc.CallOption) (*user_svc.ListResponse, error)
 	Get(ctx context.Context, in *user_svc.GetRequest, opts ...grpc.CallOption) (*user_svc.GetResponse, error)
+	Edit(ctx context.Context, in *user_svc.EditRequest, opts ...grpc.CallOption) (*user_svc.EditResponse, error)
 	WhoAmI(ctx context.Context, in *user_svc.WhoAmIRequest, opts ...grpc.CallOption) (*user_svc.WhoAmIResponse, error)
 	Register(ctx context.Context, in *user_svc.RegisterRequest, opts ...grpc.CallOption) (*user_svc.RegisterResponse, error)
 	AddRole(ctx context.Context, in *user_svc.AddRoleRequest, opts ...grpc.CallOption) (*user_svc.AddRoleResponse, error)
@@ -62,6 +64,16 @@ func (c *userServiceClient) Get(ctx context.Context, in *user_svc.GetRequest, op
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(user_svc.GetResponse)
 	err := c.cc.Invoke(ctx, UserService_Get_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) Edit(ctx context.Context, in *user_svc.EditRequest, opts ...grpc.CallOption) (*user_svc.EditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(user_svc.EditResponse)
+	err := c.cc.Invoke(ctx, UserService_Edit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +126,7 @@ func (c *userServiceClient) RemoveRole(ctx context.Context, in *user_svc.RemoveR
 type UserServiceServer interface {
 	List(context.Context, *user_svc.ListRequest) (*user_svc.ListResponse, error)
 	Get(context.Context, *user_svc.GetRequest) (*user_svc.GetResponse, error)
+	Edit(context.Context, *user_svc.EditRequest) (*user_svc.EditResponse, error)
 	WhoAmI(context.Context, *user_svc.WhoAmIRequest) (*user_svc.WhoAmIResponse, error)
 	Register(context.Context, *user_svc.RegisterRequest) (*user_svc.RegisterResponse, error)
 	AddRole(context.Context, *user_svc.AddRoleRequest) (*user_svc.AddRoleResponse, error)
@@ -133,6 +146,9 @@ func (UnimplementedUserServiceServer) List(context.Context, *user_svc.ListReques
 }
 func (UnimplementedUserServiceServer) Get(context.Context, *user_svc.GetRequest) (*user_svc.GetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedUserServiceServer) Edit(context.Context, *user_svc.EditRequest) (*user_svc.EditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Edit not implemented")
 }
 func (UnimplementedUserServiceServer) WhoAmI(context.Context, *user_svc.WhoAmIRequest) (*user_svc.WhoAmIResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WhoAmI not implemented")
@@ -199,6 +215,24 @@ func _UserService_Get_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).Get(ctx, req.(*user_svc.GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_Edit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(user_svc.EditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).Edit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_Edit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).Edit(ctx, req.(*user_svc.EditRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -289,6 +323,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Get",
 			Handler:    _UserService_Get_Handler,
+		},
+		{
+			MethodName: "Edit",
+			Handler:    _UserService_Edit_Handler,
 		},
 		{
 			MethodName: "WhoAmI",

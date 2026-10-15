@@ -483,6 +483,12 @@
 - [user/messages/user_svc/add_role_response.proto](#user_messages_user_svc_add_role_response-proto)
     - [AddRoleResponse](#user-messages-user_svc-AddRoleResponse)
   
+- [user/messages/user_svc/edit_request.proto](#user_messages_user_svc_edit_request-proto)
+    - [EditRequest](#user-messages-user_svc-EditRequest)
+  
+- [user/messages/user_svc/edit_response.proto](#user_messages_user_svc_edit_response-proto)
+    - [EditResponse](#user-messages-user_svc-EditResponse)
+  
 - [user/messages/user_svc/get_request.proto](#user_messages_user_svc_get_request-proto)
     - [GetRequest](#user-messages-user_svc-GetRequest)
   
@@ -789,6 +795,9 @@ See components/backend/internal/middleware/rbac.go.
 | email | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| renku_url | [string](#string) |  | Profile links, rendered by the backend from stored usernames. Empty string when unset. |
+| github_url | [string](#string) |  |  |
+| linkedin_url | [string](#string) |  |  |
 
 
 
@@ -5746,6 +5755,71 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="user_messages_user_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_request.proto
+
+
+
+<a name="user-messages-user_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user_id | [string](#string) |  |  |
+| renku_url | [string](#string) | optional |  |
+| github_url | [string](#string) | optional |  |
+| linkedin_url | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_messages_user_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_response.proto
+
+
+
+<a name="user-messages-user_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [user.entities.User](#user-entities-User) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="user_messages_user_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -6064,6 +6138,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ----------- | ------------ | ------------- | ------------|
 | List | [messages.user_svc.ListRequest](#user-messages-user_svc-ListRequest) | [messages.user_svc.ListResponse](#user-messages-user_svc-ListResponse) |  |
 | Get | [messages.user_svc.GetRequest](#user-messages-user_svc-GetRequest) | [messages.user_svc.GetResponse](#user-messages-user_svc-GetResponse) |  |
+| Edit | [messages.user_svc.EditRequest](#user-messages-user_svc-EditRequest) | [messages.user_svc.EditResponse](#user-messages-user_svc-EditResponse) |  |
 | WhoAmI | [messages.user_svc.WhoAmIRequest](#user-messages-user_svc-WhoAmIRequest) | [messages.user_svc.WhoAmIResponse](#user-messages-user_svc-WhoAmIResponse) |  |
 | Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
 | AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |

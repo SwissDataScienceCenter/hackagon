@@ -7,6 +7,7 @@
 package user_svc
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -69,10 +70,10 @@ var File_user_messages_user_svc_get_request_proto protoreflect.FileDescriptor
 
 const file_user_messages_user_svc_get_request_proto_rawDesc = "" +
 	"\n" +
-	"(user/messages/user_svc/get_request.proto\x12\x16user.messages.user_svc\"%\n" +
+	"(user/messages/user_svc/get_request.proto\x12\x16user.messages.user_svc\x1a\x1bbuf/validate/validate.proto\"/\n" +
 	"\n" +
-	"GetRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userIdBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
+	"GetRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userIdBeZcgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svcb\x06proto3"
 
 var (
 	file_user_messages_user_svc_get_request_proto_rawDescOnce sync.Once

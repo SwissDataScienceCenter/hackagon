@@ -5,6 +5,7 @@ package service_test
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,6 +52,9 @@ var _ = Describe("UserService", func() {
 				SetUsername("get-target-username").
 				SetDisplayName("Get Target").
 				SetEmail("get@example.com").
+				SetRenku("bob-renku").
+				SetLinkedin("bob-linkedin").
+				SetGithub("bob-github").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -71,6 +75,9 @@ var _ = Describe("UserService", func() {
 			Expect(u.GetUsername()).To(Equal("get-target-username"))
 			Expect(u.GetDisplayName()).To(Equal("Get Target"))
 			Expect(u.GetEmail()).To(Equal("get@example.com"))
+			Expect(u.GetRenkuUrl()).To(Equal("https://renkulab.io/u/bob-renku"))
+			Expect(u.GetLinkedinUrl()).To(Equal("https://linkedin.com/in/bob-linkedin"))
+			Expect(u.GetGithubUrl()).To(Equal("https://github.com/bob-github"))
 			Expect(u.GetKeycloakId()).To(Equal("get-target"))
 			Expect(u.GetCreatedAt()).NotTo(BeNil())
 			Expect(u.GetModifiedAt()).NotTo(BeNil())
@@ -852,5 +859,256 @@ var _ = Describe("UserService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
+	})
+
+	Describe("Edit", func() {
+
+		var targetUser *ent.User
+
+		oldRenkuUsr := "bob-renku"
+		oldLinkedinUsr := "bob-linkedin"
+		oldGithubUsr := "bob-github"
+
+		oldRenku := "https://renkulab.io/u/" + oldRenkuUsr
+		oldGithub := "https://github.com/" + oldGithubUsr
+		oldLinkedin := "https://linkedin.com/in/" + oldLinkedinUsr
+
+		newRenku := "https://renkulab.io/u/bob-renku-new"
+		newGithub := "https://github.com/bob-github-new"
+		newLinkedin := "https://linkedin.com/in/bob-linkedin-new"
+
+		keycloakID := "new-user"
+		token := testutils.CreateTestJWTToken(keycloakID)
+
+		BeforeEach(func() {
+			var err error
+			targetUser, err = dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername("get-target-username").
+				SetDisplayName("Get Target").
+				SetEmail("get@example.com").
+				SetRenku(oldRenkuUsr).
+				SetLinkedin(oldLinkedinUsr).
+				SetGithub(oldGithubUsr).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("correctly changes the links values", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			u := resp.GetUser()
+
+			Expect(u.GetRenkuUrl()).To(Equal(newRenku))
+			Expect(u.GetGithubUrl()).To(Equal(newGithub))
+			Expect(u.GetLinkedinUrl()).To(Equal(newLinkedin))
+		})
+
+		It("lets admins edit users profiles", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			u := resp.GetUser()
+
+			Expect(u.GetRenkuUrl()).To(Equal(newRenku))
+			Expect(u.GetGithubUrl()).To(Equal(newGithub))
+			Expect(u.GetLinkedinUrl()).To(Equal(newLinkedin))
+		})
+
+		It("doesn't let users edit another user's profile", func() {
+			token := testutils.CreateTestJWTToken("another-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				RenkuUrl:    &newRenku,
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &newLinkedin,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+
+			u, err := dbClient.User.Get(context.Background(), targetUser.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(u.Renku).To(Equal(oldRenkuUsr))
+			Expect(u.Github).To(Equal(oldGithubUsr))
+			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
+		})
+
+		It("rejects an invalid URL without writing any link", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			badLinkedin := "https://example.com/in/bob"
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:      targetUser.ID.String(),
+				GithubUrl:   &newGithub,
+				LinkedinUrl: &badLinkedin,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+
+			// The valid github_url must not be saved either.
+			u, err := dbClient.User.Get(context.Background(), targetUser.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(u.Renku).To(Equal(oldRenkuUsr))
+			Expect(u.Github).To(Equal(oldGithubUsr))
+			Expect(u.Linkedin).To(Equal(oldLinkedinUsr))
+		})
+
+		It("rejects a URL longer than 2048 characters", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			// The regex accepts any query string, so only max_len rejects this.
+			longGithub := "https://github.com/bob?" + strings.Repeat("a", 2048)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    targetUser.ID.String(),
+				GithubUrl: &longGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("rejects a malformed user_id", func() {
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    "not-a-uuid",
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("rejects anonymous requests", func() {
+			_, err := userClient.Edit(context.Background(), &msgs.EditRequest{
+				UserId:    targetUser.ID.String(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+		})
+
+		It("returns NotFound to admins for a non-existent user", func() {
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    uuid.NewString(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("returns PermissionDenied to non-admins for a non-existent user", func() {
+			// Same code as for an existing user they don't own, so non-admins can't probe which IDs exist.
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := userClient.Edit(ctx, &msgs.EditRequest{
+				UserId:    uuid.NewString(),
+				GithubUrl: &newGithub,
+			})
+
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		type input struct {
+			renku    *string
+			github   *string
+			linkedin *string
+		}
+
+		type expected struct {
+			renku    string
+			github   string
+			linkedin string
+		}
+
+		emptyString := ""
+
+		DescribeTable(
+			"removes empty string params but ignores nil params",
+			func(in input, want expected) {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := userClient.Edit(ctx, &msgs.EditRequest{
+					UserId:      targetUser.ID.String(),
+					RenkuUrl:    in.renku,
+					GithubUrl:   in.github,
+					LinkedinUrl: in.linkedin,
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+
+				u := resp.GetUser()
+
+				Expect(u.GetRenkuUrl()).To(Equal(want.renku))
+				Expect(u.GetGithubUrl()).To(Equal(want.github))
+				Expect(u.GetLinkedinUrl()).To(Equal(want.linkedin))
+			},
+			Entry("all nil", input{}, expected{oldRenku, oldGithub, oldLinkedin}),
+			Entry("clears renku", input{renku: &emptyString}, expected{"", oldGithub, oldLinkedin}),
+			Entry(
+				"clears github",
+				input{github: &emptyString},
+				expected{oldRenku, "", oldLinkedin},
+			),
+			Entry(
+				"clears linkedin",
+				input{linkedin: &emptyString},
+				expected{oldRenku, oldGithub, ""},
+			),
+			Entry("sets, clears and keeps in one request",
+				input{renku: &newRenku, github: &emptyString},
+				expected{newRenku, "", oldLinkedin},
+			),
+		)
+
 	})
 })

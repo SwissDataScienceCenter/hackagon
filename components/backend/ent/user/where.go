@@ -76,6 +76,21 @@ func Email(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldEmail, v))
 }
 
+// Renku applies equality check predicate on the "renku" field. It's identical to RenkuEQ.
+func Renku(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldRenku, v))
+}
+
+// Github applies equality check predicate on the "github" field. It's identical to GithubEQ.
+func Github(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldGithub, v))
+}
+
+// Linkedin applies equality check predicate on the "linkedin" field. It's identical to LinkedinEQ.
+func Linkedin(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldLinkedin, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreatedAt, v))
@@ -364,6 +379,231 @@ func EmailEqualFold(v string) predicate.User {
 // EmailContainsFold applies the ContainsFold predicate on the "email" field.
 func EmailContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldEmail, v))
+}
+
+// RenkuEQ applies the EQ predicate on the "renku" field.
+func RenkuEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldRenku, v))
+}
+
+// RenkuNEQ applies the NEQ predicate on the "renku" field.
+func RenkuNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldRenku, v))
+}
+
+// RenkuIn applies the In predicate on the "renku" field.
+func RenkuIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldRenku, vs...))
+}
+
+// RenkuNotIn applies the NotIn predicate on the "renku" field.
+func RenkuNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldRenku, vs...))
+}
+
+// RenkuGT applies the GT predicate on the "renku" field.
+func RenkuGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldRenku, v))
+}
+
+// RenkuGTE applies the GTE predicate on the "renku" field.
+func RenkuGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldRenku, v))
+}
+
+// RenkuLT applies the LT predicate on the "renku" field.
+func RenkuLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldRenku, v))
+}
+
+// RenkuLTE applies the LTE predicate on the "renku" field.
+func RenkuLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldRenku, v))
+}
+
+// RenkuContains applies the Contains predicate on the "renku" field.
+func RenkuContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldRenku, v))
+}
+
+// RenkuHasPrefix applies the HasPrefix predicate on the "renku" field.
+func RenkuHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldRenku, v))
+}
+
+// RenkuHasSuffix applies the HasSuffix predicate on the "renku" field.
+func RenkuHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldRenku, v))
+}
+
+// RenkuIsNil applies the IsNil predicate on the "renku" field.
+func RenkuIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldRenku))
+}
+
+// RenkuNotNil applies the NotNil predicate on the "renku" field.
+func RenkuNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldRenku))
+}
+
+// RenkuEqualFold applies the EqualFold predicate on the "renku" field.
+func RenkuEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldRenku, v))
+}
+
+// RenkuContainsFold applies the ContainsFold predicate on the "renku" field.
+func RenkuContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldRenku, v))
+}
+
+// GithubEQ applies the EQ predicate on the "github" field.
+func GithubEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldGithub, v))
+}
+
+// GithubNEQ applies the NEQ predicate on the "github" field.
+func GithubNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldGithub, v))
+}
+
+// GithubIn applies the In predicate on the "github" field.
+func GithubIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldGithub, vs...))
+}
+
+// GithubNotIn applies the NotIn predicate on the "github" field.
+func GithubNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldGithub, vs...))
+}
+
+// GithubGT applies the GT predicate on the "github" field.
+func GithubGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldGithub, v))
+}
+
+// GithubGTE applies the GTE predicate on the "github" field.
+func GithubGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldGithub, v))
+}
+
+// GithubLT applies the LT predicate on the "github" field.
+func GithubLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldGithub, v))
+}
+
+// GithubLTE applies the LTE predicate on the "github" field.
+func GithubLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldGithub, v))
+}
+
+// GithubContains applies the Contains predicate on the "github" field.
+func GithubContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldGithub, v))
+}
+
+// GithubHasPrefix applies the HasPrefix predicate on the "github" field.
+func GithubHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldGithub, v))
+}
+
+// GithubHasSuffix applies the HasSuffix predicate on the "github" field.
+func GithubHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldGithub, v))
+}
+
+// GithubIsNil applies the IsNil predicate on the "github" field.
+func GithubIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldGithub))
+}
+
+// GithubNotNil applies the NotNil predicate on the "github" field.
+func GithubNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldGithub))
+}
+
+// GithubEqualFold applies the EqualFold predicate on the "github" field.
+func GithubEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldGithub, v))
+}
+
+// GithubContainsFold applies the ContainsFold predicate on the "github" field.
+func GithubContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldGithub, v))
+}
+
+// LinkedinEQ applies the EQ predicate on the "linkedin" field.
+func LinkedinEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldLinkedin, v))
+}
+
+// LinkedinNEQ applies the NEQ predicate on the "linkedin" field.
+func LinkedinNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldLinkedin, v))
+}
+
+// LinkedinIn applies the In predicate on the "linkedin" field.
+func LinkedinIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldLinkedin, vs...))
+}
+
+// LinkedinNotIn applies the NotIn predicate on the "linkedin" field.
+func LinkedinNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldLinkedin, vs...))
+}
+
+// LinkedinGT applies the GT predicate on the "linkedin" field.
+func LinkedinGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldLinkedin, v))
+}
+
+// LinkedinGTE applies the GTE predicate on the "linkedin" field.
+func LinkedinGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldLinkedin, v))
+}
+
+// LinkedinLT applies the LT predicate on the "linkedin" field.
+func LinkedinLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldLinkedin, v))
+}
+
+// LinkedinLTE applies the LTE predicate on the "linkedin" field.
+func LinkedinLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldLinkedin, v))
+}
+
+// LinkedinContains applies the Contains predicate on the "linkedin" field.
+func LinkedinContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldLinkedin, v))
+}
+
+// LinkedinHasPrefix applies the HasPrefix predicate on the "linkedin" field.
+func LinkedinHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldLinkedin, v))
+}
+
+// LinkedinHasSuffix applies the HasSuffix predicate on the "linkedin" field.
+func LinkedinHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldLinkedin, v))
+}
+
+// LinkedinIsNil applies the IsNil predicate on the "linkedin" field.
+func LinkedinIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldLinkedin))
+}
+
+// LinkedinNotNil applies the NotNil predicate on the "linkedin" field.
+func LinkedinNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldLinkedin))
+}
+
+// LinkedinEqualFold applies the EqualFold predicate on the "linkedin" field.
+func LinkedinEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldLinkedin, v))
+}
+
+// LinkedinContainsFold applies the ContainsFold predicate on the "linkedin" field.
+func LinkedinContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldLinkedin, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

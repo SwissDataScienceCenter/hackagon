@@ -4,6 +4,8 @@ package user;
 
 import "user/messages/user_svc/add_role_request.proto";
 import "user/messages/user_svc/add_role_response.proto";
+import "user/messages/user_svc/edit_request.proto";
+import "user/messages/user_svc/edit_response.proto";
 import "user/messages/user_svc/get_request.proto";
 import "user/messages/user_svc/get_response.proto";
 import "user/messages/user_svc/list_request.proto";
@@ -20,6 +22,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 service UserService {
   rpc List(user.messages.user_svc.ListRequest) returns (user.messages.user_svc.ListResponse);
   rpc Get(user.messages.user_svc.GetRequest) returns (user.messages.user_svc.GetResponse);
+  rpc Edit(user.messages.user_svc.EditRequest) returns (user.messages.user_svc.EditResponse);
   rpc WhoAmI(user.messages.user_svc.WhoAmIRequest) returns (user.messages.user_svc.WhoAmIResponse);
   rpc Register(user.messages.user_svc.RegisterRequest) returns (user.messages.user_svc.RegisterResponse);
   rpc AddRole(user.messages.user_svc.AddRoleRequest) returns (user.messages.user_svc.AddRoleResponse);

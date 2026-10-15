@@ -12483,6 +12483,9 @@ type UserMutation struct {
 	keycloak_id                       *string
 	display_name                      *string
 	email                             *string
+	renku                             *string
+	github                            *string
+	linkedin                          *string
 	created_at                        *time.Time
 	modified_at                       *time.Time
 	clearedFields                     map[string]struct{}
@@ -12841,6 +12844,153 @@ func (m *UserMutation) EmailCleared() bool {
 func (m *UserMutation) ResetEmail() {
 	m.email = nil
 	delete(m.clearedFields, user.FieldEmail)
+}
+
+// SetRenku sets the "renku" field.
+func (m *UserMutation) SetRenku(s string) {
+	m.renku = &s
+}
+
+// Renku returns the value of the "renku" field in the mutation.
+func (m *UserMutation) Renku() (r string, exists bool) {
+	v := m.renku
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRenku returns the old "renku" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldRenku(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRenku is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRenku requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRenku: %w", err)
+	}
+	return oldValue.Renku, nil
+}
+
+// ClearRenku clears the value of the "renku" field.
+func (m *UserMutation) ClearRenku() {
+	m.renku = nil
+	m.clearedFields[user.FieldRenku] = struct{}{}
+}
+
+// RenkuCleared returns if the "renku" field was cleared in this mutation.
+func (m *UserMutation) RenkuCleared() bool {
+	_, ok := m.clearedFields[user.FieldRenku]
+	return ok
+}
+
+// ResetRenku resets all changes to the "renku" field.
+func (m *UserMutation) ResetRenku() {
+	m.renku = nil
+	delete(m.clearedFields, user.FieldRenku)
+}
+
+// SetGithub sets the "github" field.
+func (m *UserMutation) SetGithub(s string) {
+	m.github = &s
+}
+
+// Github returns the value of the "github" field in the mutation.
+func (m *UserMutation) Github() (r string, exists bool) {
+	v := m.github
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGithub returns the old "github" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldGithub(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGithub is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGithub requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGithub: %w", err)
+	}
+	return oldValue.Github, nil
+}
+
+// ClearGithub clears the value of the "github" field.
+func (m *UserMutation) ClearGithub() {
+	m.github = nil
+	m.clearedFields[user.FieldGithub] = struct{}{}
+}
+
+// GithubCleared returns if the "github" field was cleared in this mutation.
+func (m *UserMutation) GithubCleared() bool {
+	_, ok := m.clearedFields[user.FieldGithub]
+	return ok
+}
+
+// ResetGithub resets all changes to the "github" field.
+func (m *UserMutation) ResetGithub() {
+	m.github = nil
+	delete(m.clearedFields, user.FieldGithub)
+}
+
+// SetLinkedin sets the "linkedin" field.
+func (m *UserMutation) SetLinkedin(s string) {
+	m.linkedin = &s
+}
+
+// Linkedin returns the value of the "linkedin" field in the mutation.
+func (m *UserMutation) Linkedin() (r string, exists bool) {
+	v := m.linkedin
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLinkedin returns the old "linkedin" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldLinkedin(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLinkedin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLinkedin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLinkedin: %w", err)
+	}
+	return oldValue.Linkedin, nil
+}
+
+// ClearLinkedin clears the value of the "linkedin" field.
+func (m *UserMutation) ClearLinkedin() {
+	m.linkedin = nil
+	m.clearedFields[user.FieldLinkedin] = struct{}{}
+}
+
+// LinkedinCleared returns if the "linkedin" field was cleared in this mutation.
+func (m *UserMutation) LinkedinCleared() bool {
+	_, ok := m.clearedFields[user.FieldLinkedin]
+	return ok
+}
+
+// ResetLinkedin resets all changes to the "linkedin" field.
+func (m *UserMutation) ResetLinkedin() {
+	m.linkedin = nil
+	delete(m.clearedFields, user.FieldLinkedin)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -14353,7 +14503,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.username != nil {
 		fields = append(fields, user.FieldUsername)
 	}
@@ -14365,6 +14515,15 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
+	}
+	if m.renku != nil {
+		fields = append(fields, user.FieldRenku)
+	}
+	if m.github != nil {
+		fields = append(fields, user.FieldGithub)
+	}
+	if m.linkedin != nil {
+		fields = append(fields, user.FieldLinkedin)
 	}
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
@@ -14388,6 +14547,12 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.DisplayName()
 	case user.FieldEmail:
 		return m.Email()
+	case user.FieldRenku:
+		return m.Renku()
+	case user.FieldGithub:
+		return m.Github()
+	case user.FieldLinkedin:
+		return m.Linkedin()
 	case user.FieldCreatedAt:
 		return m.CreatedAt()
 	case user.FieldModifiedAt:
@@ -14409,6 +14574,12 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldDisplayName(ctx)
 	case user.FieldEmail:
 		return m.OldEmail(ctx)
+	case user.FieldRenku:
+		return m.OldRenku(ctx)
+	case user.FieldGithub:
+		return m.OldGithub(ctx)
+	case user.FieldLinkedin:
+		return m.OldLinkedin(ctx)
 	case user.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case user.FieldModifiedAt:
@@ -14449,6 +14620,27 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEmail(v)
+		return nil
+	case user.FieldRenku:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRenku(v)
+		return nil
+	case user.FieldGithub:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGithub(v)
+		return nil
+	case user.FieldLinkedin:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLinkedin(v)
 		return nil
 	case user.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -14500,6 +14692,15 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldEmail) {
 		fields = append(fields, user.FieldEmail)
 	}
+	if m.FieldCleared(user.FieldRenku) {
+		fields = append(fields, user.FieldRenku)
+	}
+	if m.FieldCleared(user.FieldGithub) {
+		fields = append(fields, user.FieldGithub)
+	}
+	if m.FieldCleared(user.FieldLinkedin) {
+		fields = append(fields, user.FieldLinkedin)
+	}
 	return fields
 }
 
@@ -14520,6 +14721,15 @@ func (m *UserMutation) ClearField(name string) error {
 	case user.FieldEmail:
 		m.ClearEmail()
 		return nil
+	case user.FieldRenku:
+		m.ClearRenku()
+		return nil
+	case user.FieldGithub:
+		m.ClearGithub()
+		return nil
+	case user.FieldLinkedin:
+		m.ClearLinkedin()
+		return nil
 	}
 	return fmt.Errorf("unknown User nullable field %s", name)
 }
@@ -14539,6 +14749,15 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldEmail:
 		m.ResetEmail()
+		return nil
+	case user.FieldRenku:
+		m.ResetRenku()
+		return nil
+	case user.FieldGithub:
+		m.ResetGithub()
+		return nil
+	case user.FieldLinkedin:
+		m.ResetLinkedin()
 		return nil
 	case user.FieldCreatedAt:
 		m.ResetCreatedAt()

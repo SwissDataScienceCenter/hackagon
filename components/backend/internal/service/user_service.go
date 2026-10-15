@@ -61,6 +61,86 @@ func (s *UserService) List(
 	return &msgs.ListResponse{Users: entries}, nil
 }
 
+func (s *UserService) Edit(
+	ctx context.Context,
+	req *msgs.EditRequest,
+) (*msgs.EditResponse, error) {
+	sub, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if sub == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot edit profiles")
+	}
+
+	isAdmin, err := s.enforcer.Enforce(ctx, "", m.User, m.Write)
+	if err != nil {
+		slog.Error("Could not enforce permission.", "error", err.Error())
+
+		return nil, status.Errorf(codes.Internal, "internal server error")
+	}
+
+	id, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
+	linkedin, err := linkUsername(linkedInUsername, req.LinkedinUrl, "LinkedIn")
+	if err != nil {
+		return nil, err
+	}
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
+	github, err := linkUsername(githubUsername, req.GithubUrl, "GitHub")
+	if err != nil {
+		return nil, err
+	}
+	//nolint:protogetter // Needed because we pass an optional field. The getter wouldn't return a pointer.
+	renku, err := linkUsername(renkuUsername, req.RenkuUrl, "Renku")
+	if err != nil {
+		return nil, err
+	}
+
+	updateQuery := s.dbClient.User.UpdateOneID(id).
+		SetNillableLinkedin(linkedin).
+		SetNillableGithub(github).
+		SetNillableRenku(renku)
+	if !isAdmin {
+		// Non-admins can only edit their own user.
+		// NOTE: Here the ownership is only checked in the database and Casbin is only used to allow admin override.
+		// We do this on purpose, because using Casbin to tell whether a user can edit its info would introduce a lot
+		// of complexity and potential security issues (e.g., users would be able to change their own role, since
+		// AddRole/RemoveRole check the same User/Write permission).
+		updateQuery = updateQuery.Where(entuser.KeycloakIDEQ(sub))
+	}
+
+	u, err := updateQuery.Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			if !isAdmin {
+				// We return permission denied whether the user exists or not to avoid leaking which user IDs exist.
+				return nil, status.Error(
+					codes.PermissionDenied,
+					"you can only edit your own profile",
+				)
+			}
+
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("update user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update database")
+	}
+
+	entry, err := s.userWithRoles(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &msgs.EditResponse{User: entry}, nil
+}
+
 func (s *UserService) Get(
 	ctx context.Context,
 	req *msgs.GetRequest,
@@ -81,14 +161,11 @@ func (s *UserService) Get(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
-	if err != nil {
-		slog.Error("get global roles", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	entry, err := s.userWithRoles(u)
+	if err != nil {
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.GetResponse{User: entry}, nil
 }
@@ -128,14 +205,10 @@ func (s *UserService) WhoAmI(
 		}
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.WhoAmIResponse{User: entry}, nil
 }
@@ -177,14 +250,10 @@ func (s *UserService) AddRole(
 		return nil, status.Error(codes.Internal, "couldn't assign role")
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.AddRoleResponse{User: entry}, nil
 }
@@ -232,14 +301,10 @@ func (s *UserService) RemoveRole(
 		return nil, status.Errorf(codes.Internal, "couldn't remove user roles: %v", err)
 	}
 
-	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	entry, err := s.userWithRoles(u)
 	if err != nil {
-		slog.Error("get global roles", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		return nil, err
 	}
-	entry := userEntryFromEnt(u)
-	entry.Roles = append(entry.Roles, globalRoles...)
 
 	return &msgs.RemoveRoleResponse{User: entry}, nil
 }
@@ -307,4 +372,17 @@ func (s *UserService) Register(
 	}
 
 	return &msgs.RegisterResponse{User: userEntryFromEnt(u)}, nil
+}
+
+func (s *UserService) userWithRoles(u *ent.User) (*ents.User, error) {
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return entry, nil
 }

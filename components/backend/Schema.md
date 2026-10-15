@@ -394,6 +394,9 @@ An authenticated user, synced from Keycloak on first login.
 | `keycloak_id` | string | yes | yes | no | no | Unique identifier from Keycloak (sub claim). |
 | `display_name` | string | no | no | no | yes | Preferred display name of the user. |
 | `email` | string | no | no | no | yes | Email of the user, same as in Keycloak |
+| `renku` | string | no | no | no | yes | Renku username (not a URL), the service renders the link. |
+| `github` | string | no | no | no | yes | Github username (not a URL), the service renders the link. |
+| `linkedin` | string | no | no | no | yes | LinkedIn username (not a URL), the service renders the link. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user was first seen. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last profile update. |
 
