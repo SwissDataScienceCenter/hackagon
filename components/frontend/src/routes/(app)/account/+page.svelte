@@ -1,16 +1,21 @@
 <script lang="ts">
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
     import CircleHelp from 'lucide-svelte/icons/circle-help';
     import KeyRound from 'lucide-svelte/icons/key-round';
+    import Link from 'lucide-svelte/icons/link';
     import Mail from 'lucide-svelte/icons/mail';
     import X from 'lucide-svelte/icons/x';
     import { startEmailChange, startPasswordChange } from '$lib/utils/account';
-    import type { PageData } from './$types';
+    import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
+    import type { ActionData, PageData } from './$types';
 
-    // No loader of its own: everything shown here is already on the session that
-    // the root layout hands every route. An RPC would only re-fetch what the
-    // cookie already says.
-    let { data }: { data: PageData } = $props();
+    // The identity card reads the session the root layout hands every route. The
+    // links come from this page's own load, which makes no RPC either: it reads
+    // the backend user that `hooks.server.ts` already fetched.
+    let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    let saving = $state(false);
 
     const user = $derived(data.session?.user);
     const userName = $derived(user?.name ?? user?.email ?? 'You');
@@ -127,5 +132,88 @@
         </span>
         <h2 class="m-0 flex-1 text-section">Email</h2>
         <button onclick={changeEmail} class="btn btn-outline">Change email</button>
+    </section>
+
+    <!-- Unlike the two rows above, these are Hackagon's own: a form posted here,
+         not a trip to the sign-in service — so the explanation sits in the card
+         rather than in the help panel, which is about that trip. Save is the
+         page's one solid action, being the only one that submits anything. -->
+    <section class="card flex flex-col gap-3 p-4" aria-labelledby="profile-links-heading">
+        <div class="flex items-center gap-3">
+            <span
+                class="flex size-9 shrink-0 items-center justify-center rounded-field
+                       bg-info/10 text-info-ink"
+                aria-hidden="true"
+            >
+                <Link class="h-4 w-4" />
+            </span>
+            <h2 id="profile-links-heading" class="m-0 flex-1 text-section">Profile links</h2>
+        </div>
+
+        <p class="prose m-0 text-xs text-ink-3">
+            Shown to the other participants of hackathons you join. Leave a box empty to remove
+            that link.
+        </p>
+
+        {#if data.links === null}
+            <p class="m-0 text-xs text-ink-3">
+                Your links cannot be loaded right now. Reload the page in a moment.
+            </p>
+        {:else}
+            <form
+                method="POST"
+                action="?/links"
+                class="flex flex-col gap-3"
+                use:enhance={() => {
+                    saving = true;
+                    // Not reset: a refused save keeps what was typed, and a
+                    // successful one reruns the load, whose fresh links re-key the
+                    // boxes below.
+                    return async ({ update }) => {
+                        await update({ reset: false });
+                        saving = false;
+                    };
+                }}
+            >
+                <!-- Re-keyed on every load, so after a save each box shows the link
+                     as the backend now renders it — `www.` and trailing slashes
+                     dropped — even where that matches what the box held before. -->
+                {#key data.links}
+                    {#each PROFILE_LINK_KINDS as kind (kind.key)}
+                        <label class="field-label">
+                            {kind.label}
+                            <input
+                                type="url"
+                                name={kind.key}
+                                value={form?.values?.[kind.key] ?? data.links[kind.key]}
+                                placeholder={kind.example}
+                                maxlength="2048"
+                                spellcheck="false"
+                                class="field"
+                            />
+                        </label>
+                    {/each}
+                {/key}
+
+                {#if form?.message}
+                    <p
+                        class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2
+                               text-xs text-danger-ink"
+                        role="alert"
+                    >
+                        {form.message}
+                    </p>
+                {/if}
+
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="btn btn-solid" disabled={saving}>
+                        {saving ? 'Saving…' : 'Save links'}
+                    </button>
+                    <span class="text-xs text-success-ink" role="status">
+                        {form?.saved && !saving ? 'Saved' : ''}
+                    </span>
+                </div>
+            </form>
+        {/if}
     </section>
 </div>
