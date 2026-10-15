@@ -28,14 +28,67 @@ export const load: PageServerLoad = async (event) => {
     error(403, "You don't have permission to list every hackathon")
   }
 
-  try {
-    const { hackathons } = await hackathon.list({})
-
-    return { hackathons }
-  } catch (e) {
+  const { hackathons } = await hackathon.list({}).catch((e: unknown) => {
     if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
       error(403, "You don't have permission to list every hackathon")
     }
     throw e
+  })
+
+  // TODO(backend: list-owners): `List` leaves `owners` empty — only `Get` fills
+  // it — so each row costs a `Get` of its own, the whole hackathon tree fetched
+  // to read one edge of it. Until then the page makes one call per hackathon,
+  // in parallel. Once `List` carries owners for a caller who may read them,
+  // delete `ownersOf` and read `h.owners` straight off the list entry.
+  const owners = await Promise.all(hackathons.map((h) => ownersOf(event, h.id)))
+
+  // Only what the page draws. A `Get` carries every project, member and page
+  // of the hackathon; none of it belongs in the page payload.
+  return {
+    hackathons: hackathons.map((h, i) => ({
+      id: h.id,
+      name: h.name,
+      logo: h.logo,
+      status: h.status,
+      startsAt: h.startsAt,
+      endsAt: h.endsAt,
+      visibility: h.visibility,
+      participantCount: h.participantCount,
+      owners: owners[i],
+    })),
+  }
+}
+
+type Owner = { id: string; displayName: string; username: string }
+
+/**
+ * The hackathon's owners, or null when they could not be read.
+ *
+ * Null rather than a failed page: one hackathon deleted between `List` and its
+ * `Get`, or one refusal, should cost that row its owners and nothing else. The
+ * page says so on the row rather than showing an empty list, which would read
+ * as a hackathon nobody runs.
+ */
+async function ownersOf(
+  event: Parameters<PageServerLoad>[0],
+  hackathonId: string,
+): Promise<Owner[] | null> {
+  const { hackathon } = requireGrpc(event.locals.grpc)
+  try {
+    const { hackathon: h } = await hackathon.get({ hackathonId })
+    if (!h) return null
+
+    return h.owners.map((o) => ({
+      id: o.id,
+      displayName: o.displayName,
+      username: o.username,
+    }))
+  } catch (e) {
+    event.locals.logger.warn(
+      { err: e, hackathonId },
+      "manage/hackathons: could not read owners",
+    )
+
+    return null
   }
 }
