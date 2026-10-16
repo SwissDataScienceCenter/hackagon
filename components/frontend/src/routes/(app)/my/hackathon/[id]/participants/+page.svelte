@@ -75,6 +75,12 @@
                     links={participant.links}
                 >
                     {#snippet actions()}
+                        <!-- Beside View rather than on the card: "you" is about
+                             who is reading the list, which the shared card is
+                             deliberately ignorant of. -->
+                        {#if participant.isMe}
+                            <span class="badge badge-neutral">You</span>
+                        {/if}
                         <a
                             href={resolve(
                                 `/my/hackathon/${data.hackathonId}/participants/${participant.id}`

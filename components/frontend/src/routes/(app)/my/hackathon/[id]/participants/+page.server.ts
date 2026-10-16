@@ -10,7 +10,8 @@ import { profileLinksOf } from "$lib/server/user/profileLinks"
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // participant with their casbin role and waitlist flag.
-  const { hackathon } = await event.parent()
+  const { hackathon, myMembership } = await event.parent()
+  const myId = myMembership?.user?.id
 
   // Waitlisted members are dropped: who has applied and not been accepted is
   // between the applicant and the organizer, and the "Waitlisted" chip
@@ -27,7 +28,12 @@ export const load: PageServerLoad = async (event) => {
       name: m.user!.displayName || m.user!.username,
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
       links: profileLinksOf(m.user),
+      isMe: m.user!.id === myId,
     }))
+    // Your own row first. Your profile is where your registration answers are
+    // read and changed, and in a list of a hundred names it was otherwise found
+    // only by searching for yourself. The rest keep the backend's order.
+    .sort((a, b) => Number(b.isMe) - Number(a.isMe))
 
   // The route id is returned rather than read from `$page` in the component, so
   // the View link's target comes from the same load that produced the rows.
