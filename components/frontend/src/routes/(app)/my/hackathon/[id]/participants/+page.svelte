@@ -28,9 +28,10 @@
 <!--
   Who is here, and nothing to act on: Approve and Remove live on the Manage
   Participants page (see $lib/navigation's manageNav), which is the one place an
-  owner's extra capabilities are collected. The only control on a row is View,
-  onto that participant's profile — the row is a name and a role chip, which is
-  not enough to know who you are about to team up with.
+  owner's extra capabilities are collected. The only control on a row is View
+  (View & edit on your own), onto that participant's profile — the row is a
+  name and a role chip, which is not enough to know who you are about to team
+  up with.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -87,7 +88,10 @@
                             )}
                             class="btn btn-sm btn-ghost no-underline"
                         >
-                            View
+                            <!-- Says "edit" only where there is something to edit:
+                                 your own answers and links. On anyone else's row it
+                                 would promise a change you cannot make. -->
+                            {participant.isMe ? 'View & edit' : 'View'}
                         </a>
                     {/snippet}
                 </ParticipantCard>

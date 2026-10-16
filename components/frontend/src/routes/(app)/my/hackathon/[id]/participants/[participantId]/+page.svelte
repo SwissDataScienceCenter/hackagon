@@ -143,8 +143,13 @@
                         {data.answerScope === 'mine' ? 'Registration answers' : 'Shared answers'}
                     </h3>
                     {#if data.answerScope === 'mine'}
+                        <!-- The in-hackathon answers page, not /register: that one
+                             is for signing up and sits outside the hackathon, so
+                             the sidebar went and nothing led back here. -->
                         <a
-                            href={resolve(`/register/${data.hackathonId}`)}
+                            href={resolve(
+                                `/my/hackathon/${data.hackathonId}/participants/${data.participant.id}/answers`
+                            )}
                             class="btn btn-sm btn-ghost no-underline"
                         >
                             {data.answers.length === 0 ? 'Answer the form' : 'Edit answers'}
