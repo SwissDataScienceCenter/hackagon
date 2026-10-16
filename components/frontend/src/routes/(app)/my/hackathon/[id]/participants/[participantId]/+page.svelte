@@ -1,10 +1,16 @@
 <script lang="ts">
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
-    import type { PageData } from './$types';
+    import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    const LINK_LABEL = Object.fromEntries(PROFILE_LINK_KINDS.map((k) => [k.key, k.label]));
+
+    const hasLinks = $derived(PROFILE_LINK_KINDS.some((k) => data.participant.links[k.key] !== ''));
 
     const initials = $derived(
         data.participant.name
@@ -50,7 +56,8 @@
   sentence, label, value and empty state at one size — text-xs mono — which left
   a 21px name above an undifferentiated grey field and no rung between them.
 
-  A read-only profile: nothing here acts on the person. Approve, Remove and the
+  Nothing here acts on the person — except, on your own profile, "Save as your
+  GitHub link" beside an answer, which edits only your own links. Approve, Remove and the
   owner controls live on the organizer's own view of this participant,
   `participants/manage/<id>` (see $lib/navigation's manageNav), and duplicating
   them here would mean two surfaces to keep in step with the same casbin rules.
@@ -99,6 +106,21 @@
                     <h2 class="m-0 text-title leading-snug text-ink">{data.participant.name}</h2>
                     <p class="m-0 text-xs leading-snug text-ink-3">@{data.participant.username}</p>
                     <ProfileLinks links={data.participant.links} />
+                    <!-- On your own profile only, and always: with no links set the
+                         row above renders nothing, which told nobody the feature
+                         existed. The links are kept on the Account page, so that is
+                         where this goes rather than a second form here. -->
+                    {#if data.answerScope === 'mine'}
+                        <a
+                            href={resolve('/account')}
+                            class="w-fit text-xs font-semibold text-accent-ink no-underline
+                                   hover:underline"
+                        >
+                            {hasLinks
+                                ? 'Edit your profile links'
+                                : 'Add your GitHub, LinkedIn or Renku link'}
+                        </a>
+                    {/if}
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Always the confirmed variant: a waitlisted member never
                              resolves to this page at all. -->
@@ -181,9 +203,30 @@
                                 {#if answer.publicAnswers && data.answerScope === 'mine'}
                                     <span class="badge badge-neutral">Shared</span>
                                 {/if}
+                                <!-- Set only on your own profile, and only while that
+                                     link is still empty — saving it is what retires
+                                     the offer. -->
+                                {#if answer.linkSuggestion}
+                                    <form method="POST" action="?/saveLink" use:enhance>
+                                        <input type="hidden" name="key" value={answer.linkSuggestion.key} />
+                                        <input type="hidden" name="url" value={answer.linkSuggestion.url} />
+                                        <button type="submit" class="btn btn-sm btn-ghost">
+                                            Save as your {LINK_LABEL[answer.linkSuggestion.key]} link
+                                        </button>
+                                    </form>
+                                {/if}
                             </dd>
                         {/each}
                     </dl>
+                {/if}
+
+                {#if form?.message}
+                    <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
+                {:else if form?.savedLink}
+                    <p class="m-0 text-xs text-success-ink" role="status">
+                        Saved as your {form.savedLink} link. Everyone in the hackathon now
+                        sees it on your profile.
+                    </p>
                 {/if}
 
                 <!-- Who can see this, said on the page rather than left to be
