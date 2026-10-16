@@ -95,14 +95,23 @@ export const load: PageServerLoad = async (event) => {
   // passed on, so this cannot introduce a target it would not have chosen itself.
   const teamQuery =
     event.url.searchParams.get("teamFrom") === "teams" ? "?from=teams" : ""
+  // The teams list links each project title here, and a reader who came from
+  // it was never on the projects list either.
+  const backToTeams = event.url.searchParams.get("from") === "teams"
 
   return {
     backHref: backToTeam
       ? `/my/hackathon/${hackathon.id}/teams/${teamId}`
-      : `/my/hackathon/${hackathon.id}/projects`,
+      : backToTeams
+        ? `/my/hackathon/${hackathon.id}/teams`
+        : `/my/hackathon/${hackathon.id}/projects`,
     // Separate from the path: `resolve()` takes a route, not a URL.
     backQuery: backToTeam ? teamQuery : "",
-    backLabel: backToTeam ? "Back to the team" : "Back to projects",
+    backLabel: backToTeam
+      ? "Back to the team"
+      : backToTeams
+        ? "Back to teams"
+        : "Back to projects",
     project: {
       id: project.id,
       title: project.title,

@@ -3,6 +3,7 @@
         submissionStatusLabel,
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import { isHttpUrl } from '$lib/utils/url';
     import type { Snippet } from 'svelte';
 
@@ -35,7 +36,12 @@
         // team: on the detail page there is no list to be nth of.
         num?: number;
         title: string;
-        projectDescription: string;
+        /**
+         * Markdown, rendered in full. Optional because the teams list leaves it
+         * out — there the project's title links to its page instead — and only
+         * the team detail page carries it.
+         */
+        projectDescription?: string;
         imageUrl?: string;
         members: TeamMember[];
         isOwn?: boolean;
@@ -112,11 +118,14 @@
                 <h3 class="m-0 text-sm leading-snug text-ink">
                     {#if num !== undefined}{num}. {/if}{title}
                 </h3>
-                <div class="block w-2/3 min-w-0">
-                    <p class="m-0 text-xs leading-snug text-ink-2">
-                        {projectDescription}
-                    </p>
-                </div>
+                {#if projectDescription}
+                    <!-- Rendered, as on the project's own page: the proposal is
+                         written in the markdown editor, and as plain text its
+                         headings and lists arrived as raw `#` and `-`. -->
+                    <div class="w-2/3 min-w-0 text-xs leading-snug text-ink-2">
+                        <MarkdownContent content={projectDescription} />
+                    </div>
+                {/if}
             </div>
 
             <div class="flex flex-wrap gap-4">

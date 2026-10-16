@@ -87,9 +87,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   its own.
 - The team assignment spreadsheet now includes free-text registration answers,
   one column per question, alongside the multiple-choice and yes/no ones.
+- The Teams page no longer shows each project's full description. The project
+  title above its teams now opens the project's page instead, and "Back to
+  teams" there returns you to the list.
 
 ### Fixed
 
+- A team's page shows its project description formatted — headings, lists, links
+  — instead of as raw markdown.
 - The Unassigned list on Manage Teams shows its scrollbar from the start when
   there are more people than fit, instead of only on hover (Chrome, Edge and
   Safari).
