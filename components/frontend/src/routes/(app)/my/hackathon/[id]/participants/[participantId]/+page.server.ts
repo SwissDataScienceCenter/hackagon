@@ -206,6 +206,7 @@ export const load: PageServerLoad = async (event) => {
     questionCount,
     answers: withSuggestions,
     participant: {
+      id: user.id,
       name: user.displayName || user.username,
       username: user.username,
       roleLabel: membershipBadgeLabel(member.isWaiting, member.role),
