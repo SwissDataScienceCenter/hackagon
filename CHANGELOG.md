@@ -107,6 +107,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - The Unassigned list on Manage Teams shows its scrollbar from the start when
   there are more people than fit, instead of only on hover (Chrome, Edge and
   Safari).
+- The Save bar on Manage Teams no longer lets the teams scrolling underneath it
+  show through, and keeps a small gap below the navigation bar.
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 

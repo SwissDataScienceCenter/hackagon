@@ -850,42 +850,47 @@
          state, so warning rather than accent, and the same color marks what
          changed on the page. A failed save's message is repeated here, where
          it is in view. -->
-    <div
-        bind:offsetHeight={saveBarHeight}
-        class="sticky top-14 z-10 flex flex-wrap items-center gap-3 rounded-card border px-3
-               py-2 text-xs {changes.total > 0
-            ? 'border-warning bg-warning/10'
-            : 'border-line bg-raised'}"
-        role="status"
-    >
-        <span class="flex-1 {changes.total > 0 ? 'text-warning-ink' : 'text-ink-3'}">
-            {#if pending}
-                Saving…
-            {:else if changes.total > 0}
-                Unsaved changes, marked on the page: {changes.summary}
-            {:else}
-                No unsaved changes
+    <!-- The bar's tint is translucent, so it sticks inside a canvas-filled
+         wrapper: what scrolls underneath stays hidden, the tint reads the same
+         as on the unsaved cards, and the 2px above it keeps it off the nav bar
+         without a see-through slit. -->
+    <div bind:offsetHeight={saveBarHeight} class="sticky top-14 z-10 bg-canvas pt-0.5">
+        <div
+            class="flex flex-wrap items-center gap-3 rounded-card border px-3 py-2
+                   text-xs {changes.total > 0
+                ?'border-warning bg-warning/10'
+                : 'border-line bg-raised'}"
+            role="status"
+        >
+            <span class="flex-1 {changes.total > 0 ? 'text-warning-ink' : 'text-ink-3'}">
+                {#if pending}
+                    Saving…
+                {:else if changes.total > 0}
+                    Unsaved changes, marked on the page: {changes.summary}
+                {:else}
+                    No unsaved changes
+                {/if}
+            </span>
+            {#if form?.message && !pending}
+                <span class="text-danger-ink">{form.message}</span>
             {/if}
-        </span>
-        {#if form?.message && !pending}
-            <span class="text-danger-ink">{form.message}</span>
-        {/if}
-        <button
-            type="button"
-            class="btn btn-sm btn-ghost"
-            disabled={pending || changes.total === 0}
-            onclick={discard}
-        >
-            Discard
-        </button>
-        <button
-            type="button"
-            class="btn btn-sm btn-solid"
-            disabled={pending || changes.total === 0}
-            onclick={save}
-        >
-            Save
-        </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-ghost"
+                disabled={pending || changes.total === 0}
+                onclick={discard}
+            >
+                Discard
+            </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-solid"
+                disabled={pending || changes.total === 0}
+                onclick={save}
+            >
+                Save
+            </button>
+        </div>
     </div>
 
     {#if locked}
