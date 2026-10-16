@@ -867,6 +867,15 @@ func (s *HackathonService) RemoveParticipant(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
+	// We remove the role first because casbin and the DB cannot share a transaction.
+	// If the DB step fails, the person still shows on the roster and Remove can be
+	// clicked again. Calling RemoveRole has no effect when the role is already gone.
+	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
+		slog.Error("remove hackathon member", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon member permission")
+	}
+
 	// Delete the participant and their answers to this hackathon's questions.
 	tx, err := s.dbClient.Tx(ctx)
 	if err != nil {
@@ -906,12 +915,6 @@ func (s *HackathonService) RemoveParticipant(
 		slog.Error("commit transaction", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't commit transaction")
-	}
-
-	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
-		slog.Error("remove hackathon member", "err", err)
-
-		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon member permission")
 	}
 
 	return &msgs.RemoveParticipantResponse{}, nil
