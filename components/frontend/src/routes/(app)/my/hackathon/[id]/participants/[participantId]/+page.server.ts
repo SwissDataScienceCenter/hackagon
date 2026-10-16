@@ -1,4 +1,4 @@
-import type { PageServerLoad } from "./$types"
+import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import {
   answersByParticipant,
@@ -6,9 +6,18 @@ import {
   type ParticipantAnswer,
 } from "$lib/server/hackathon/registrationForm"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
-import { profileLinksOf } from "$lib/server/user/profileLinks"
+import {
+  editRequestFor,
+  failForLinks,
+  profileLinksOf,
+} from "$lib/server/user/profileLinks"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
-import { error } from "@sveltejs/kit"
+import { linkify } from "$lib/utils/linkify"
+import {
+  PROFILE_LINK_KINDS,
+  profileLinkSuggestion,
+} from "$lib/utils/profileLinks"
+import { error, fail } from "@sveltejs/kit"
 
 /**
  * Who is reading this profile, which decides both how the answers are asked for
@@ -169,6 +178,24 @@ export const load: PageServerLoad = async (event) => {
     )
   }
 
+  // On your own profile, an answer holding a GitHub, LinkedIn or Renku address
+  // for a link you have not set yet gets an offer to save it as that link. Those
+  // answers mostly predate profile links: events asked for the address on the
+  // form because there was nowhere else to put it.
+  const links = profileLinksOf(user)
+  const withSuggestions = answers.map((a) => ({
+    ...a,
+    linkSuggestion:
+      isMe && typeof a.value === "string"
+        ? (profileLinkSuggestion(
+            linkify(a.value).flatMap((s) =>
+              s.kind === "link" ? [s.href] : [],
+            ),
+            links,
+          ) ?? null)
+        : null,
+  }))
+
   return {
     hackathonId: event.params.id,
     // `answerScope` picks the line under the heading and decides what an empty
@@ -177,16 +204,57 @@ export const load: PageServerLoad = async (event) => {
     // which is not a fact about the person and so draws no section at all.
     answerScope,
     questionCount,
-    answers,
+    answers: withSuggestions,
     participant: {
       name: user.displayName || user.username,
       username: user.username,
       roleLabel: membershipBadgeLabel(member.isWaiting, member.role),
       joinedAt: member.joinedAt,
-      links: profileLinksOf(user),
+      links,
     },
     teams,
     teamsPublished,
     teamsFailed,
   }
+}
+
+export const actions: Actions = {
+  /**
+   * Saves one address as one of your profile links — the "Save as your GitHub
+   * link" offered beside a registration answer. Only the one link is sent, so
+   * the other two are kept as they are.
+   *
+   * Always edits the caller, whatever profile the post came from: the address
+   * is theirs to save, exactly as if typed on the Account page, and
+   * `UserService.Edit` refuses a shape it does not accept.
+   */
+  saveLink: async (event) => {
+    const { user } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const key = form.get("key")
+    const url = form.get("url")
+    const kind = PROFILE_LINK_KINDS.find((k) => k.key === key)
+    if (!kind || typeof url !== "string") {
+      return fail(400, { message: "That link could not be read." })
+    }
+
+    const me = event.locals.platformUser
+    if (!me) {
+      return fail(503, {
+        message:
+          "Hackagon could not be reached, so your link was not saved. Try again in a moment.",
+      })
+    }
+
+    const values = { [kind.key]: url.trim() }
+    try {
+      await user.edit(editRequestFor(me.id, values))
+    } catch (e) {
+      return failForLinks(e, values)
+    }
+
+    // The load reruns after this, and `hackathon.get` brings back the link as
+    // the backend now renders it — which is what retires the offer.
+    return { savedLink: kind.label }
+  },
 }

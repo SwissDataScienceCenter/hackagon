@@ -19,7 +19,12 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 ### Added
 
 - Changing your registration answers is easier to find. On a hackathon's
-  Participants page your own entry is now at the top, marked "You", and your
+
+- Your profile in a hackathon now points you to your Account page to add your
+  GitHub, LinkedIn or Renku link. If you once typed one of those addresses into
+  a registration answer, a "Save as your GitHub link" button (or LinkedIn, or
+  Renku) next to that answer saves it as your profile link in one click.
+- Participants page your own entry is now at the top, marked "You", and your
   profile there has an "Edit answers" button that opens your registration form
   with your answers filled in.
 - Administrators' Hackathons page is now one searchable table, like the Users
