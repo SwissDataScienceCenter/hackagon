@@ -18,6 +18,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Changing your registration answers is easier to find. On a hackathon's
+  Participants page your own entry is now at the top, marked "You", and your
+  profile there has an "Edit answers" button that opens your registration form
+  with your answers filled in.
 - Administrators' Hackathons page is now one searchable table, like the Users
   page, and shows who owns each hackathon. Search finds a hackathon by its name
   or by an owner's name, and each name still opens the hackathon.

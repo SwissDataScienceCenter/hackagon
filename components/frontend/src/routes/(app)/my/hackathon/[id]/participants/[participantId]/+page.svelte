@@ -113,9 +113,22 @@
 
         {#if answersSection}
             <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
-                <h3 class="m-0 text-section text-ink">
-                    {data.answerScope === 'mine' ? 'Registration answers' : 'Shared answers'}
-                </h3>
+                <!-- The edit control in the heading row, not in the footnote: it
+                     was a link at the end of the small print, and the one action
+                     this section offers was the last thing on it anyone read. -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="m-0 text-section text-ink">
+                        {data.answerScope === 'mine' ? 'Registration answers' : 'Shared answers'}
+                    </h3>
+                    {#if data.answerScope === 'mine'}
+                        <a
+                            href={resolve(`/register/${data.hackathonId}`)}
+                            class="btn btn-sm btn-ghost no-underline"
+                        >
+                            {data.answers.length === 0 ? 'Answer the form' : 'Edit answers'}
+                        </a>
+                    {/if}
+                </div>
 
                 {#if data.answers.length === 0}
                     <!-- Only reachable on your own profile: on anyone else's an empty
@@ -188,13 +201,7 @@
                     {#if data.answerScope === 'mine'}
                         The hackathon's organizers see all of these. The ones marked
                         <span class="font-semibold text-ink-3">Shared</span>
-                        are also visible to everyone in the hackathon. Change them on the
-                        <a
-                            href={resolve(`/register/${data.hackathonId}`)}
-                            class="font-semibold text-accent-ink no-underline hover:underline"
-                        >
-                            registration form</a
-                        >.
+                        are also visible to everyone in the hackathon.
                     {:else}
                         Answers this event shares with everyone taking part. The rest of
                         {data.participant.name}'s form is between them and the organizers.
