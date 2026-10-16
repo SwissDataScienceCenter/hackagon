@@ -42,10 +42,10 @@
         {#if data.projectId}
             <!--
               The heading is the project's title, but only its description
-              reaches this page and only as plain text — the proposal's own page
-              renders it as markdown and carries the track, proposer and status
-              besides. Named for what is through there rather than "View
-              project", which reads as the thing you are already looking at.
+              reaches this page — the proposal's own page carries the track,
+              proposer and status besides. Named for what is through there
+              rather than "View project", which reads as the thing you are
+              already looking at.
 
               `?from=team` carries this team back, so the chain stays reversible
               instead of returning to a projects list the reader was never on,

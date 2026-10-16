@@ -61,13 +61,23 @@
                       places made the two read as one name. Absent for a team
                       whose project the viewer cannot see, rather than an empty
                       line.
+
+                      A link onto the project's page, which is where its
+                      description is read — the card does not carry it.
+                      `?from=teams` so that page's back link returns here.
                     -->
-                    {#if startsProject}
-                        <span class="meta">{team.projectTitle}</span>
+                    {#if startsProject && team.projectId}
+                        <a
+                            href="{resolve(
+                                `/my/hackathon/${data.hackathonId}/projects/${team.projectId}`
+                            )}?from=teams"
+                            class="meta w-fit no-underline hover:underline"
+                        >
+                            {team.projectTitle}
+                        </a>
                     {/if}
                     <TeamCard
                         title={team.name}
-                        projectDescription={team.projectDescription}
                         imageUrl={team.imageUrl}
                         members={team.members}
                         isOwn={team.isOwn}
