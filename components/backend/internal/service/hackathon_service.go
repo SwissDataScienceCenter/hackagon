@@ -867,18 +867,47 @@ func (s *HackathonService) RemoveParticipant(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Delete the participant record
-	_, err = s.dbClient.Participant.Delete().
+	// Delete the participant and their answers to this hackathon's questions.
+	tx, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+
+	_, err = tx.Participant.Delete().
 		Where(
 			entparticipant.HackathonIDEQ(id),
 			entparticipant.UserID(user.ID),
 		).
 		Exec(ctx)
+
 	if err != nil {
+		_ = tx.Rollback()
 		slog.Error("delete participant", "err", err)
 
 		return nil, status.Errorf(codes.Internal, "couldn't remove participant")
 	}
+
+	_, err = tx.Answer.Delete().
+		Where(
+			entanswer.UserID(user.ID),
+			entanswer.HasQuestionWith(entquestion.HackathonID(id)),
+		).
+		Exec(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		slog.Error("delete participant answers", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove participant answers")
+	}
+
+	if err := tx.Commit(); err != nil {
+		slog.Error("commit transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't commit transaction")
+	}
+
 	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
 		slog.Error("remove hackathon member", "err", err)
 

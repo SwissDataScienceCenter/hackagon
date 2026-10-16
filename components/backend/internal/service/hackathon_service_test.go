@@ -922,6 +922,92 @@ var _ = Describe("HackathonService", func() {
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 
+		It("deletes the removed participant's answers to this hackathon only", func() {
+			bg := context.Background()
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				bg,
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// A second hackathon the participant stays in.
+			now := time.Now()
+			otherResp, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Remove Test Other Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			otherHackathonID := otherResp.GetHackathonId()
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(otherHackathonID)).
+				SetUserID(participantUser.ID).
+				SetIsWaiting(false).
+				Save(bg)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Someone who stays in this hackathon.
+			stayingUser, err := dbClient.User.Create().
+				SetKeycloakID("remove-test-staying-user").
+				SetUsername("remove-test-staying-username").
+				Save(bg)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetUserID(stayingUser.ID).
+				SetIsWaiting(false).
+				Save(bg)
+			Expect(err).NotTo(HaveOccurred())
+
+			addQuestionIn := func(hackathonID string) uuid.UUID {
+				resp, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				return uuid.MustParse(resp.GetQuestionId())
+			}
+			addAnswer := func(questionID uuid.UUID, userID uuid.UUID) {
+				_, err := dbClient.Answer.Create().
+					SetQuestionID(questionID).
+					SetUserID(userID).
+					SetValue("SDSC").
+					Save(bg)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			q1, q2 := addQuestionIn(createdHackathonID), addQuestionIn(otherHackathonID)
+			addAnswer(q1, participantUser.ID)
+			addAnswer(q1, stayingUser.ID)
+			addAnswer(q2, participantUser.ID)
+
+			_, err = client.RemoveParticipant(ctx, &msgs.RemoveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      participantUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			hasAnswer := func(questionID uuid.UUID, userID uuid.UUID) bool {
+				ok, err := dbClient.Answer.Query().Where(
+					entanswer.QuestionIDEQ(questionID),
+					entanswer.UserIDEQ(userID),
+				).Exist(bg)
+				Expect(err).NotTo(HaveOccurred())
+
+				return ok
+			}
+			Expect(
+				hasAnswer(q1, participantUser.ID),
+			).To(BeFalse(), "removed participant's answer")
+			Expect(
+				hasAnswer(q1, stayingUser.ID),
+			).To(BeTrue(), "other participant, same hackathon")
+			Expect(hasAnswer(q2, participantUser.ID)).To(BeTrue(), "same user, other hackathon")
+		})
+
 		It("returns NOT_FOUND for invalid hackathon ID", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
