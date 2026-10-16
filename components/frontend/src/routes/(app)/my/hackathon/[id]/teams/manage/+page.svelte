@@ -843,8 +843,8 @@
         <h2 class="m-0 text-title text-ink">Manage Teams</h2>
     </div>
 
-    <!-- Save lives here, always, and sticks below the nav bar (`top-14`, the
-         same offset the sidebar uses) so it stays in reach however far down
+    <!-- Save lives here, always, and sticks below the nav bar (its `h-14` row
+         plus its 1px bottom border) so it stays in reach however far down
          the projects the organizer has scrolled. Quiet while everything is
          saved; warning-colored as soon as anything is not — unsaved is a
          state, so warning rather than accent, and the same color marks what
@@ -854,7 +854,10 @@
          wrapper: what scrolls underneath stays hidden, the tint reads the same
          as on the unsaved cards, and the 2px above it keeps it off the nav bar
          without a see-through slit. -->
-    <div bind:offsetHeight={saveBarHeight} class="sticky top-14 z-10 bg-canvas pt-0.5">
+    <div
+        bind:offsetHeight={saveBarHeight}
+        class="sticky top-[calc(3.5rem+1px)] z-10 bg-canvas pt-0.5"
+    >
         <div
             class="flex flex-wrap items-center gap-3 rounded-card border px-3 py-2
                    text-xs {changes.total > 0
@@ -1304,7 +1307,7 @@
          browsers draw and would sit beside ours. -->
     <div
         class="sticky z-10 -my-2 flex flex-wrap items-center gap-1.5 bg-canvas py-2"
-        style:top="calc(3.5rem + {saveBarHeight}px)"
+        style:top="calc(3.5rem + 1px + {saveBarHeight}px)"
     >
         <div class="relative w-56">
             <Search
