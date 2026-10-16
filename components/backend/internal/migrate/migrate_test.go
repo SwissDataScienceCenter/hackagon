@@ -142,7 +142,7 @@ var _ = Describe("answers of people no longer in the hackathon", func() {
 		hackathon1 := publicHackathon(ctx, dbClient, "with participants")
 		hackathon2 := publicHackathon(ctx, dbClient, "where the removed one stays")
 		hackathonEmpty := publicHackathon(ctx, dbClient, "with nobody left")
-		qHere, qThere, qEmpty := addQuestion(
+		q1, q2, qEmpty := addQuestion(
 			hackathon1,
 		), addQuestion(
 			hackathon2,
@@ -155,18 +155,18 @@ var _ = Describe("answers of people no longer in the hackathon", func() {
 		addParticipant(hackathon1, waiting, true)
 		addParticipant(hackathon2, removed, false)
 
-		addAnswer(qHere, confirmed)
-		addAnswer(qHere, waiting)
-		addAnswer(qHere, removed) // what an older RemoveParticipant left behind
-		addAnswer(qThere, removed)
+		addAnswer(q1, confirmed)
+		addAnswer(q1, waiting)
+		addAnswer(q1, removed) // what an older RemoveParticipant left behind
+		addAnswer(q2, removed)
 		addAnswer(qEmpty, confirmed)
 
 		Expect(migrate.Run(ctx, dbClient, enf)).To(Succeed())
 
-		Expect(hasAnswer(qHere, removed)).To(BeFalse(), "removed from this hackathon")
+		Expect(hasAnswer(q1, removed)).To(BeFalse(), "removed from this hackathon")
 		Expect(hasAnswer(qEmpty, confirmed)).To(BeFalse(), "hackathon with no participants")
-		Expect(hasAnswer(qHere, confirmed)).To(BeTrue(), "confirmed participant")
-		Expect(hasAnswer(qHere, waiting)).To(BeTrue(), "waitlisted participant")
-		Expect(hasAnswer(qThere, removed)).To(BeTrue(), "same user, still in the other hackathon")
+		Expect(hasAnswer(q1, confirmed)).To(BeTrue(), "confirmed participant")
+		Expect(hasAnswer(q1, waiting)).To(BeTrue(), "waitlisted participant")
+		Expect(hasAnswer(q2, removed)).To(BeTrue(), "same user, still in the other hackathon")
 	})
 })

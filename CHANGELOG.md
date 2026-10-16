@@ -93,6 +93,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- When someone is removed from a hackathon, their registration answers are now
+  deleted too. Organizers no longer see people who left in the answers list.
+  Answers from people removed before this fix are deleted as well.
 - A team's page shows its project description formatted — headings, lists, links
   — instead of as raw markdown.
 - The Unassigned list on Manage Teams shows its scrollbar from the start when
