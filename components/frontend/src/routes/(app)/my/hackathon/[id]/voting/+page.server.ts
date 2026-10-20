@@ -135,11 +135,17 @@ export const actions: Actions = {
       return fail(400, { message: "No category selected" })
     }
 
+    // From here on every result carries `categoryId`, so the page shows it
+    // inside the ballot that was submitted, next to its button — not at the top
+    // of the page, out of sight of anyone voting further down.
     try {
       if (method === "single_choice") {
         const submissionId = form.get("submissionId")
         if (typeof submissionId !== "string" || submissionId.length === 0) {
-          return fail(400, { message: "Pick a submission to vote for" })
+          return fail(400, {
+            message: "Pick a submission to vote for",
+            categoryId,
+          })
         }
         await vote.submitVote({ categoryId, singleChoice: { submissionId } })
       } else if (method === "points") {
@@ -151,9 +157,9 @@ export const actions: Actions = {
         // TODO(backend: vote-points-immutable): dropping is also all that *can*
         // be done — there is no EditVote or DeleteVote, and `SubmitVote` returns
         // an existing (category, voter, submission) vote untouched
-        // (`vote_service.go:598-607`). So blanking an entry does not withdraw
-        // its points, and re-scoring one is silently ignored. The page warns
-        // about that above a points ballot until this lands.
+        // (`vote_service.go:620-630`). So a resubmit could neither withdraw nor
+        // re-score points, which is why the page offers a ballot only in a
+        // category the viewer has not voted in yet.
         const submissions = form
           .getAll("submissionId")
           .filter((id): id is string => typeof id === "string")
@@ -166,15 +172,16 @@ export const actions: Actions = {
         if (submissions.length === 0) {
           return fail(400, {
             message: "Give at least one submission some points",
+            categoryId,
           })
         }
         await vote.submitVote({ categoryId, points: { submissions } })
       } else {
-        return fail(400, { message: "Unsupported voting method" })
+        return fail(400, { message: "Unsupported voting method", categoryId })
       }
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { message: e.details })
+        return fail(400, { message: e.details, categoryId })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
         // The handler uses PermissionDenied for two very different things —
@@ -182,10 +189,13 @@ export const actions: Actions = {
         // its message is the only way to tell them apart. Passed through rather
         // than replaced with a generic line, because the specific one is the
         // useful one.
-        return fail(403, { message: e.details })
+        return fail(403, { message: e.details, categoryId })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: "That category no longer exists" })
+        return fail(404, {
+          message: "That category no longer exists",
+          categoryId,
+        })
       }
       throw e
     }
