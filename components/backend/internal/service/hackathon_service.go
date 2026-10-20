@@ -19,7 +19,6 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
-	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -177,11 +176,7 @@ func (s *HackathonService) Get(
 
 	entry.Creator = userEntryFromEnt(h.Edges.Creator)
 	entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
-
-	entry.Owners = make([]*userEnts.User, 0, len(h.Edges.Owners))
-	for _, o := range h.Edges.Owners {
-		entry.Owners = append(entry.Owners, userEntryFromEnt(o))
-	}
+	entry.Owners = ownerEntriesFromEnt(h.Edges.Owners)
 
 	entry.Tracks = make([]*ents.Track, 0, len(h.Edges.Tracks))
 	for _, t := range h.Edges.Tracks {
@@ -1653,7 +1648,7 @@ func (s *HackathonService) List(
 	// without a nil check.
 	hs, err := q.WithPhases(func(pq *ent.PhaseQuery) {
 		pq.WithCreator().WithModifier().WithPage()
-	}).Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
+	}).WithOwners().Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
 
@@ -1673,19 +1668,17 @@ func (s *HackathonService) List(
 
 	entries := make([]*ents.Hackathon, 0, len(hs))
 	for _, h := range hs {
-		// Only private ones are checked, so this never leaned on the public
-		// wildcard row and stays on Read.
-		if h.Visibility == enthackathon.VisibilityPrivate {
-			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), mw.Hackathon, mw.Read)
-			if err != nil {
-				slog.Error("enforce list hackathon", "err", err)
+		canRead, err := s.enforcer.Enforce(ctx, h.ID.String(), mw.Hackathon, mw.Read)
+		if err != nil {
+			slog.Error("enforce list hackathon", "err", err)
 
-				return nil, status.Error(codes.Internal, "authorization error")
-			}
-			if !ok {
-				continue
-			}
+			return nil, status.Error(codes.Internal, "authorization error")
 		}
+
+		if h.Visibility == enthackathon.VisibilityPrivate && !canRead {
+			continue
+		}
+
 		e := hackathonEntryFromEnt(h, now)
 		c := int32(counts[h.ID]) //nolint:gosec // a participant count cannot overflow int32
 		e.ParticipantCount = &c
@@ -1709,6 +1702,11 @@ func (s *HackathonService) List(
 				JoinedAt:  timestamppb.New(p.CreatedAt),
 			}
 		}
+
+		if canRead {
+			e.Owners = ownerEntriesFromEnt(h.Edges.Owners)
+		}
+
 		entries = append(entries, e)
 	}
 

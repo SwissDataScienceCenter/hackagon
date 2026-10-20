@@ -366,6 +366,104 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
+	// Owners carry email addresses, so List fills them only where the caller
+	// holds hackathon:read. Being public grants View, which is not enough.
+	Describe("List reports owners only to callers who may read them", func() {
+		var publicA, publicB, privateC string
+
+		ctxFor := func(sub string) context.Context {
+			return metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(sub)),
+			)
+		}
+
+		// Owner usernames per listed hackathon id.
+		ownersByID := func(ctx context.Context) map[string][]string {
+			GinkgoHelper()
+			resp, err := client.List(ctx, &msgs.ListRequest{})
+			Expect(err).NotTo(HaveOccurred())
+
+			owners := make(map[string][]string, len(resp.GetHackathons()))
+			for _, h := range resp.GetHackathons() {
+				names := []string{}
+				for _, o := range h.GetOwners() {
+					names = append(names, o.GetUsername())
+				}
+				owners[h.GetId()] = names
+			}
+
+			return owners
+		}
+
+		BeforeEach(func() {
+			adminCtx := ctxFor(testAdmin)
+			create := func(name string, v entities.Visibility) string {
+				resp, err := client.Create(adminCtx, &msgs.CreateRequest{Name: name, Visibility: v})
+				Expect(err).NotTo(HaveOccurred())
+
+				return resp.GetHackathonId()
+			}
+			publicA = create("Owners Public A", entities.Visibility_VISIBILITY_PUBLIC)
+			publicB = create("Owners Public B", entities.Visibility_VISIBILITY_PUBLIC)
+			privateC = create("Owners Private C", entities.Visibility_VISIBILITY_PRIVATE)
+
+			// An owner who is not an admin, so A has two owners and the owner case
+			// below is not passing on the admin escape hatch.
+			owner, err := dbClient.User.Create().
+				SetKeycloakID("list-owner").SetUsername("list-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.AddOwner(adminCtx, &msgs.AddOwnerRequest{
+				HackathonId: publicA,
+				UserId:      owner.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole("list-member", middleware.Member, publicA)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("gives an anonymous caller no owners", func() {
+			owners := ownersByID(context.Background())
+			Expect(owners).To(HaveKey(publicA))
+			Expect(owners).To(HaveKey(publicB))
+			Expect(owners[publicA]).To(BeEmpty())
+			Expect(owners[publicB]).To(BeEmpty())
+		})
+
+		It("gives a signed-in caller who joined nothing no owners", func() {
+			owners := ownersByID(ctxFor("list-outsider"))
+			Expect(owners).To(HaveKey(publicA))
+			Expect(owners).To(HaveKey(publicB))
+			Expect(owners[publicA]).To(BeEmpty())
+			Expect(owners[publicB]).To(BeEmpty())
+		})
+
+		It("gives a member the owners of the hackathon they joined, and only that one", func() {
+			owners := ownersByID(ctxFor("list-member"))
+			Expect(owners[publicA]).To(ConsistOf("hackagon-admin", "list-owner"))
+			Expect(owners).To(HaveKey(publicB))
+			Expect(owners[publicB]).To(BeEmpty())
+		})
+
+		// Owner does not imply Member, so this holds only if Owner's own read row
+		// is what List checks.
+		It("gives an owner holding no Member row the owners of their hackathon", func() {
+			owners := ownersByID(ctxFor("list-owner"))
+			Expect(owners[publicA]).To(ConsistOf("hackagon-admin", "list-owner"))
+			Expect(owners).To(HaveKey(publicB))
+			Expect(owners[publicB]).To(BeEmpty())
+		})
+
+		It("gives a global admin the owners of every hackathon, private ones included", func() {
+			owners := ownersByID(ctxFor(testAdmin))
+			Expect(owners[publicA]).To(ConsistOf("hackagon-admin", "list-owner"))
+			Expect(owners[publicB]).To(ConsistOf("hackagon-admin"))
+			Expect(owners[privateC]).To(ConsistOf("hackagon-admin"))
+		})
+	})
+
 	Describe("Join", func() {
 		var createdHackathonID string
 

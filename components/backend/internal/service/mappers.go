@@ -30,6 +30,14 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 	}
 }
 
+func ownerEntriesFromEnt(us []*ent.User) (owners []*userEnts.User) {
+	for _, o := range us {
+		owners = append(owners, userEntryFromEnt(o))
+	}
+
+	return owners
+}
+
 func VisibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
 	switch v {
 	case enthackathon.VisibilityPublic:
