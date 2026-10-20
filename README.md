@@ -44,6 +44,10 @@ Recipes are grouped into namespaced modules (`tools/just/*.just`) addressed with
 After changing `*.proto` use `just api-change`; after changing `db/schema/*.go`
 use `just schema-change`; `just changes` will tell you which you need.
 
+> Note: `just api-change` depends on `protoc-gen-ts_proto` which is installed by
+the frontend. You must build the frontend once before calling `just api-change`
+for the first time.
+
 ## Versioning
 
 `VERSION` at the repo root holds the product version, and it is the only place

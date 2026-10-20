@@ -10,17 +10,21 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 export const protobufPackage = "hackathon.messages.team_svc";
 
 export interface ListSubmissionsRequest {
-  teamId: string;
+  teamId?: string | undefined;
+  hackathonId?: string | undefined;
 }
 
 function createBaseListSubmissionsRequest(): ListSubmissionsRequest {
-  return { teamId: "" };
+  return { teamId: undefined, hackathonId: undefined };
 }
 
 export const ListSubmissionsRequest: MessageFns<ListSubmissionsRequest> = {
   encode(message: ListSubmissionsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.teamId !== "") {
+    if (message.teamId !== undefined) {
       writer.uint32(10).string(message.teamId);
+    }
+    if (message.hackathonId !== undefined) {
+      writer.uint32(18).string(message.hackathonId);
     }
     return writer;
   },
@@ -40,6 +44,14 @@ export const ListSubmissionsRequest: MessageFns<ListSubmissionsRequest> = {
           message.teamId = reader.string();
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.hackathonId = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -55,14 +67,22 @@ export const ListSubmissionsRequest: MessageFns<ListSubmissionsRequest> = {
         ? globalThis.String(object.teamId)
         : isSet(object.team_id)
         ? globalThis.String(object.team_id)
-        : "",
+        : undefined,
+      hackathonId: isSet(object.hackathonId)
+        ? globalThis.String(object.hackathonId)
+        : isSet(object.hackathon_id)
+        ? globalThis.String(object.hackathon_id)
+        : undefined,
     };
   },
 
   toJSON(message: ListSubmissionsRequest): unknown {
     const obj: any = {};
-    if (message.teamId !== "") {
+    if (message.teamId !== undefined) {
       obj.teamId = message.teamId;
+    }
+    if (message.hackathonId !== undefined) {
+      obj.hackathonId = message.hackathonId;
     }
     return obj;
   },
@@ -72,7 +92,8 @@ export const ListSubmissionsRequest: MessageFns<ListSubmissionsRequest> = {
   },
   fromPartial(object: DeepPartial<ListSubmissionsRequest>): ListSubmissionsRequest {
     const message = createBaseListSubmissionsRequest();
-    message.teamId = object.teamId ?? "";
+    message.teamId = object.teamId ?? undefined;
+    message.hackathonId = object.hackathonId ?? undefined;
     return message;
   },
 };

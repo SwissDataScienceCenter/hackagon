@@ -7,6 +7,7 @@
 package team_svc
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -22,8 +23,12 @@ const (
 )
 
 type ListSubmissionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TeamId        string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Value:
+	//
+	//	*ListSubmissionsRequest_TeamId
+	//	*ListSubmissionsRequest_HackathonId
+	Value         isListSubmissionsRequest_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -58,20 +63,56 @@ func (*ListSubmissionsRequest) Descriptor() ([]byte, []int) {
 	return file_hackathon_messages_team_svc_list_submissions_request_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *ListSubmissionsRequest) GetValue() isListSubmissionsRequest_Value {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
 func (x *ListSubmissionsRequest) GetTeamId() string {
 	if x != nil {
-		return x.TeamId
+		if x, ok := x.Value.(*ListSubmissionsRequest_TeamId); ok {
+			return x.TeamId
+		}
 	}
 	return ""
 }
+
+func (x *ListSubmissionsRequest) GetHackathonId() string {
+	if x != nil {
+		if x, ok := x.Value.(*ListSubmissionsRequest_HackathonId); ok {
+			return x.HackathonId
+		}
+	}
+	return ""
+}
+
+type isListSubmissionsRequest_Value interface {
+	isListSubmissionsRequest_Value()
+}
+
+type ListSubmissionsRequest_TeamId struct {
+	TeamId string `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3,oneof"`
+}
+
+type ListSubmissionsRequest_HackathonId struct {
+	HackathonId string `protobuf:"bytes,2,opt,name=hackathon_id,json=hackathonId,proto3,oneof"`
+}
+
+func (*ListSubmissionsRequest_TeamId) isListSubmissionsRequest_Value() {}
+
+func (*ListSubmissionsRequest_HackathonId) isListSubmissionsRequest_Value() {}
 
 var File_hackathon_messages_team_svc_list_submissions_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_team_svc_list_submissions_request_proto_rawDesc = "" +
 	"\n" +
-	":hackathon/messages/team_svc/list_submissions_request.proto\x12\x1bhackathon.messages.team_svc\"1\n" +
-	"\x16ListSubmissionsRequest\x12\x17\n" +
-	"\ateam_id\x18\x01 \x01(\tR\x06teamIdBjZhgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svcb\x06proto3"
+	":hackathon/messages/team_svc/list_submissions_request.proto\x12\x1bhackathon.messages.team_svc\x1a\x1bbuf/validate/validate.proto\"u\n" +
+	"\x16ListSubmissionsRequest\x12#\n" +
+	"\ateam_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\x06teamId\x12-\n" +
+	"\fhackathon_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\vhackathonIdB\a\n" +
+	"\x05valueBjZhgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_team_svc_list_submissions_request_proto_rawDescOnce sync.Once
@@ -101,6 +142,10 @@ func init() { file_hackathon_messages_team_svc_list_submissions_request_proto_in
 func file_hackathon_messages_team_svc_list_submissions_request_proto_init() {
 	if File_hackathon_messages_team_svc_list_submissions_request_proto != nil {
 		return
+	}
+	file_hackathon_messages_team_svc_list_submissions_request_proto_msgTypes[0].OneofWrappers = []any{
+		(*ListSubmissionsRequest_TeamId)(nil),
+		(*ListSubmissionsRequest_HackathonId)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

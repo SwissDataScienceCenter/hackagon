@@ -23,7 +23,9 @@ const (
 )
 
 type ListSubmissionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ordered by team_id ascending, then by version ascending (oldest first).
+	// (team_id, version) is unique, so the order is total.
 	Submissions   []*entities.Submission `protobuf:"bytes,1,rep,name=submissions,proto3" json:"submissions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
