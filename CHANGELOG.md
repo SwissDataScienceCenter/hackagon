@@ -112,6 +112,15 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   Safari).
 - The Save bar on Manage Teams no longer lets the teams scrolling underneath it
   show through, and keeps a small gap below the navigation bar.
+- On the Voting page, a points ballot that hands out more than its budget can no
+  longer be submitted, and says how many points to take back. Why a vote was
+  refused now shows next to that ballot's button instead of at the top of the
+  page. Point fields drop leading zeros, so "007" reads "7".
+- Voting has one rule for every method: you vote once in each category, and your
+  vote is final. Once you have voted, the category shows what you voted for
+  instead of the ballot. Before, a single-choice vote could be changed but
+  points could not, and points re-entered on a ballot already cast were silently
+  dropped.
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 
