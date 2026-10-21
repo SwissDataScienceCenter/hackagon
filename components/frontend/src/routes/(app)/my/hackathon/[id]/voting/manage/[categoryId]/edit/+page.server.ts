@@ -2,7 +2,12 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageVoteCategories } from "$lib/server/hackathon/capabilities"
-import { categoryView, methodFromSlug } from "$lib/server/hackathon/voting"
+import {
+  categoryView,
+  categoryVoterCount,
+  methodFromSlug,
+  votingRoundStatus,
+} from "$lib/server/hackathon/voting"
 import { readCategoryForm } from "$lib/server/hackathon/voteCategoryForm"
 import { resolve } from "$app/paths"
 import { error, fail, redirect } from "@sveltejs/kit"
@@ -37,30 +42,20 @@ export const load: PageServerLoad = async (event) => {
   }
   if (!category) error(404, "Voting category not found")
 
-  // Only to warn with. EditVoteCategory *deletes every vote in the category*
-  // when the voting method changes (`applyVotingMethodChange`,
-  // `vote_service.go:524`) — silently, with no confirmation and nothing in the
-  // response to say it happened. An organizer switching Single choice to Points
-  // to see what it looks like would throw away every vote already cast, so the
-  // form says so before they do it.
-  let voteCount = 0
-  try {
-    const { votes } = await vote.listVotes({
-      hackathonId: event.params.id,
-      categoryId: event.params.categoryId,
-    })
-    voteCount = votes.length
-  } catch (e) {
-    event.locals.logger.warn(
-      { err: e },
-      "VOTING: vote count lookup failed, editing without the vote-loss warning",
-    )
-  }
+  // Once anyone has voted the category is locked — see `categoryVoterCount` —
+  // and once the results are final, every category is. The page then says so
+  // instead of offering a form. Not degraded on failure: a lock that cannot be
+  // checked must not read as "unlocked".
+  const [voters, { final }] = await Promise.all([
+    categoryVoterCount(vote, event.params.id, event.params.categoryId),
+    votingRoundStatus(vote, event.params.id),
+  ])
 
   return {
     hackathonId: hackathon.id,
     category: categoryView(category),
-    voteCount,
+    voters,
+    resultsFinal: final,
   }
 }
 
@@ -70,14 +65,36 @@ export const actions: Actions = {
     const parsed = readCategoryForm(await event.request.formData())
     if ("message" in parsed) return fail(400, { message: parsed.message })
 
+    // Checked again here, not just on load: someone may have voted while the
+    // form was open, and an edit that changes the method deletes their votes.
+    if (
+      (await categoryVoterCount(
+        vote,
+        event.params.id,
+        event.params.categoryId,
+      )) > 0
+    ) {
+      return fail(409, {
+        message:
+          "People have voted in this category since you opened it, so it can no longer be changed.",
+      })
+    }
+    if ((await votingRoundStatus(vote, event.params.id)).final) {
+      return fail(409, {
+        message:
+          "The results are final, so categories can no longer be changed.",
+      })
+    }
+
     try {
       await vote.editVoteCategory({
         id: event.params.categoryId,
         name: parsed.name,
         description: parsed.description,
         votingMethod: methodFromSlug(parsed.method)!,
-        // `voterType` is omitted so an existing jury category is not silently
-        // demoted to all-participants by a form that has no control for it.
+        // `voterType` is omitted so a jury category made through the API is not
+        // silently turned into an all-participants one by a form that has no
+        // jury control — it stays listed as "not votable here".
         //
         // `juryMemberIds` is sent empty, which is *not* the same as clearing it:
         // the field is `repeated`, so an empty list encodes to no bytes at all

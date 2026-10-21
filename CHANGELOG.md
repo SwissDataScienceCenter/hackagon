@@ -99,6 +99,12 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - The Teams page no longer shows each project's full description. The project
   title above its teams now opens the project's page instead, and "Back to
   teams" there returns you to the list.
+- Manage Voting is now the one page for running a vote. It shows the steps, how
+  many people have voted, and the count so far in every category.
+- Results are made final once, with one button, after voting is closed, and can
+  be published only after that.
+- A voting category can no longer be edited or deleted once anyone has voted in
+  it.
 
 ### Fixed
 
@@ -121,6 +127,12 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   instead of the ballot. Before, a single-choice vote could be changed but
   points could not, and points re-entered on a ballot already cast were silently
   dropped.
+
+### Removed
+
+- The separate results page for each voting category, with its CSV and JSON
+  downloads and hand-editing of results.
+- Jury voting. Everyone taking part votes, by single choice or points.
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 

@@ -1,6 +1,8 @@
+import type { Vote } from "$lib/server/grpc/generated/vote/entities/vote"
 import type { VoteCategory } from "$lib/server/grpc/generated/vote/entities/vote_category"
 import type { VoteResult } from "$lib/server/grpc/generated/vote/entities/vote_result"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
+import type { VoteServiceClient } from "$lib/server/grpc/generated/vote/vote_service"
 import { listVisibleTeams } from "./teams"
 import { submissionVersions } from "./submissions"
 import { VotingMethod } from "$lib/server/grpc/generated/vote/entities/voting_method"
@@ -52,9 +54,9 @@ export function slugFromMethod(method: VotingMethod): MethodSlug {
 /**
  * One category, flattened for display.
  *
- * `canVoteHere` is deliberately absent — whether *this viewer* may vote in this
- * category depends on the jury roster and, per submission, on which team they
- * are on. The booth resolves both; this is just what the category is.
+ * `canVoteHere` is deliberately absent — whether *this viewer* may vote on an
+ * entry depends on which team they are on. The booth resolves that; this is
+ * just what the category is.
  */
 export interface CategoryView {
   id: string
@@ -63,12 +65,13 @@ export interface CategoryView {
   method: MethodSlug
   methodLabel: string
   maxPoints: number
-  isJury: boolean
-  juryMemberIds: string[]
   /**
-   * True for a method the booth cannot cast a vote for — today, ranked. Such a
-   * category is still shown rather than hidden: it exists, an organizer made it,
-   * and pretending otherwise would be worse than saying it is not votable here.
+   * False for a category the booth cannot offer: a ranked one (no control to
+   * cast it) or a jury one (only its roster may vote, and the platform has no
+   * jury voting — it is handled off the platform for now). Neither can be
+   * created here, only through the API. Such a category is still listed for the
+   * organizer rather than hidden: it exists, and pretending otherwise would be
+   * worse than saying it is not votable here.
    */
   votableInBooth: boolean
 }
@@ -264,6 +267,153 @@ export function resultView(
   }
 }
 
+/**
+ * How many people voted, which is not how many votes are stored: a vote row
+ * carries one submission, so a points ballot spread over three entries is three
+ * rows from one person.
+ */
+export function voterCount(votes: Pick<Vote, "voterId">[]): number {
+  return new Set(votes.map((v) => v.voterId)).size
+}
+
+/**
+ * How many people have voted in one category — and so whether it is locked.
+ * A category anyone has voted in can no longer be edited or deleted: what
+ * people voted on has to stay what it was. The backend would allow both (an
+ * edit that changes the method even deletes the votes), so the lock is this
+ * frontend's rule, applied by every page and action that could change one.
+ */
+export async function categoryVoterCount(
+  vote: VoteServiceClient,
+  hackathonId: string,
+  categoryId: string,
+): Promise<number> {
+  const { votes } = await vote.listVotes({ hackathonId, categoryId })
+  return voterCount(votes)
+}
+
+/**
+ * Whether a voting round's results are final: every category anyone voted in
+ * has its results. A category nobody voted in never gets any — there is nothing
+ * to place — so it does not hold the round back; a round nobody voted in at all
+ * has nothing to be final about.
+ *
+ * The one definition, because two things hang off it: Manage Voting says
+ * "Final" and stops offering the button, and Settings lets results be
+ * published only once it is true.
+ */
+export function roundIsFinal(
+  categories: { voterCount: number; resultCount: number }[],
+): boolean {
+  const voted = categories.filter((c) => c.voterCount > 0)
+  return voted.length > 0 && voted.every((c) => c.resultCount > 0)
+}
+
+/**
+ * Where a hackathon's voting round stands, read from the backend for a caller
+ * that has nothing loaded — Settings, which uses it to word its switches.
+ *
+ * `final`: see `roundIsFinal`. `anyVotes`: whether anyone has voted at all —
+ * with nobody, there is nothing that could be published too early.
+ */
+export async function votingRoundStatus(
+  vote: VoteServiceClient,
+  hackathonId: string,
+): Promise<{ final: boolean; anyVotes: boolean }> {
+  const [{ voteCategories }, { votes }] = await Promise.all([
+    vote.listVoteCategories({ hackathonId }),
+    vote.listVotes({ hackathonId }),
+  ])
+  const categories = await Promise.all(
+    voteCategories.map(async (c) => ({
+      voterCount: voterCount(votes.filter((v) => v.categoryId === c.id)),
+      resultCount: (await vote.listVoteResults({ categoryId: c.id }))
+        .voteResults.length,
+    })),
+  )
+  return { final: roundIsFinal(categories), anyVotes: votes.length > 0 }
+}
+
+/** One entry's line in the tally. */
+export interface TallyRow {
+  submissionId: string
+  projectTitle: string
+  teamName: string
+  teamId: string | undefined
+  /** Votes (single choice), points, or Borda score (ranked). */
+  score: number
+  /** Shared by equal scores: 1, 1, 3. */
+  rank: number
+}
+
+/**
+ * The tally `SuggestResults` would save, worked out here so the organizer can
+ * see the scores behind the placements. The backend computes them, ranks by
+ * them, and stores only the rank (`vote_service.go:1325`, `computeResults`), so
+ * without this the page could show "1st" but never "14 points".
+ *
+ * Mirrors that function and has to stay in step with it: single choice counts
+ * one per vote, points sums them, ranked is a Borda count over the entries that
+ * received a vote. Only entries with a vote appear, exactly as only they are
+ * placed. Ties share a rank and are ordered by title so they don't shuffle.
+ */
+export function tallyVotes(
+  method: MethodSlug,
+  votes: Vote[],
+  submissions: Map<string, SubmissionRef>,
+): TallyRow[] {
+  const cast = votes.flatMap((v) => {
+    // ts-proto renders the `vote` oneof as three optional fields; whichever is
+    // set is the method.
+    const submissionId =
+      v.singleChoice?.submissionId ??
+      v.points?.submissionId ??
+      v.ranked?.submissionId
+    if (!submissionId) return []
+    return [
+      {
+        submissionId,
+        points: v.points?.points ?? 0,
+        rank: v.ranked?.rank ?? 0,
+      },
+    ]
+  })
+
+  const entryCount = new Set(cast.map((c) => c.submissionId)).size
+  const scores = new Map<string, number>()
+  for (const c of cast) {
+    const worth =
+      method === "points"
+        ? c.points
+        : method === "ranked"
+          ? entryCount - c.rank
+          : 1
+    scores.set(c.submissionId, (scores.get(c.submissionId) ?? 0) + worth)
+  }
+
+  const rows = [...scores].map(([submissionId, score]) => {
+    const sub = submissions.get(submissionId)
+    return {
+      submissionId,
+      projectTitle: sub?.projectTitle ?? "Unknown submission",
+      teamName: sub?.teamName ?? "",
+      teamId: sub?.teamId,
+      score,
+    }
+  })
+  rows.sort(
+    (a, b) => b.score - a.score || a.projectTitle.localeCompare(b.projectTitle),
+  )
+
+  let rank = 0
+  let previous: number | undefined
+  return rows.map((row, i) => {
+    if (row.score !== previous) rank = i + 1
+    previous = row.score
+    return { ...row, rank }
+  })
+}
+
 export function categoryView(c: VoteCategory): CategoryView {
   const method = slugFromMethod(c.votingMethod)
 
@@ -276,8 +426,7 @@ export function categoryView(c: VoteCategory): CategoryView {
     // The field is optional on the wire and only meaningful for points; 0 reads
     // as "unset" everywhere downstream.
     maxPoints: c.maxPoints ?? 0,
-    isJury: c.voterType === VoterType.VOTER_TYPE_JURY,
-    juryMemberIds: c.juryMembers.map((u) => u.id),
-    votableInBooth: method !== "ranked",
+    votableInBooth:
+      method !== "ranked" && c.voterType !== VoterType.VOTER_TYPE_JURY,
   }
 }

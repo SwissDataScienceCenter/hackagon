@@ -11,16 +11,14 @@ import { ClientError, Status } from "nice-grpc-common"
 /**
  * The participant roster as a CSV, for import into a mailing tool.
  *
- * A `+server.ts` rather than a load, same reason as the vote export
- * (`voting/manage/[categoryId]/results/export/[file]`): this is a download, not
- * a page. Unlike that one it has no RPC handing it finished bytes — there is no
- * `ExportParticipants` — so it builds the file here out of the members
- * `Hackathon.Get` already returns.
+ * A `+server.ts` rather than a load: this is a download, not a page. There is
+ * no RPC handing it finished bytes — no `ExportParticipants` — so it builds the
+ * file here out of the members `Hackathon.Get` already returns.
  *
- * The filename lives in `Content-Disposition` rather than in the route, which is
- * the opposite of what the vote export argues for. It has to: that name is the
- * hackathon's, and a hackathon-dependent name cannot sit in a static route
- * segment. The anchor carries a bare `download` and lets this header name it.
+ * The filename lives in `Content-Disposition` rather than in the route. It has
+ * to: that name is the hackathon's, and a hackathon-dependent name cannot sit in
+ * a static route segment. The anchor carries a bare `download` and lets this
+ * header name it.
  */
 
 export const GET: RequestHandler = async (event) => {

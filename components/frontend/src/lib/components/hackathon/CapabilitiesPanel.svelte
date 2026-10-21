@@ -9,7 +9,17 @@
     }: {
         /** False when the hackathon has no HackathonState row to configure. */
         hasState: boolean;
-        capabilities: { value: number; enabled: boolean }[];
+        /**
+         * `lockedReason`, when set, is why a switch cannot be turned on yet —
+         * today only "View results", until the results are final. `warnings`
+         * say what turning one on means, and never stop anything.
+         */
+        capabilities: {
+            value: number;
+            enabled: boolean;
+            lockedReason?: string;
+            warnings?: string[];
+        }[];
         /** Failure text from the last action, if it failed. */
         message?: string;
         saved?: boolean;
@@ -49,15 +59,21 @@
                      a second copy beside every switch was a wall of arrows. -->
                 <div class="flex flex-col gap-1 pt-2">
                     {#each capabilities as capability (capability.value)}
+                        <!-- A locked switch is disabled, and so submits nothing —
+                             right, since it is only ever locked while off. The
+                             reason sits under it so it is never unexplained. -->
                         <label
-                            class="flex cursor-pointer items-start gap-2.5 rounded-field px-2 py-2
-                                   hover:bg-raised"
+                            class="flex items-start gap-2.5 rounded-field px-2 py-2
+                                   {capability.lockedReason
+                                ? 'cursor-not-allowed'
+                                : 'cursor-pointer hover:bg-raised'}"
                         >
                             <input
                                 type="checkbox"
                                 name="capabilities"
                                 value={capability.value}
                                 checked={capability.enabled}
+                                disabled={capability.lockedReason !== undefined}
                                 class="checkbox mt-0.5"
                             />
                             <span class="flex min-w-0 flex-col gap-0.5">
@@ -68,6 +84,14 @@
                                     {capabilityDescription(capability.value) ??
                                         'No description for this capability.'}
                                 </span>
+                                {#if capability.lockedReason}
+                                    <span class="text-xs text-warning-ink">
+                                        {capability.lockedReason}
+                                    </span>
+                                {/if}
+                                {#each capability.warnings ?? [] as warning (warning)}
+                                    <span class="text-xs text-warning-ink">{warning}</span>
+                                {/each}
                             </span>
                         </label>
                     {/each}

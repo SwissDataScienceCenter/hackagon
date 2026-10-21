@@ -16,10 +16,17 @@
 
 import type { RequestEvent } from "@sveltejs/kit"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import {
   CAPABILITY_ORDER,
   capabilityStates,
+  enabledCapabilities,
 } from "$lib/server/hackathon/phaseForm"
+import { votingRoundStatus } from "$lib/server/hackathon/voting"
+import {
+  mayPublishResults,
+  type VotingRound,
+} from "$lib/server/hackathon/votingSwitches"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -99,13 +106,42 @@ export async function saveCapabilities(
   event: RequestEvent,
   hackathonId: string,
 ) {
-  const { hackathon } = requireGrpc(event.locals.grpc)
+  const { hackathon, vote } = requireGrpc(event.locals.grpc)
   const form = await event.request.formData()
 
   const checked = new Set(form.getAll("capabilities").map(String))
   const enabled = CAPABILITY_ORDER.filter((c) =>
     checked.has(String(c as number)),
   ).map((c) => c as number)
+
+  // The one switch that can refuse — see `switchNote`. Only when "View
+  // results" is being switched *on*: a hackathon that already shows them can
+  // still save its other switches, and turning it off is never blocked. If the
+  // voting state cannot be read, it is allowed rather than refused, so Settings
+  // can never be stuck on a lookup.
+  const viewResults = Capability.CAPABILITY_VIEW_RESULTS as number
+  if (enabled.includes(viewResults)) {
+    const { hackathon: h } = await hackathon.get({ hackathonId })
+    const wasOn = enabledCapabilities(h?.state).includes(viewResults)
+    if (!wasOn) {
+      let round: VotingRound
+      try {
+        round = await votingRoundStatus(vote, hackathonId)
+      } catch (e) {
+        event.locals.logger.warn(
+          { err: e },
+          "SETTINGS: voting state lookup failed, allowing View results",
+        )
+        round = undefined
+      }
+      if (!mayPublishResults(round)) {
+        return fail(409, {
+          message:
+            "Results can be published only once they are final. Make them final in Manage Voting first.",
+        })
+      }
+    }
+  }
 
   try {
     await hackathon.setCapabilities({

@@ -6,8 +6,7 @@
         category,
         cancelHref,
         submitLabel,
-        message,
-        voteCount = 0
+        message
     }: {
         category: {
             name: string;
@@ -16,35 +15,22 @@
             votingMethod: string;
             /** Only meaningful for 'points'; 0 when unset. */
             maxPoints: number;
-            /**
-             * Present only so the form can warn about a category it cannot fully
-             * edit. Jury categories are creatable through the API but not here.
-             */
-            isJury?: boolean;
         };
         /** Unresolved path — `resolve()` is called here, at the anchor. */
         cancelHref: string;
         submitLabel: string;
         /** Failure text from the action, if the last submit failed. */
         message?: string;
-        /**
-         * Votes already cast in this category. Only used to warn that changing
-         * the method throws them away — 0 on the create form, where there is
-         * nothing to lose.
-         */
-        voteCount?: number;
     } = $props();
 
     // Local so the points budget can appear and disappear with the choice. The
     // server re-reads the submitted value either way and ignores the budget for
     // single choice, so this is presentation only.
+    //
+    // No "changing the method deletes the votes" warning: the backend does do
+    // that, but this form is only ever shown for a category nobody has voted in
+    // — see `categoryVoterCount`.
     let method = $state(category.votingMethod || 'single_choice');
-
-    // The backend deletes every vote in the category when the method changes,
-    // with no confirmation step of its own. Warn only once the choice actually
-    // differs from what is stored, so the notice means "this submit will discard
-    // them" rather than sitting there permanently as background noise.
-    const willDiscardVotes = $derived(voteCount > 0 && method !== category.votingMethod);
 </script>
 
 <!-- Server-side validation only: every rule here is one the action repeats, and
@@ -55,16 +41,6 @@
 <form method="POST" action="?/save" class="flex w-full flex-col gap-6">
     {#if message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{message}</p>
-    {/if}
-
-    {#if category.isJury}
-        <!-- Not an error, so not styled as one: the category is valid and the
-             backend is happy to edit its other fields. Only the jury roster is
-             out of reach from here. -->
-        <p class="m-0 text-xs text-ink-3">
-            This is a jury category. Its name, description and method can be changed
-            here; who sits on the jury cannot, and is left exactly as it is.
-        </p>
     {/if}
 
     <label class="field-label">
@@ -158,15 +134,6 @@
             placeholder="What should people be judging? Name the criteria."
         />
     </div>
-
-    {#if willDiscardVotes}
-        <p class="m-0 text-xs text-danger-ink" role="alert">
-            Changing how people vote <strong>deletes the
-            {voteCount === 1 ? 'vote' : `${voteCount} votes`}</strong>
-            already cast in this category. There is no undo. Leave the method as it
-            is to keep them.
-        </p>
-    {/if}
 
     <div class="flex gap-2">
         <button type="submit" class="btn btn-sm btn-solid">{submitLabel}</button>

@@ -63,19 +63,11 @@ export const load: PageServerLoad = async (event) => {
     platformUserId,
   )
 
-  // Only what this viewer may actually cast. A jury category refuses anyone off
-  // its roster, and a ranked category has no control in the booth — both are
-  // filtered rather than shown-and-refused. `juryMemberIds` holds platform user
-  // ids, the same ids `platformUser.id` and the team rosters use.
+  // Only what can be cast here: ranked and jury categories are filtered rather
+  // than shown-and-refused — see `votableInBooth`.
   const categories = voteCategories
     .map(categoryView)
     .filter((c) => c.votableInBooth)
-    .filter(
-      (c) =>
-        !c.isJury ||
-        (platformUserId !== undefined &&
-          c.juryMemberIds.includes(platformUserId)),
-    )
 
   // The viewer's own votes, so the booth opens showing what they already chose
   // rather than a blank ballot. Scoped by voterId because ListVotes only lets a

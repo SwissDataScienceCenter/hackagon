@@ -2,11 +2,17 @@ import type { Actions, PageServerLoad } from "./$types"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
+import { requireGrpc } from "$lib/server/grpc/client"
 import { CAPABILITY_ORDER } from "$lib/server/hackathon/phaseForm"
 import {
   saveCapabilities,
   setCurrentPhase,
 } from "$lib/server/hackathon/stateActions"
+import { votingRoundStatus } from "$lib/server/hackathon/voting"
+import {
+  switchNote,
+  type VotingRound,
+} from "$lib/server/hackathon/votingSwitches"
 import { error } from "@sveltejs/kit"
 
 /**
@@ -20,8 +26,10 @@ import { error } from "@sveltejs/kit"
  * hackathon, and mixing the two was what buried the capability switches under a
  * heading nobody opened unless they already suspected something.
  *
- * No RPC of its own: the layout's `hackathon.get` already returned the phases and
- * the state, and `hackathonState` is the derivation every surface shares.
+ * Almost no RPC of its own: the layout's `hackathon.get` already returned the
+ * phases and the state, and `hackathonState` is the derivation every surface
+ * shares. The one exception reads the voting round, to word the voting
+ * switches — see `switchNote`.
  */
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership, hackathonState } = await event.parent()
@@ -34,6 +42,23 @@ export const load: PageServerLoad = async (event) => {
   // it returns is organiser-only, so the check comes first.
   if (!mayManagePhases(myMembership ?? undefined, isAdmin)) {
     error(403, "Only the hackathon organizer can manage this hackathon")
+  }
+
+  // Where the voting round stands, to word the voting switches — see
+  // `switchNote`. A failure here must not take Settings down with it: the
+  // switches then just say they could not check, and nothing is locked.
+  let round: VotingRound
+  try {
+    round = await votingRoundStatus(
+      requireGrpc(event.locals.grpc).vote,
+      event.params.id,
+    )
+  } catch (e) {
+    event.locals.logger.warn(
+      { err: e },
+      "SETTINGS: voting state lookup failed, showing the switches unlocked",
+    )
+    round = undefined
   }
 
   return {
@@ -58,6 +83,7 @@ export const load: PageServerLoad = async (event) => {
     capabilityStates: CAPABILITY_ORDER.map((c) => ({
       value: c as number,
       enabled: hackathonState.enabled.includes(c as number),
+      ...switchNote(c as number, hackathonState.enabled, round),
     })),
     // Badges the Waitlist tile, so approving is not something an organiser has
     // to open a screen to discover. Counted the way that page counts its rows —

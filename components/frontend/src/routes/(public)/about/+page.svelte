@@ -20,7 +20,7 @@
         },
         {
             title: 'Voting',
-            body: 'Participants and jury vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.',
+            body: 'Participants vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.',
         },
         {
             title: 'Showcasing the results',

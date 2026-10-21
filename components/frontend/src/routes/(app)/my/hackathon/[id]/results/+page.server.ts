@@ -44,15 +44,11 @@ export const load: PageServerLoad = async (event) => {
   )
   const byId = submissionLookup(submissions)
 
-  // Every category, including ranked ones the booth cannot cast a vote for —
-  // results are results however they were produced, and a category tallied
-  // elsewhere still deserves to show its podium.
-  //
-  // Jury categories are *not* filtered here, unlike in the booth. Reading a
-  // result needs `vote_result:read`, which the capability grants to every
-  // member; only *casting* is restricted to the jury. Hiding a jury category's
-  // results from non-jury members would withhold what the backend is willing to
-  // show, and a jury prize is exactly the kind everyone wants to see.
+  // Every category, including ranked and jury ones the booth cannot cast a
+  // vote for — results are results however they were produced, and a category
+  // decided elsewhere (a jury meeting off the platform, say) still deserves to
+  // show its podium. Reading a result needs only `vote_result:read`, which the
+  // capability grants to every member.
   const { voteCategories } = await vote.listVoteCategories({
     hackathonId: event.params.id,
   })
@@ -63,9 +59,26 @@ export const load: PageServerLoad = async (event) => {
       try {
         const { voteResults } = await vote.listVoteResults({ categoryId: c.id })
 
+        // Shaped for `ResultsList`, the layout the organizer checks them in.
+        //
+        // TODO(backend: result-score) — no score yet. A result stores only its
+        // place; the organizer's page reads the score back from the votes, but
+        // a participant may not list other people's votes (`ListVotes` needs
+        // hackathon-wide `vote:read`). Once `VoteResult` carries the score
+        // `SuggestResults` computed, pass it here as `score` — the list already
+        // shows one when it is set.
         return {
           ...view,
-          results: sortResults(voteResults.map((r) => resultView(r, byId))),
+          results: sortResults(voteResults.map((r) => resultView(r, byId))).map(
+            (r) => ({
+              key: r.id,
+              place: r.position,
+              projectTitle: r.projectTitle,
+              teamName: r.teamName,
+              teamId: r.teamId,
+              title: r.title,
+            }),
+          ),
         }
       } catch (e) {
         // One category's results failing should not blank the whole page — the

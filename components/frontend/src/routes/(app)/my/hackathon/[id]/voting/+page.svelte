@@ -77,7 +77,7 @@
         <p class="m-0 py-6 text-center text-sm text-ink-3">
             {data.votingEnabled
                 ? 'You need to be a confirmed participant of this hackathon to vote.'
-                : 'Voting is not open yet. The organizers will open it when judging starts.'}
+                : 'Voting is not open right now.'}
         </p>
     <!-- Before the two emptier explanations below, both of which would be a
          guess here: a ballot is built from the hackathon's teams, so with
@@ -129,9 +129,6 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <h3 class="m-0 text-sm leading-snug text-ink">{ballot.category.name}</h3>
                     <span class="badge badge-neutral">{ballot.category.methodLabel}</span>
-                    {#if ballot.category.isJury}
-                        <span class="badge badge-neutral">Jury</span>
-                    {/if}
                 </div>
 
                 {#if ballot.category.description}
