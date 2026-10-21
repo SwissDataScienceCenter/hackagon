@@ -1924,20 +1924,26 @@ var _ = Describe("TeamService", func() {
 				// Interleave the two teams so that insertion order matches
 				// neither possible team order: the outer BeforeEach made v1-v3
 				// of the first team, so rows go in as A1 A2 A3 B1 A4 B2.
-				_, err = teamClient.CreateSubmission(otherMemberCtx, &teamMsgs.CreateSubmissionRequest{
-					TeamId:    otherTeamID,
-					ProjectId: projectID,
-				})
+				_, err = teamClient.CreateSubmission(
+					otherMemberCtx,
+					&teamMsgs.CreateSubmissionRequest{
+						TeamId:    otherTeamID,
+						ProjectId: projectID,
+					},
+				)
 				Expect(err).NotTo(HaveOccurred())
 				_, err = teamClient.CreateSubmission(memberCtx, &teamMsgs.CreateSubmissionRequest{
 					TeamId:    teamID,
 					ProjectId: projectID,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				_, err = teamClient.CreateSubmission(otherMemberCtx, &teamMsgs.CreateSubmissionRequest{
-					TeamId:    otherTeamID,
-					ProjectId: projectID,
-				})
+				_, err = teamClient.CreateSubmission(
+					otherMemberCtx,
+					&teamMsgs.CreateSubmissionRequest{
+						TeamId:    otherTeamID,
+						ProjectId: projectID,
+					},
+				)
 				Expect(err).NotTo(HaveOccurred())
 
 				// A submission in another hackathon, which must not be listed.
@@ -1992,10 +1998,13 @@ var _ = Describe("TeamService", func() {
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
-				_, err = teamClient.CreateSubmission(unrelatedCtx, &teamMsgs.CreateSubmissionRequest{
-					TeamId:    uResp.GetTeamId(),
-					ProjectId: pResp.GetProjectId(),
-				})
+				_, err = teamClient.CreateSubmission(
+					unrelatedCtx,
+					&teamMsgs.CreateSubmissionRequest{
+						TeamId:    uResp.GetTeamId(),
+						ProjectId: pResp.GetProjectId(),
+					},
+				)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -2085,7 +2094,9 @@ var _ = Describe("TeamService", func() {
 				)
 
 				_, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
-					Value: &teamMsgs.ListSubmissionsRequest_HackathonId{HackathonId: uuid.NewString()},
+					Value: &teamMsgs.ListSubmissionsRequest_HackathonId{
+						HackathonId: uuid.NewString(),
+					},
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
@@ -2109,7 +2120,9 @@ var _ = Describe("TeamService", func() {
 				)
 
 				_, err = teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
-					Value: &teamMsgs.ListSubmissionsRequest_HackathonId{HackathonId: uuid.NewString()},
+					Value: &teamMsgs.ListSubmissionsRequest_HackathonId{
+						HackathonId: uuid.NewString(),
+					},
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(status.Code(err)).To(Equal(codes.NotFound))

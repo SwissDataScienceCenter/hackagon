@@ -82,6 +82,7 @@ changes ref="HEAD~1":
         echo "  Seed script changed — if dev data needs refreshing: just schema-change"
     fi
 
+
 # Handle a DB schema change: regenerate proto + ent, wipe state, restart and reseed.
 # Run after changing db/schema/*.go (also safe to run after *.proto changes).
 [group('general')]
@@ -161,6 +162,10 @@ build *args:
 [private]
 list *args:
     just quitsh list "$@"
+
+[private]
+format:
+    just quitsh format
 
 [private]
 alias q := quitsh
