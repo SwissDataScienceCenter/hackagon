@@ -24,33 +24,31 @@ cannot log in — see [Users](#users).
 
 ## Which hackathon for which test
 
-| To test                                                | Use            | Sign in as           | What is there                                                                                                               |
-| ------------------------------------------------------ | -------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Approving a waitlisted participant                     | H1, H5         | alice                | charles waits in H1, dana in H5                                                                                             |
-| What a waitlisted participant sees                     | H1             | charles              |                                                                                                                             |
-| Joining a public hackathon with its form               | H1             | hackagon-admin       | The only login not already in H1. Mandatory questions refuse an empty sign-up                                               |
-| Joining refused because sign-up closed                 | H4             | hackagon-admin       | `register` is off                                                                                                           |
-| Invitation links: redeem, revoked, expired             | H5             | bob or charles       | Links are printed at the end of the seed log; see [H5](#h5--partner-data-sprint-2026)                                       |
-| Managing invitations as an organizer                   | H5             | alice                |                                                                                                                             |
-| A private hackathon you cannot see                     | H3, H5         | bob or charles       | Neither is in H3 or H5                                                                                                      |
-| Proposing a project                                    | H1, H2         | bob, alice           |                                                                                                                             |
-| Reviewing proposals                                    | H1             | alice                | Two of bob's are still proposed                                                                                             |
-| Team preferences, small                                | H2             | bob or alice         |                                                                                                                             |
-| Team preferences and forming teams at volume           | H4             | alice (bob, charles) | One project wanted by 42 people, one by 2                                                                                   |
-| Registration answers as a roster                       | H4             | alice                | About one in seven never answered                                                                                           |
-| Submitting as a team member                            | H2, H1         | bob                  | H2 Team Gamma has a final; H1 Team Beta has nothing yet                                                                     |
-| Manage Submissions (organizer overview)                | H6             | alice                | 9 teams: drafts before finals, one team with only a draft. H1 (2 teams) and H2 (1 team) for small cases                     |
-| Casting a vote: single choice, points                  | H6             | charles              | Every final submission on his ballot, nothing cast yet                                                                      |
-| Refusal to vote for your own team                      | H6             | bob                  | bob is on Team Zeta, the favourite; the voting page leaves it off his ballot, so the refusal itself shows only over the API |
-| Points cannot be changed once given                    | H6             | bob or charles       | Best Use of Open Data, 10 points each — each account gets one try per seed                                                  |
-| Jury voting                                            | H6             | bob (jury), charles  | bob sees and can score Jury Prize; charles does not see it                                                                  |
-| Tallies, suggesting and publishing results, exports    | H6             | alice                | All four categories have votes and none has results. Audience Favourite has a tie for first                                 |
-| Ranked voting                                          | H6             | alice                | Most Reproducible — organizer side only: the voting page has no ranked control yet                                          |
-| Results as a participant                               | H6, H3         | bob, charles / alice | H6 shows results once alice publishes some; H3 has them already, but alice is its only login                                |
-| A hackathon with no tracks                             | H4, H6         |                      | H1–H3 have tracks                                                                                                           |
-| Phases: none current, agreeing, disagreeing with dates | H1, H2, H3     |                      | See [Phases](#phases). H5 has no phases at all                                                                              |
-| The global-admin escape hatch                          | any            | hackagon-admin       | He takes part in nothing, so every success he has is the escape hatch                                                       |
-| An organizer who is not an admin                       | H1, H4, H5, H6 | alice                | alice holds `Owner` and nothing global beyond being allowed to create hackathons                                            |
+| To test                                                | Use            | Sign in as           | What is there                                                                                                                           |
+| ------------------------------------------------------ | -------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Approving a waitlisted participant                     | H1, H5         | alice                | charles waits in H1, dana in H5                                                                                                         |
+| What a waitlisted participant sees                     | H1             | charles              |                                                                                                                                         |
+| Joining a public hackathon with its form               | H1             | hackagon-admin       | The only login not already in H1. Mandatory questions refuse an empty sign-up                                                           |
+| Joining refused because sign-up closed                 | H4             | hackagon-admin       | `register` is off                                                                                                                       |
+| Invitation links: redeem, revoked, expired             | H5             | bob or charles       | Links are printed at the end of the seed log; see [H5](#h5--partner-data-sprint-2026)                                                   |
+| Managing invitations as an organizer                   | H5             | alice                |                                                                                                                                         |
+| A private hackathon you cannot see                     | H3, H5         | bob or charles       | Neither is in H3 or H5                                                                                                                  |
+| Proposing a project                                    | H1, H2         | bob, alice           |                                                                                                                                         |
+| Reviewing proposals                                    | H1             | alice                | Two of bob's are still proposed                                                                                                         |
+| Team preferences, small                                | H2             | bob or alice         |                                                                                                                                         |
+| Team preferences and forming teams at volume           | H4             | alice (bob, charles) | One project wanted by 42 people, one by 2                                                                                               |
+| Registration answers as a roster                       | H4             | alice                | About one in seven never answered                                                                                                       |
+| Submitting as a team member                            | H2, H1         | bob                  | H2 Team Gamma has a final; H1 Team Beta has nothing yet                                                                                 |
+| Manage Submissions (organizer overview)                | H6             | alice                | 9 teams: drafts before finals, one team with only a draft. H1 (2 teams) and H2 (1 team) for small cases                                 |
+| Casting a vote: single choice, points                  | H6             | charles              | Every final submission on his ballot, nothing cast yet                                                                                  |
+| Refusal to vote for your own team                      | H6             | bob                  | bob is on Team Zeta, weighted as the favourite; the voting page leaves it off his ballot, so the refusal itself shows only over the API |
+| A vote is final once cast                              | H6             | bob or charles       | Both categories — each account gets one vote per category per seed                                                                      |
+| Tallies, saving and publishing results                 | H6             | alice                | Both categories have votes and none has results. Best Use of Open Data has a tie for third                                              |
+| Results as a participant                               | H6, H3         | bob, charles / alice | H6 shows results once alice makes them final and publishes them; H3 has them already, but alice is its only login                       |
+| A hackathon with no tracks                             | H4, H6         |                      | H1–H3 have tracks                                                                                                                       |
+| Phases: none current, agreeing, disagreeing with dates | H1, H2, H3     |                      | See [Phases](#phases). H5 has no phases at all                                                                                          |
+| The global-admin escape hatch                          | any            | hackagon-admin       | He takes part in nothing, so every success he has is the escape hatch                                                                   |
+| An organizer who is not an admin                       | H1, H4, H5, H6 | alice                | alice holds `Owner` and nothing global beyond being allowed to create hackathons                                                        |
 
 ## When to re-seed
 
@@ -173,14 +171,14 @@ from config; the others are hardcoded constants in [main.go](main.go).
 `bob` and `charles` take part in H4 and H6, so signing in as either lands you
 inside the two large fixtures; `alice` runs both.
 
-| Username         | Display name      | Role across the seed                                | Can log in |
-| ---------------- | ----------------- | --------------------------------------------------- | ---------- |
-| `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3        | yes        |
-| `alice`          | Alice Wonderland  | Creator of H1, H4, H5, H6; participant in H1–H3     | yes        |
-| `bob`            | Bob Henderson     | In H1, H2, H4, H6; Teams Beta, Gamma, Zeta; H6 jury | yes        |
-| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed in H4 and H6           | yes        |
-| `dana`           | Dana Okonkwo      | Participant in H1 and H3; waitlisted in H5          | **no**     |
-| `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                       | **no**     |
+| Username         | Display name      | Role across the seed                            | Can log in |
+| ---------------- | ----------------- | ----------------------------------------------- | ---------- |
+| `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3    | yes        |
+| `alice`          | Alice Wonderland  | Creator of H1, H4, H5, H6; participant in H1–H3 | yes        |
+| `bob`            | Bob Henderson     | In H1, H2, H4, H6; Teams Beta, Gamma, Zeta      | yes        |
+| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed in H4 and H6       | yes        |
+| `dana`           | Dana Okonkwo      | Participant in H1 and H3; waitlisted in H5      | **no**     |
+| `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                   | **no**     |
 
 **`hackagon-admin` is a participant in nothing.** He is the platform operator —
 global admin, and owner of the two hackathons he created — which is a job rather
@@ -213,8 +211,8 @@ no project-scoped `Owner`.
 H6 adds **30 more** the same way — Keycloak IDs `seed-osh-001` … `seed-osh-030`,
 names from the same two lists, picked from a range H4 does not use, so no
 username collides (`amara.keller`, `bruno.keller`, …). Twenty-seven of them
-staff H6's nine teams, three to a team; the last three are on no team and sit on
-its jury. They cast every vote H6 holds.
+staff H6's nine teams, three to a team; the last three are on no team. They cast
+every vote H6 holds.
 
 ## Hackathons at a glance
 
@@ -272,7 +270,7 @@ a patch on whatever was there before.
 | Team preferences    | ✅          | ✅         | —       | ✅               | —              | —         |
 | Project submissions | ✅          | ✅         | —       | —                | —              | —         |
 | Vote                | —           | —          | ✅      | —                | —              | ✅        |
-| View results        | —           | —          | ✅      | —                | —              | ✅        |
+| View results        | —           | —          | ✅      | —                | —              | —         |
 | View teams          | ✅          | ✅         | ✅      | —                | —              | ✅        |
 
 Chosen to match each hackathon's phase: H1 is taking sign-ups and proposals, H2
@@ -434,7 +432,7 @@ fixture.
 | -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
 | hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        | _not a participant_                        | _not a participant_                        |
 | alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant |
-| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects | — left free to redeem a link by hand       | member of Team Zeta; on the jury; no votes |
+| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects | — left free to redeem a link by hand       | member of Team Zeta; no votes              |
 | charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    | — left free to redeem a link by hand       | participant, on no team; no votes          |
 | dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          | _waitlisted_, via the live invitation      | —                                          |
 | yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          | —                                          | —                                          |
@@ -768,47 +766,46 @@ looking at submissions should notice, and a voter should not see.
 
 Pages: `About`, `How voting works` (both visible).
 
-### The four categories
+### The two categories
 
-| Category              | Method        | Who votes         | Budget | Cast so far                        |
-| --------------------- | ------------- | ----------------- | -----: | ---------------------------------- |
-| Audience Favourite    | single choice | all participants  |      — | 25 voters                          |
-| Best Use of Open Data | points        | all participants  |     10 | 21 voters, 1–3 projects each       |
-| Most Reproducible     | ranked        | all participants  |      — | 22 voters, top three each          |
-| Jury Prize            | points        | jury: bob + three |     20 | 2 of the 4 jurors, 4 projects each |
+| Category              | Method        | Who votes        | Budget | Cast so far                  |
+| --------------------- | ------------- | ---------------- | -----: | ---------------------------- |
+| Audience Favourite    | single choice | all participants |      — | 26 voters                    |
+| Best Use of Open Data | points        | all participants |     10 | 20 voters, 1–3 projects each |
+
+No ranked category and no jury category. The backend supports both, but the
+platform offers neither — the voting page cannot cast them and Manage Voting
+cannot create them — and a jury prize is decided off the platform for now.
 
 Who votes for what is drawn from a fixed PRNG seed (`openScienceVoteSeed`),
 weighted towards some projects, so the same tallies come back on every re-seed.
-What they come to:
+Team Zeta carries the most weight, but the draw does not always follow it. What
+they come to:
 
-- **Audience Favourite has a tie for first** — Team Theta and Team Zeta, six
-  votes each — which is the case suggesting results has to handle.
-- **Best Use of Open Data has a clear order**, from Team Zeta's 48 points down
-  to Team Lambda's 6. Not every voter spent their whole 10.
-- **Jury Prize** is led by Team Iota, with Team Theta and Team Eta tied at the
-  bottom.
-- **Most Reproducible** can only be voted in over the API: the voting page has
-  no ranked control yet and leaves the category off every ballot. Its seeded
-  votes are there for the organizer's side — tallies, suggesting results and the
-  exports.
+- **Audience Favourite** is led by Team Mu with 7 votes, then Team Zeta with 6;
+  Team Nu and Team Theta tie further down with 3 each.
+- **Best Use of Open Data has a tie for third** — Team Kappa and Team Zeta, 28
+  points each — below Team Mu's 43 and Team Eta's 41, which is the case saving
+  results has to handle. Not every voter spent their whole 10.
 
-**No results are recorded in any category.** Going from tallies to published
-results is the organizer flow this fixture is for, so it starts at the
-beginning; H3 is the one whose results are already published. `view results` is
-on, so once alice publishes a result, bob and charles can see it.
+**No results are recorded in any category, and `view results` is off.** Going
+from tallies to published results is the organizer flow this fixture is for, so
+it starts at the beginning: alice closes voting in Settings, makes the results
+final in Manage Voting, then switches `view results` on — which Settings allows
+only once they are final — and bob and charles can see them. H3 is the one whose
+results are already published.
 
 ### Who to sign in as
 
-- **charles** — the plain voter. On no team and not on the jury: every final
-  submission is on his ballot, and Jury Prize is not shown to him.
-- **bob** — on Team Zeta, the favourite, so his own team is left off his ballot
-  (`SubmitVote` refuses it if asked over the API). He is also on the jury, so
-  Jury Prize is his to score.
-- **alice** — the organizer: tallies, results, exports, and Manage Submissions
-  with nine teams in it.
+- **charles** — the plain voter. On no team: every final submission is on his
+  ballot.
+- **bob** — on Team Zeta, weighted as the favourite, so his own team is left off
+  his ballot (`SubmitVote` refuses it if asked over the API).
+- **alice** — the organizer: tallies, results, and Manage Submissions with nine
+  teams in it.
 
-Points cannot be changed once given, so each account gets **one** go at each
-points category per seed. Single choice can be changed as often as you like.
+A vote is final once cast — the voting page offers no way to change one — so
+each account gets **one** go at each category per seed.
 
 ### Deliberately absent — do not "fix"
 

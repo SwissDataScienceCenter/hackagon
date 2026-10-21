@@ -724,15 +724,16 @@ func (h *harness) backdate(
 //
 // `maxPoints` is the budget each voter spreads in a points category, and must
 // be set for one — CreateVoteCategory refuses a points category without it. 0
-// sends none, which is right for the other two methods. `jury` is who may vote
-// in a jury category, and nobody else can; it means nothing otherwise.
+// sends none, which is right for single choice.
+//
+// Every category is open to all participants. The backend also has jury
+// categories, but the platform offers no jury voting — a jury prize is decided
+// off the platform for now — so the fixture seeds none.
 type voteCategorySpec struct {
 	name        string
 	description string
 	method      voteEnts.VotingMethod
-	voterType   voteEnts.VoterType
 	maxPoints   int32
-	jury        []*actor
 }
 
 // createVoteCategory opens a category for voting and returns its id.
@@ -745,21 +746,14 @@ func (h *harness) createVoteCategory(
 	if spec.maxPoints > 0 {
 		maxPoints = ptr(spec.maxPoints)
 	}
-	// Platform user ids, not Keycloak ids — the handler adds them as edges to
-	// the user rows.
-	jury := make([]string, 0, len(spec.jury))
-	for _, j := range spec.jury {
-		jury = append(jury, j.id)
-	}
-
 	resp, err := h.vote.CreateVoteCategory(owner.ctx, &voteMsgs.CreateVoteCategoryRequest{
 		HackathonId:   hackathonID,
 		Name:          spec.name,
 		Description:   spec.description,
 		VotingMethod:  spec.method,
-		VoterType:     spec.voterType,
+		VoterType:     voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
 		MaxPoints:     maxPoints,
-		JuryMemberIds: jury,
+		JuryMemberIds: nil,
 	})
 	if err != nil {
 		return "", fmt.Errorf("vote category %q: %w", spec.name, err)
@@ -780,28 +774,6 @@ func (h *harness) submitSingleChoiceVote(voter *actor, categoryID, submissionID 
 		},
 	}); err != nil {
 		return fmt.Errorf("vote by %s: %w", voter.username, err)
-	}
-
-	return nil
-}
-
-// submitRankedVote casts one ranked ballot: the submissions in order, first
-// place first. Ranks start at 1, which is the lowest the request accepts.
-func (h *harness) submitRankedVote(voter *actor, categoryID string, inOrder []string) error {
-	ranked := make([]*voteMsgs.RankedSubmission, 0, len(inOrder))
-	for i, id := range inOrder {
-		ranked = append(ranked, &voteMsgs.RankedSubmission{
-			SubmissionId: id,
-			Rank:         int32(i + 1),
-		})
-	}
-	if _, err := h.vote.SubmitVote(voter.ctx, &voteMsgs.SubmitVoteRequest{
-		CategoryId: categoryID,
-		Vote: &voteMsgs.SubmitVoteRequest_Ranked{
-			Ranked: &voteMsgs.RankedVote{Submissions: ranked},
-		},
-	}); err != nil {
-		return fmt.Errorf("ranked vote by %s: %w", voter.username, err)
 	}
 
 	return nil
