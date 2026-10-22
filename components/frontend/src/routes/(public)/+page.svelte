@@ -170,7 +170,7 @@
             { icon: Lightbulb, title: 'Propose & discover projects', desc: 'Submit project ideas, browse proposals from other participants, and find the challenge that matches your skills.' },
             { icon: Upload, title: 'Submit & showcase work', desc: 'Submit your project with links, repos, slides and demos. Draft and iterate before the final deadline.' },
             { icon: Users, title: 'Smart team formation', desc: 'Rank your project preferences and get matched into balanced teams. Organizers can fine-tune assignments.' },
-            { icon: Vote, title: 'Vote & leaderboard', desc: 'Participants and jury vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.' },
+            { icon: Vote, title: 'Vote & leaderboard', desc: 'Participants vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.' },
         ] as feat, i (i)}
             {@const Icon = feat.icon}
             <div

@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest"
 import { ClientError, Status } from "nice-grpc-common"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
-import { ballotSubmissions } from "./voting"
+import type { Vote } from "$lib/server/grpc/generated/vote/entities/vote"
+import {
+  ballotSubmissions,
+  roundIsFinal,
+  tallyVotes,
+  voterCount,
+  type SubmissionRef,
+} from "./voting"
 
 // SubmissionStatus numeric values: DRAFT=1, FINAL=2.
 const FINAL = 2
@@ -129,5 +136,151 @@ describe("ballotSubmissions", () => {
         ALICE,
       ),
     ).rejects.toThrow("boom")
+  })
+})
+
+/** A stored vote: one voter, one entry, one method's payload. */
+const vote = (
+  voterId: string,
+  payload: Pick<Vote, "singleChoice" | "points" | "ranked">,
+): Vote => ({
+  id: `${voterId}-${JSON.stringify(payload)}`,
+  categoryId: "cat-1",
+  voterId,
+  createdAt: 100,
+  modifiedAt: 100,
+  ...payload,
+})
+const pick = (voterId: string, submissionId: string) =>
+  vote(voterId, { singleChoice: { submissionId } })
+const give = (voterId: string, submissionId: string, points: number) =>
+  vote(voterId, { points: { submissionId, points } })
+
+const entries = new Map<string, SubmissionRef>([
+  ["sub-a", { projectTitle: "Alpha", teamName: "Team A", teamId: "team-a" }],
+  ["sub-b", { projectTitle: "Bravo", teamName: "Team B", teamId: "team-b" }],
+  ["sub-c", { projectTitle: "Charlie", teamName: "Team C", teamId: "team-c" }],
+])
+
+describe("voterCount", () => {
+  it("counts people, not the rows one points ballot is stored as", () => {
+    expect(
+      voterCount([
+        give("u1", "sub-a", 4),
+        give("u1", "sub-b", 6),
+        give("u2", "sub-a", 10),
+      ]),
+    ).toBe(2)
+  })
+})
+
+describe("roundIsFinal", () => {
+  it("is final once every category anyone voted in has results", () => {
+    expect(
+      roundIsFinal([
+        { voterCount: 3, resultCount: 2 },
+        { voterCount: 1, resultCount: 1 },
+      ]),
+    ).toBe(true)
+  })
+
+  it("is not final while a voted-in category has no results", () => {
+    expect(
+      roundIsFinal([
+        { voterCount: 3, resultCount: 2 },
+        { voterCount: 1, resultCount: 0 },
+      ]),
+    ).toBe(false)
+  })
+
+  // Nothing to place, so it must not keep the round from being final.
+  it("ignores a category nobody voted in", () => {
+    expect(
+      roundIsFinal([
+        { voterCount: 3, resultCount: 2 },
+        { voterCount: 0, resultCount: 0 },
+      ]),
+    ).toBe(true)
+  })
+
+  it("is not final when nobody has voted at all", () => {
+    expect(roundIsFinal([{ voterCount: 0, resultCount: 0 }])).toBe(false)
+    expect(roundIsFinal([])).toBe(false)
+  })
+})
+
+describe("tallyVotes", () => {
+  it("counts one per vote for single choice, highest first", () => {
+    const got = tallyVotes(
+      "single_choice",
+      [pick("u1", "sub-b"), pick("u2", "sub-b"), pick("u3", "sub-a")],
+      entries,
+    )
+    expect(got.map((r) => [r.projectTitle, r.score, r.rank])).toEqual([
+      ["Bravo", 2, 1],
+      ["Alpha", 1, 2],
+    ])
+  })
+
+  it("sums points per entry", () => {
+    const got = tallyVotes(
+      "points",
+      [give("u1", "sub-a", 4), give("u1", "sub-b", 6), give("u2", "sub-a", 10)],
+      entries,
+    )
+    expect(got.map((r) => [r.projectTitle, r.score])).toEqual([
+      ["Alpha", 14],
+      ["Bravo", 6],
+    ])
+  })
+
+  // The same rule `SuggestResults` applies, so the preview and the saved
+  // placements agree: equal scores share a rank and the next one skips.
+  it("shares a rank between equal scores and skips the next", () => {
+    const got = tallyVotes(
+      "single_choice",
+      [
+        pick("u1", "sub-b"),
+        pick("u2", "sub-a"),
+        pick("u3", "sub-c"),
+        pick("u4", "sub-c"),
+      ],
+      entries,
+    )
+    expect(got.map((r) => [r.projectTitle, r.rank])).toEqual([
+      ["Charlie", 1],
+      ["Alpha", 2],
+      ["Bravo", 2],
+    ])
+  })
+
+  it("scores ranked votes as a Borda count over the entries that got a vote", () => {
+    const got = tallyVotes(
+      "ranked",
+      [
+        vote("u1", { ranked: { submissionId: "sub-a", rank: 1 } }),
+        vote("u1", { ranked: { submissionId: "sub-b", rank: 2 } }),
+      ],
+      entries,
+    )
+    // Two entries voted on, so rank 1 is worth 2 - 1 and rank 2 is worth 0.
+    expect(got.map((r) => [r.projectTitle, r.score])).toEqual([
+      ["Alpha", 1],
+      ["Bravo", 0],
+    ])
+  })
+
+  it("names an entry it cannot resolve rather than dropping its votes", () => {
+    const got = tallyVotes("single_choice", [pick("u1", "sub-gone")], entries)
+    expect(got).toEqual([
+      {
+        submissionId: "sub-gone",
+        projectTitle: "Unknown submission",
+        teamName: "",
+        teamId: undefined,
+        score: 1,
+        rank: 1,
+      },
+    ])
   })
 })

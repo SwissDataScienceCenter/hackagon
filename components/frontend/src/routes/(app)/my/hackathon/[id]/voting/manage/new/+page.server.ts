@@ -3,7 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { VoterType } from "$lib/server/grpc/generated/vote/entities/voter_type"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageVoteCategories } from "$lib/server/hackathon/capabilities"
-import { methodFromSlug } from "$lib/server/hackathon/voting"
+import { methodFromSlug, votingRoundStatus } from "$lib/server/hackathon/voting"
 import { readCategoryForm } from "$lib/server/hackathon/voteCategoryForm"
 import { resolve } from "$app/paths"
 import { error, fail, redirect } from "@sveltejs/kit"
@@ -19,7 +19,14 @@ export const load: PageServerLoad = async (event) => {
     error(403, "Only the hackathon organizer can add voting categories")
   }
 
-  return { hackathonId: hackathon.id }
+  // Manage Voting stops offering "New category" once the results are final —
+  // a category added then could never get any. This catches a direct link.
+  const { final } = await votingRoundStatus(
+    requireGrpc(event.locals.grpc).vote,
+    event.params.id,
+  )
+
+  return { hackathonId: hackathon.id, resultsFinal: final }
 }
 
 export const actions: Actions = {
@@ -28,15 +35,20 @@ export const actions: Actions = {
     const parsed = readCategoryForm(await event.request.formData())
     if ("message" in parsed) return fail(400, { message: parsed.message })
 
+    if ((await votingRoundStatus(vote, event.params.id)).final) {
+      return fail(409, {
+        message: "The results are final, so no more categories can be added.",
+      })
+    }
+
     try {
       await vote.createVoteCategory({
         hackathonId: event.params.id,
         name: parsed.name,
         description: parsed.description,
         votingMethod: methodFromSlug(parsed.method)!,
-        // Always all-participants. A jury category needs a roster to be worth
-        // creating, and there is no member picker here yet — creating one with
-        // an empty jury would produce a category literally nobody can vote in.
+        // Always all-participants: the platform offers no jury voting — a jury
+        // prize is decided off the platform for now.
         voterType: VoterType.VOTER_TYPE_ALL_PARTICIPANTS,
         maxPoints: parsed.maxPoints,
         juryMemberIds: [],

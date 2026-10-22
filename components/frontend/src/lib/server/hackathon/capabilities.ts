@@ -306,11 +306,11 @@ export function mayManageVoteCategories(
  * here:
  *
  *  - **jury membership.** A `VOTER_TYPE_JURY` category refuses anyone not on its
- *    jury list (`vote_service.go:402`). That is per-category, not per-viewer, so
- *    callers filter the categories themselves rather than asking this.
+ *    jury list (`vote_service.go:422`). That is per-category, and the booth
+ *    offers no jury category at all — see `votableInBooth`.
  *  - **the own-team rule.** `SubmitVote` refuses a vote on a submission by a team
- *    you belong to (`vote_service.go:588`). That is per-submission; the booth
- *    disables those options rather than hiding the whole page.
+ *    you belong to (`vote_service.go:612`). That is per-submission; the booth
+ *    leaves those entries off the ballot rather than hiding the whole page.
  */
 export function mayVote(
   membership: HackathonMember | undefined,

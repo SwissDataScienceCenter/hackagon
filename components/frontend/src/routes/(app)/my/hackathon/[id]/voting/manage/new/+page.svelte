@@ -32,10 +32,17 @@
         </p>
     </div>
 
-    <VoteCategoryForm
-        category={blank}
-        cancelHref={backHref}
-        submitLabel="Create category"
-        message={form?.message}
-    />
+    {#if data.resultsFinal}
+        <p class="m-0 text-sm text-ink-2">
+            The results of this voting round are final, so no more categories can be
+            added.
+        </p>
+    {:else}
+        <VoteCategoryForm
+            category={blank}
+            cancelHref={backHref}
+            submitLabel="Create category"
+            message={form?.message}
+        />
+    {/if}
 </div>

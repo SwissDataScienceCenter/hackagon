@@ -242,9 +242,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 		name:        "Best Project",
 		description: "Vote for the project you found most interesting or useful.",
 		method:      voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE,
-		voterType:   voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
 		maxPoints:   0,
-		jury:        nil,
 	})
 	if err != nil {
 		return err

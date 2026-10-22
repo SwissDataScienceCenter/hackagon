@@ -5,20 +5,24 @@ package main
 //
 // H3 votes too, but it is over, and nobody who can sign in has a ballot left
 // there. This one exists so that voting can be tested as a participant would
-// meet it, with enough submissions for a ranking or a points split to mean
-// something, and with each of the ways a category can be set up.
+// meet it, with enough submissions for a points split to mean something, and
+// with both kinds of category the voting page can cast: single choice and
+// points.
 //
 // Deliberately absent, do not "fix":
 //
-//   - No results. Votes are in, placements are not: going from tallies to
-//     published results (SuggestResults, then edit) is the organizer flow this
+//   - No results, and `view results` off. Votes are in, placements are not:
+//     going from tallies to published results (close voting, make the results
+//     final, then publish) is the organizer flow this
 //     fixture is for, and it starts at the beginning. H3 is the hackathon whose
 //     results are already published.
 //   - bob and charles have voted in nothing. They are the two accounts you can
 //     sign in as, and a ballot somebody else has already filled in tests
 //     nothing — a points vote cannot even be changed once cast.
-//   - charles is on no team and on no jury. He is the plain voter: every
-//     submission is on his ballot, and the jury category is not.
+//   - charles is on no team. He is the plain voter: every submission is on
+//     his ballot.
+//   - No jury category and no ranked one. The backend has both, but the
+//     platform offers neither, so a seeded one could only be looked at.
 //   - One team never finalized. Its draft is all it has, so it is on no ballot
 //     and has no votes — the case an organizer looking at submissions has to
 //     see, and a voter must not.
@@ -41,7 +45,7 @@ import (
 // openScienceParticipants is how many synthetic participants seedH6 creates,
 // on top of bob and charles. Like H4's hundred they have no Keycloak account
 // and cannot log in. Twenty-seven of them fill the nine teams, three a side;
-// the last three are on no team and sit on the jury.
+// the last three are on no team.
 const openScienceParticipants = 30
 
 // openScienceNameOffset is where in the dfgNames pairs the thirty start. H4
@@ -195,7 +199,7 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 		},
 		{
 			name:        "Demo & Voting",
-			description: "Every team demos; then everyone votes, and the jury picks its prize.",
+			description: "Every team demos; then everyone votes.",
 			startsAt:    timestamppb.New(now.AddDate(0, 0, -1)),
 			endsAt:      timestamppb.New(now.AddDate(0, 0, 4)),
 			capabilities: []hackEnts.Capability{
@@ -216,7 +220,7 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 		},
 		{
 			"How voting works",
-			"## Four prizes\n\n- **Audience Favourite** — pick the one project you liked best.\n- **Best Use of Open Data** — spread 10 points across the projects you think used open data best. Points cannot be changed once given.\n- **Most Reproducible** — rank the projects whose results you could most easily re-run.\n- **Jury Prize** — decided by the jury alone.\n\nYou cannot vote for your own team's project.",
+			"## Two prizes\n\n- **Audience Favourite** — pick the one project you liked best.\n- **Best Use of Open Data** — spread 10 points across the projects you think used open data best. Points cannot be changed once given.\n\nYou cannot vote for your own team's project.",
 			true,
 		},
 	}); err != nil {
@@ -274,7 +278,7 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 
 	// Three a side, in order. bob joins the first team — the favourite — so the
 	// refusal to vote for your own team is met on the submission most people
-	// would pick. The three left over are on no team and make up the jury.
+	// would pick. The three left over are on no team.
 	teamSize := 3
 	teamOf := make(map[*actor]int, len(synthetic))
 	teamSpecs := make([]teamSpec, 0, len(specs))
@@ -293,7 +297,6 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 			members:     members,
 		})
 	}
-	jurors := synthetic[len(specs)*teamSize:]
 
 	teams, err := h.createTeams(alice, projects, teamSpecs)
 	if err != nil {
@@ -342,7 +345,7 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 		}
 	}
 
-	if err := h.castVotes(id, alice, bob, synthetic, jurors, teamOf, finals, weights); err != nil {
+	if err := h.castVotes(id, alice, synthetic, teamOf, finals, weights); err != nil {
 		return err
 	}
 
@@ -351,21 +354,22 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 	}
 
 	// Voting: sign-up, proposals and submissions are closed. Teams stay visible,
-	// because the ballot is built from them; results are visible, and empty
-	// until alice publishes some.
+	// because the ballot is built from them. Results stay hidden: the platform
+	// lets them be published only once they are final, and making them final
+	// is the organizer flow this fixture is for — close voting, make the
+	// results final, then publish.
 	return h.setCaps(alice, id,
 		hackEnts.Capability_CAPABILITY_VOTE,
-		hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
 		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	)
 }
 
-// castVotes opens H6's four categories and fills them with the synthetic
+// castVotes opens H6's two categories and fills them with the synthetic
 // participants' votes. bob and charles are left with every ballot empty.
 func (h *harness) castVotes(
 	hackathonID string,
-	alice, bob *actor,
-	voters, jurors []*actor,
+	alice *actor,
+	voters []*actor,
 	teamOf map[*actor]int,
 	finals []string,
 	weights []int,
@@ -374,9 +378,7 @@ func (h *harness) castVotes(
 		name:        "Audience Favourite",
 		description: "Pick the one project you liked best.",
 		method:      voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE,
-		voterType:   voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
 		maxPoints:   0,
-		jury:        nil,
 	})
 	if err != nil {
 		return err
@@ -385,41 +387,15 @@ func (h *harness) castVotes(
 		name:        "Best Use of Open Data",
 		description: "Spread 10 points across the projects that used open data best.",
 		method:      voteEnts.VotingMethod_VOTING_METHOD_POINTS,
-		voterType:   voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
 		maxPoints:   10,
-		jury:        nil,
-	})
-	if err != nil {
-		return err
-	}
-	// Ranked has no control in the voting page yet, so this category is
-	// filtered out of every participant's ballot. Its seeded votes are there
-	// for the organizer's side: tallies, SuggestResults and the exports.
-	reproducible, err := h.createVoteCategory(alice, hackathonID, voteCategorySpec{
-		name:        "Most Reproducible",
-		description: "Rank the projects whose results you could most easily re-run.",
-		method:      voteEnts.VotingMethod_VOTING_METHOD_RANKED,
-		voterType:   voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
-		maxPoints:   0,
-		jury:        nil,
-	})
-	if err != nil {
-		return err
-	}
-	jury, err := h.createVoteCategory(alice, hackathonID, voteCategorySpec{
-		name:        "Jury Prize",
-		description: "The jury spreads 20 points each across the projects it rates highest.",
-		method:      voteEnts.VotingMethod_VOTING_METHOD_POINTS,
-		voterType:   voteEnts.VoterType_VOTER_TYPE_JURY,
-		maxPoints:   20,
-		jury:        append([]*actor{bob}, jurors...),
 	})
 	if err != nil {
 		return err
 	}
 
 	// Never anybody's own team: the handler refuses that, so it is left out of
-	// the weights rather than drawn and rejected. Jurors have no team.
+	// the weights rather than drawn and rejected. The three on no team have
+	// nothing to leave out.
 	weightsFor := func(who *actor) []int {
 		w := make([]int, len(weights))
 		copy(w, weights)
@@ -472,29 +448,6 @@ func (h *harness) castVotes(
 			if err := h.submitPointsVote(v, openData, ballot); err != nil {
 				return err
 			}
-		}
-
-		if rng.Intn(3) > 0 {
-			if err := h.submitRankedVote(
-				v,
-				reproducible,
-				ids(pickPreferences(rng, w, 3)),
-			); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Two of the three synthetic jurors have scored; the third has not, and
-	// neither has bob. 20 points each, over four projects.
-	for _, j := range jurors[:2] {
-		picked := ids(pickPreferences(rng, weightsFor(j), 4))
-		ballot := make([]pointsFor, 0, len(picked))
-		for i, sub := range picked {
-			ballot = append(ballot, pointsFor{submission: sub, points: []int32{8, 6, 4, 2}[i]})
-		}
-		if err := h.submitPointsVote(j, jury, ballot); err != nil {
-			return err
 		}
 	}
 
