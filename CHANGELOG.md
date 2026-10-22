@@ -74,6 +74,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- For organizers, the "Participant View" section of a hackathon's sidebar is now
+  folded every time you open the hackathon. Open it with its arrow when you need
+  it.
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
   people onto them, or by downloading the spreadsheet, filling in the team
   column and uploading it again.

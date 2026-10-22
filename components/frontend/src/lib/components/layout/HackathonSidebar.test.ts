@@ -22,10 +22,10 @@ const OWNER = 1
  * starts open — Settings included, since it is one of the screens in the
  * section and not the way in — and Participant View starts folded, which is the
  * whole point of labelling it: an owner arriving gets their own section, not a
- * participant's. Arriving anywhere inside either section brings that one out, so
- * the lit row is never hidden, and the chevron works wherever you are — an
- * earlier version derived the state from the route and so dead-ended on every
- * Manage page.
+ * participant's. Arriving inside Manage brings it out; Participant View stays
+ * folded wherever an owner arrives, Overview included, and does not remember
+ * being opened. The chevron works wherever you are — an earlier version derived
+ * the state from the route and so dead-ended on every Manage page.
  *
  * A participant has no Manage section, and so no heading and no chevron over
  * their entries either: for them this is one plain list, exactly as before.
@@ -204,17 +204,29 @@ describe("HackathonSidebar's Participant View section", () => {
     expect(memberEntry()).toBeInTheDocument()
   })
 
-  // Never fold away the lit row: an owner who navigates to a participant page
-  // finds the section around it already open, whatever it was before.
-  it("opens itself when an owner is on a participant page", async () => {
+  // Every link into a hackathon lands on Overview, a participant page. Opening
+  // the section around the lit row there opened it on every visit.
+  it("stays folded for an owner arriving on a participant page", async () => {
     await renderAt("/my/hackathon/h1/overview")
 
-    expect(memberEntry()).toBeInTheDocument()
+    expect(memberHeading()).toBeInTheDocument()
+    expect(memberEntry()).toBeNull()
   })
 
-  it("closes again from the chevron while inside it", async () => {
+  // Earlier versions saved the choice; a browser still holding it is ignored.
+  it("ignores a saved preference to be open", async () => {
+    window.localStorage.setItem("sidebar-member-open", "true")
     await renderAt("/my/hackathon/h1/overview")
 
+    expect(memberEntry()).toBeNull()
+  })
+
+  it("closes again from the chevron", async () => {
+    await renderAt("/my/hackathon/h1/overview")
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: /Show Participant View/ }),
+    )
     await fireEvent.click(
       screen.getByRole("button", { name: /Hide Participant View/ }),
     )

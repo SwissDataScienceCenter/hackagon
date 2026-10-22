@@ -113,6 +113,12 @@
     // the default and start being what they are — the other side of the
     // hackathon, one click away.
     //
+    // Participant View is folded on every arrival, wherever that is: it neither
+    // opens for the route nor remembers being opened. Every link into a
+    // hackathon lands on Overview, a participant page, so opening the section
+    // around the lit row opened it for an owner on every visit. The chevron
+    // still opens it, and it stays open while this layout is mounted.
+    //
     // Both are ignored for a participant: with no Manage section there is no
     // heading and no chevron on the entries above it, so they are simply always
     // out, exactly as before.
@@ -160,10 +166,6 @@
     // one of the pages, not the way in. The way in is the heading, which is drawn
     // whatever the fold state.
     const insideManage = $derived(activeId?.startsWith('manage:') ?? false);
-    // Its counterpart, and deliberately not `!insideManage`: with no entry lit at
-    // all — a route neither section owns — neither section is forced open, and
-    // whatever the reader last chose stands.
-    const insideMember = $derived(activeId?.startsWith('member:') ?? false);
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
     // never joined, hence the second argument.
@@ -182,20 +184,15 @@
     $effect(() => {
         collapsed = stored('sidebar-collapsed') ?? collapsed;
         manageOpen = stored('sidebar-manage-open') ?? manageOpen;
-        memberOpen = stored('sidebar-member-open') ?? memberOpen;
     });
 
-    // Entering a section opens it, rather than pinning it open while you are in
+    // Entering Manage opens it, rather than pinning it open while you are in
     // there: deriving the fold state from the route instead made the chevron a
     // no-op on every Manage page, which reads as a broken control. Declared after
-    // the restore above so the route wins over the saved preference on arrival —
-    // the section holding the lit row is never the folded one.
+    // the restore above so the route wins over the saved preference on arrival.
+    // Participant View has no counterpart — see `memberOpen`.
     $effect(() => {
         if (insideManage) manageOpen = true;
-    });
-
-    $effect(() => {
-        if (insideMember) memberOpen = true;
     });
 
     $effect(() => {
@@ -243,7 +240,6 @@
 
     function toggleMember() {
         memberOpen = !memberOpen;
-        remember('sidebar-member-open', memberOpen);
     }
 </script>
 
