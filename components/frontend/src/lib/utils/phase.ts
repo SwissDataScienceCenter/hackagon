@@ -209,8 +209,10 @@ export function currentAndNextPhase<
  * the frontend no longer reads or writes it. See
  * `mydocs/docs/backend-tickets/phase-capabilities-unused.md`.
  *
- * The description is what the label cannot carry: "Set team preferences" reads
- * as a setting rather than as a permission handed to everyone in the hackathon.
+ * The description is what the label cannot carry: "Choose preferred projects"
+ * reads as a setting rather than as a permission handed to everyone in the
+ * hackathon. Its label used to be "Set team preferences", which organizers read
+ * as choosing teammates; the preference is for a project.
  *
  * **Pronoun-free throughout**, which is stronger than third person and is what
  * lets one string serve two surfaces. Capabilities grant to the `Member` role
@@ -239,8 +241,8 @@ const CAPABILITIES: {
   },
   {
     value: 3,
-    label: "Set team preferences",
-    description: "Mark preferred projects on the project list.",
+    label: "Choose preferred projects",
+    description: "Mark preferred projects on the project list, not teammates.",
   },
   // Out of enum order, and deliberately: this is what the preferences above it
   // lead to and what the submissions below it are filed against, so it reads

@@ -77,6 +77,13 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - For organizers, the "Participant View" section of a hackathon's sidebar is now
   folded every time you open the hackathon. Open it with its arrow when you need
   it.
+- A hackathon's Settings page now walks organizers through the event step by
+  step: registration, projects, preferences, teams, hacking, voting and results.
+  Each switch sits at the step where it is turned on, with links to the pages in
+  between, such as approving participants, forming teams and setting up voting.
+  A private hackathon links to its invitation links.
+- "Set team preferences" is now called "Choose preferred projects", since
+  participants pick projects, not teammates.
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
   people onto them, or by downloading the spreadsheet, filling in the team
   column and uploading it again.
