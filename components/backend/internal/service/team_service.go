@@ -1085,7 +1085,10 @@ func (s *TeamService) ListSubmissions(
 
 	switch req.GetValue().(type) {
 	case *msgs.ListSubmissionsRequest_TeamId:
-		teamID := uuid.MustParse(req.GetTeamId()) // Guarded upstream.
+		teamID, err := uuid.Parse(req.GetTeamId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
+		}
 
 		t, err := getTeamById(ctx, s, teamID)
 		if err != nil {
@@ -1113,7 +1116,10 @@ func (s *TeamService) ListSubmissions(
 		query = query.Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID)))
 
 	case *msgs.ListSubmissionsRequest_HackathonId:
-		hackathonID := uuid.MustParse(req.GetHackathonId()) // Guarded upstream.
+		hackathonID, err := uuid.Parse(req.GetHackathonId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+		}
 
 		// If the hackathon doesn't exist we still return access denied. We do this
 		// to avoid giving unnecessary information to unauthorized users.
