@@ -1,5 +1,10 @@
-import { render, screen } from "@testing-library/svelte"
-import { describe, expect, it } from "vitest"
+import { fireEvent, render, screen } from "@testing-library/svelte"
+import { describe, expect, it, vi } from "vitest"
+
+// The leave guard and the enhanced save need the router, which a component
+// test has none of; what they do is the browser's business, not this file's.
+vi.mock("$app/navigation", () => ({ beforeNavigate: () => {}, goto: () => {} }))
+vi.mock("$app/forms", () => ({ enhance: () => ({ destroy: () => {} }) }))
 
 import CapabilitiesPanel from "./CapabilitiesPanel.svelte"
 
@@ -120,6 +125,68 @@ describe("CapabilitiesPanel", () => {
       "href",
       "/my/hackathon/h1/manage/invites",
     )
+  })
+
+  describe("unsaved changes", () => {
+    const status = () => screen.getAllByRole("status")[0]
+    const button = (name: string) => screen.getByRole("button", { name })
+
+    it("says nothing is unsaved, with nothing to save or discard", () => {
+      renderPanel()
+
+      expect(status()).toHaveTextContent("No unsaved changes")
+      expect(button("Save")).toBeDisabled()
+      expect(button("Discard")).toBeDisabled()
+    })
+
+    it("names what Save would write, by the organizer's labels", async () => {
+      renderPanel({
+        capabilities: all.map((c) =>
+          c.value === 5 ? { ...c, enabled: true } : c,
+        ),
+      })
+
+      await fireEvent.click(box("Open registration"))
+      await fireEvent.click(box("Participants can vote"))
+
+      expect(status()).toHaveTextContent(
+        "Unsaved changes, marked below: Open registration on, Participants can vote off",
+      )
+      expect(button("Save")).toBeEnabled()
+    })
+
+    it("is clean again once a switch is put back by hand", async () => {
+      renderPanel()
+
+      await fireEvent.click(box("Open registration"))
+      await fireEvent.click(box("Open registration"))
+
+      expect(status()).toHaveTextContent("No unsaved changes")
+    })
+
+    it("puts every switch back on Discard", async () => {
+      renderPanel()
+
+      await fireEvent.click(box("Open registration"))
+      await fireEvent.click(button("Discard"))
+
+      expect(box("Open registration")).not.toBeChecked()
+      expect(status()).toHaveTextContent("No unsaved changes")
+    })
+
+    it("confirms a save", () => {
+      renderPanel({ saved: true })
+
+      expect(status()).toHaveTextContent("Saved.")
+    })
+
+    it("shows why a save failed", () => {
+      renderPanel({ message: "Something went wrong" })
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Something went wrong",
+      )
+    })
   })
 
   // A switch the backend adds before a step names it must still be settable.

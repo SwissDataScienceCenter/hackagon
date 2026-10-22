@@ -18,6 +18,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- The Settings page shows when you have changed a switch without saving, as
+  Manage Teams does: a bar at the top lists what is unsaved, with Save and
+  Discard, and leaving the page asks first. Saving keeps you on the page.
 - Changing your registration answers is easier to find. On a hackathon's
   Participants page your own entry is now at the top, marked "You", and its
   button reads "View & edit". Your profile there has an "Edit answers" button
