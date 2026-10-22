@@ -1,0 +1,23 @@
+[project]
+name = "hackagon-docs"
+version = "0.1.0"
+description = "User documentation for the Hackagon hackathon platform"
+requires-python = ">=3.11"
+dependencies = [
+  "sphinx>=8.1",
+  # Markdown instead of reStructuredText, so the docs are formatted and
+  # written like every other .md file in the repo.
+  "myst-parser>=4.0",
+  "furo>=2024.8.6",
+]
+
+[dependency-groups]
+# `just docs::serve`: rebuilds and reloads the browser on every save.
+dev = ["sphinx-autobuild>=2024.10.3"]
+# `just docs::screenshots`, only. Not a default group, so the docs build in CI
+# never installs a browser.
+screenshots = ["playwright>=1.48"]
+
+[tool.uv]
+# A set of pages, not an installable package.
+package = false
