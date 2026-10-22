@@ -67,6 +67,7 @@ components/backend/
 ├── internal/logx/logx.go         # slog setup + Fatal helper
 └── Schema.md                     # human-readable DB reference (auto-generated)
 components/frontend/              # SvelteKit; generated gRPC clients under src/lib/server/grpc/generated/
+docs/                             # user documentation: Sphinx + Markdown (MyST), one guide per role, under src/
 helm-chart/                       # Helm chart; published as an OCI artifact on a v* tag
 CHANGELOG.md                      # user-visible changes; the entry lands in the PR
 RELEASING.md                      # branch model + how a change reaches a cluster
@@ -103,6 +104,9 @@ just ci::all                    # everything CI runs, locally
 just version::show              # declared version + what a build stamps in the footer
 just version::check             # fail if a component version has drifted from VERSION
 just version::bump patch|minor|major   # edit VERSION everywhere, commit, annotated tag
+
+just docs::build                # build the user docs; any Sphinx warning (e.g. a broken link) fails
+just docs::serve [port]         # live preview of the docs while writing, default :8090
 
 just helm::lint                 # helm lint + full render against tools/helm/lint-values.yaml
 just helm::template [args]      # render the chart to stdout

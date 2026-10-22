@@ -1,0 +1,121 @@
+# What `just docs::screenshots <page>...` photographs: one entry per entry of a
+# hackathon's sidebar, named after the doc page it belongs to
+# (src/<guide>/<page>.md). Each picture is saved to
+# src/static/screenshots/<page>.png; that folder belongs to the script, so put
+# hand-made images anywhere else under src/static/.
+#
+#   nav        the sidebar entry's id, which the script clicks (data-nav-id)
+#   user       a seeded login; every one has the password `aliceandbob`
+#   hackathon  a seeded hackathon by name, since ids change on every re-seed
+#
+# Pick a hackathon where the entry exists: Teams needs teams, Voting and
+# Results need their capability on, Timeline needs a phase, Manage Tracks a
+# track, Invitations a private hackathon. components/backend/cmd/seed/README.md
+# says which hackathon is in which state.
+
+# ── Participant (bob in H6, Open Science: teams, voting open, phases) ─────────
+
+[member-overview]
+nav = "member:overview"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+[member-participants]
+nav = "member:participants"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+[member-projects]
+nav = "member:projects"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+[member-teams]
+nav = "member:teams"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+[member-submissions]
+nav = "member:submissions"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+[member-voting]
+nav = "member:voting"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+# H3 is the one with results already published; alice takes part in it.
+[member-results]
+nav = "member:results"
+user = "alice"
+hackathon = "Internal Product Sprint"
+
+[member-timeline]
+nav = "member:timeline"
+user = "bob"
+hackathon = "Open Science Hackathon 2026"
+
+# ── Owner (alice owns H1, H4, H5 and H6) ──────────────────────────────────────
+
+[manage-settings]
+nav = "manage:settings"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-public]
+nav = "manage:public"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-participants]
+nav = "manage:participants"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+# Private, so the entry exists.
+[manage-invites]
+nav = "manage:invites"
+user = "alice"
+hackathon = "Partner Data Sprint 2026"
+
+[manage-forms]
+nav = "manage:forms"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-projects]
+nav = "manage:projects"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+# H6 has no tracks; H1 has.
+[manage-tracks]
+nav = "manage:tracks"
+user = "alice"
+hackathon = "AI Innovation Challenge 2026"
+
+[manage-teams]
+nav = "manage:teams"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-submissions]
+nav = "manage:submissions"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-timeline]
+nav = "manage:timeline"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-pages]
+nav = "manage:pages"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"
+
+[manage-voting]
+nav = "manage:voting"
+user = "alice"
+hackathon = "Open Science Hackathon 2026"

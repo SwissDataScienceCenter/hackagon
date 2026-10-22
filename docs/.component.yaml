@@ -1,0 +1,11 @@
+name: docs
+version: 0.1.0
+language: none
+
+# The user documentation: a Sphinx site written in Markdown (MyST), published to
+# GitHub Pages from main. `just docs::serve` previews it while writing.
+targets:
+  build:
+    steps:
+      - runnerID: hackagon::doc-sphinx
+    inputs: ["self"]

@@ -16,6 +16,7 @@ mod clean "./tools/just/clean.just"
 mod version "./tools/just/version.just"
 mod helm "./tools/just/helm.just"
 mod cluster "./tools/just/cluster.just"
+mod docs "./tools/just/docs.just"
 
 [private]
 default:

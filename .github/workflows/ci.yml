@@ -91,6 +91,11 @@ jobs:
           just ci::run just check::build -c backend
           just ci::run just check::build -c frontend
 
+      # Fails on any Sphinx warning, so a broken link cannot be merged. The
+      # `docs` job below publishes the same build from main.
+      - name: Docs
+        run: just ci::run just docs::build
+
       - name: Test
         run: |
           just ci::run just check::test -c backend
@@ -212,3 +217,55 @@ jobs:
 
       - name: Publish chart if its version is unpublished
         run: just ci::run just helm::publish
+
+  # Publishes the user docs (docs/) to GitHub Pages. From main only: that is
+  # what the dev instance runs, and the docs say so on every page. Pages must be
+  # enabled in the repository settings with "GitHub Actions" as the source.
+  docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: [ci]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # One deployment at a time, and never cancel one halfway: a newer push
+    # queues behind it instead.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    steps:
+      # `fetch-depth: 0` so the version in the docs can see the tags.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
+        with:
+          name: hackagon
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install bootstrap tools
+        run: nix profile install --accept-flake-config ./tools/nix#bootstrap
+
+      - name: Build docs
+        run: just ci::run just docs::build
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: .output/docs/build/docs
+
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
