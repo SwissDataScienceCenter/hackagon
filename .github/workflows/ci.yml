@@ -240,10 +240,13 @@ jobs:
       cancel-in-progress: false
 
     steps:
-      # `fetch-depth: 0` so the version in the docs can see the tags.
+      # `fetch-depth: 0` so the version in the docs can see the tags. `lfs: true`
+      # because the docs' images are stored in Git LFS: without it the checkout
+      # holds three-line pointer files, and those are what got published.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          lfs: true
 
       - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
         with:
