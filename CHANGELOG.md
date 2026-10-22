@@ -18,6 +18,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- There is now user documentation, published on GitHub Pages: a guide for
+  hackathon owners and one for participants, with a page and a screenshot for
+  every entry in a hackathon's menu. The Settings page there explains each
+  checkbox, step by step. The documentation describes the latest development
+  version, and every page says which one.
 - The Settings page shows when you have changed a switch without saving, as
   Manage Teams does: a bar at the top lists what is unsaved, with Save and
   Discard, and leaving the page asks first. Saving keeps you on the page.
