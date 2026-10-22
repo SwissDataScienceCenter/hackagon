@@ -2,7 +2,6 @@ package docsphinxrunner
 
 import (
 	"github.com/sdsc-ordes/quitsh/pkg/exec/python"
-	fs "github.com/sdsc-ordes/quitsh/pkg/filesystem"
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
@@ -33,19 +32,22 @@ func (*DocSphinxRunner) Run(ctx runner.IContext) error {
 		}).
 		Cwd(comp.Root()).Build()
 
-	log.Info("Creating python venv.", "path", comp.Root())
-	if !fs.Exists(venv) {
-		err := cmdCtx.Check("uv", "sync")
-		if err != nil {
-			return err
-		}
+	// Every run, not only when the venv is missing: a venv left over from an
+	// older lock file would otherwise build with the wrong versions. `--locked`
+	// fails when pyproject.toml and uv.lock disagree instead of rewriting the lock.
+	log.Info("Syncing python venv.", "path", venv)
+	err := cmdCtx.Check("uv", "sync", "--locked")
+	if err != nil {
+		return err
 	}
 
 	out := comp.OutBuildDocsDir()
 
+	// `-W` makes any warning fail the build — a broken cross-reference is a
+	// warning, and in docs it is a bug. `--keep-going` still reports all of them.
 	log.Info("Starting sphinx build.")
-	err := cmdCtx.Chain().
-		Check("uv", "run", "sphinx-build", "src", out).
+	err = cmdCtx.Chain().
+		Check("uv", "run", "sphinx-build", "-W", "--keep-going", "src", out).
 		Error()
 
 	if err != nil {
