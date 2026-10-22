@@ -123,8 +123,11 @@
         <!-- eslint-disable svelte/no-navigation-without-resolve -- these hrefs are
              built with resolve() in $lib/navigation; the rule only recognizes a
              literal resolve() call in the attribute itself. -->
+        <!-- `data-nav-id` is what `just docs::screenshots` clicks: the id outlives
+             a renamed label, and names the doc page the screenshot is for. -->
         <a
             href={item.href}
+            data-nav-id={item.id}
             aria-current={isActive ? 'page' : undefined}
             title={collapsed ? item.label : undefined}
             class="flex h-10 items-center gap-2 rounded-control px-2 text-sm no-underline
