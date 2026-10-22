@@ -238,6 +238,8 @@
     <!-- The switches. Nothing on this page reconciles them against a phase:
          phases carry no plan any more, and advancing one never changes these. -->
     <CapabilitiesPanel
+        hackathonId={data.hackathonId}
+        isPrivate={isPrivate(data.visibility)}
         hasState={state.hasState}
         capabilities={data.capabilityStates}
         message={form?.message}
