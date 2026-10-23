@@ -1012,6 +1012,8 @@ func (s *TeamService) CreateSubmission(
 		SetTeamID(teamID).
 		SetProjectID(projectID).
 		SetResult(req.GetResult()).
+		SetAttachmentFolderURL(req.GetAttachmentFolderUrl()).
+		SetDescription(req.GetDescription()).
 		SetStatus(entsubmission.StatusDraft).
 		SetVersion(version + 1).
 		SetCreatorID(u.ID).

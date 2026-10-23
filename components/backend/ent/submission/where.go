@@ -71,6 +71,16 @@ func Result(v string) predicate.Submission {
 	return predicate.Submission(sql.FieldEQ(FieldResult, v))
 }
 
+// AttachmentFolderURL applies equality check predicate on the "attachment_folder_url" field. It's identical to AttachmentFolderURLEQ.
+func AttachmentFolderURL(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEQ(FieldAttachmentFolderURL, v))
+}
+
+// Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
+func Description(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEQ(FieldDescription, v))
+}
+
 // Version applies equality check predicate on the "version" field. It's identical to VersionEQ.
 func Version(v int) predicate.Submission {
 	return predicate.Submission(sql.FieldEQ(FieldVersion, v))
@@ -229,6 +239,156 @@ func ResultEqualFold(v string) predicate.Submission {
 // ResultContainsFold applies the ContainsFold predicate on the "result" field.
 func ResultContainsFold(v string) predicate.Submission {
 	return predicate.Submission(sql.FieldContainsFold(FieldResult, v))
+}
+
+// AttachmentFolderURLEQ applies the EQ predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLEQ(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEQ(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLNEQ applies the NEQ predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLNEQ(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldNEQ(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLIn applies the In predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLIn(vs ...string) predicate.Submission {
+	return predicate.Submission(sql.FieldIn(FieldAttachmentFolderURL, vs...))
+}
+
+// AttachmentFolderURLNotIn applies the NotIn predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLNotIn(vs ...string) predicate.Submission {
+	return predicate.Submission(sql.FieldNotIn(FieldAttachmentFolderURL, vs...))
+}
+
+// AttachmentFolderURLGT applies the GT predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLGT(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldGT(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLGTE applies the GTE predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLGTE(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldGTE(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLLT applies the LT predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLLT(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldLT(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLLTE applies the LTE predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLLTE(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldLTE(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLContains applies the Contains predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLContains(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldContains(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLHasPrefix applies the HasPrefix predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLHasPrefix(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldHasPrefix(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLHasSuffix applies the HasSuffix predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLHasSuffix(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldHasSuffix(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLIsNil applies the IsNil predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLIsNil() predicate.Submission {
+	return predicate.Submission(sql.FieldIsNull(FieldAttachmentFolderURL))
+}
+
+// AttachmentFolderURLNotNil applies the NotNil predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLNotNil() predicate.Submission {
+	return predicate.Submission(sql.FieldNotNull(FieldAttachmentFolderURL))
+}
+
+// AttachmentFolderURLEqualFold applies the EqualFold predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLEqualFold(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEqualFold(FieldAttachmentFolderURL, v))
+}
+
+// AttachmentFolderURLContainsFold applies the ContainsFold predicate on the "attachment_folder_url" field.
+func AttachmentFolderURLContainsFold(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldContainsFold(FieldAttachmentFolderURL, v))
+}
+
+// DescriptionEQ applies the EQ predicate on the "description" field.
+func DescriptionEQ(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEQ(FieldDescription, v))
+}
+
+// DescriptionNEQ applies the NEQ predicate on the "description" field.
+func DescriptionNEQ(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldNEQ(FieldDescription, v))
+}
+
+// DescriptionIn applies the In predicate on the "description" field.
+func DescriptionIn(vs ...string) predicate.Submission {
+	return predicate.Submission(sql.FieldIn(FieldDescription, vs...))
+}
+
+// DescriptionNotIn applies the NotIn predicate on the "description" field.
+func DescriptionNotIn(vs ...string) predicate.Submission {
+	return predicate.Submission(sql.FieldNotIn(FieldDescription, vs...))
+}
+
+// DescriptionGT applies the GT predicate on the "description" field.
+func DescriptionGT(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldGT(FieldDescription, v))
+}
+
+// DescriptionGTE applies the GTE predicate on the "description" field.
+func DescriptionGTE(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldGTE(FieldDescription, v))
+}
+
+// DescriptionLT applies the LT predicate on the "description" field.
+func DescriptionLT(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldLT(FieldDescription, v))
+}
+
+// DescriptionLTE applies the LTE predicate on the "description" field.
+func DescriptionLTE(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldLTE(FieldDescription, v))
+}
+
+// DescriptionContains applies the Contains predicate on the "description" field.
+func DescriptionContains(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldContains(FieldDescription, v))
+}
+
+// DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
+func DescriptionHasPrefix(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldHasPrefix(FieldDescription, v))
+}
+
+// DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
+func DescriptionHasSuffix(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldHasSuffix(FieldDescription, v))
+}
+
+// DescriptionIsNil applies the IsNil predicate on the "description" field.
+func DescriptionIsNil() predicate.Submission {
+	return predicate.Submission(sql.FieldIsNull(FieldDescription))
+}
+
+// DescriptionNotNil applies the NotNil predicate on the "description" field.
+func DescriptionNotNil() predicate.Submission {
+	return predicate.Submission(sql.FieldNotNull(FieldDescription))
+}
+
+// DescriptionEqualFold applies the EqualFold predicate on the "description" field.
+func DescriptionEqualFold(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldEqualFold(FieldDescription, v))
+}
+
+// DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
+func DescriptionContainsFold(v string) predicate.Submission {
+	return predicate.Submission(sql.FieldContainsFold(FieldDescription, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

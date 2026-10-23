@@ -251,6 +251,14 @@ func submissionEntryFromEnt(s *ent.Submission) *hackEnts.Submission {
 		res := s.Result
 		e.Result = &res
 	}
+	if s.AttachmentFolderURL != "" {
+		url := s.AttachmentFolderURL
+		e.AttachmentFolderUrl = &url
+	}
+	if s.Description != "" {
+		desc := s.Description
+		e.Description = &desc
+	}
 	if s.Edges.Modifier != nil {
 		modID := s.Edges.Modifier.ID.String()
 		e.ModifierId = &modID

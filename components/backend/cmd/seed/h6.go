@@ -304,27 +304,31 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 	}
 
 	// Each team's submissions, made by a synthetic member — bob's team included,
-	// so his own ballot is untouched. Drafts carry no link, as an early draft
-	// often does not.
+	// so his own ballot is untouched. Drafts carry no link or description, as an
+	// early draft often does not.
 	var subSpecs []submissionSpec
 	for t, s := range specs {
 		author := synthetic[t*teamSize]
 		for range s.drafts {
 			subSpecs = append(subSpecs, submissionSpec{
-				by:      author,
-				team:    s.team,
-				project: s.title,
-				result:  "",
-				final:   false,
+				by:                  author,
+				team:                s.team,
+				project:             s.title,
+				result:              "",
+				description:         "",
+				attachmentFolderURL: "",
+				final:               false,
 			})
 		}
 		if s.final {
 			subSpecs = append(subSpecs, submissionSpec{
-				by:      author,
-				team:    s.team,
-				project: s.title,
-				result:  "https://github.com/open-science-hack/" + s.repo,
-				final:   true,
+				by:                  author,
+				team:                s.team,
+				project:             s.title,
+				result:              "https://github.com/open-science-hack/" + s.repo,
+				description:         "Final submission of " + s.title,
+				attachmentFolderURL: "https://drive.example.com/open-science-hack/" + s.repo,
+				final:               true,
 			})
 		}
 	}

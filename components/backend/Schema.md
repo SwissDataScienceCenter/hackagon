@@ -294,7 +294,9 @@ A versioned submission from a team for a project.
 |--------|------|----------|--------|-----------|---------|-------------|
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the submission was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
-| `result` | string | no | no | no | no | Result or output of the submission (e.g. a URL). |
+| `result` | string | no | no | no | no | URL of the repository that contains the output of the submission. |
+| `attachment_folder_url` | string | no | no | no | no | URL of the folder that contains the attachments. |
+| `description` | string | no | no | no | no | Description of the submission. |
 | `status` | enum(draft, final) | yes | no | no | no | Whether the submission is a draft or final. |
 | `version` | int | yes | no | no | no | Monotonically increasing version number, unique per project+team. |
 

@@ -20,6 +20,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Backend: A submission can now hold a description and a link to a folder of
+  attachments, next to the link to its repository.
+
 ### Changed
 
 ### Fixed
