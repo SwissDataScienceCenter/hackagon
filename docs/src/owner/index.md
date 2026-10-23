@@ -2,8 +2,8 @@
 
 This guide is for hackathon owners: the people who set up and run a hackathon.
 
-The pages under **Manage Hackathon** in a hackathon's menu, in the order they
-appear there:
+The pages under {guilabel}`Manage Hackathon` in a hackathon's menu, in the order
+they appear there:
 
 ```{toctree}
 :maxdepth: 1
