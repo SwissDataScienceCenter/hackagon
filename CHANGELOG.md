@@ -8,7 +8,9 @@ Entries are written by hand, one line per user-visible change, added in the same
 pull request that makes the change. Write for someone who has never opened the
 codebase: say what a person can now do, not which function changed. Anything
 invisible to a user of the platform — a refactor, a test, a CI tweak — does not
-need an entry.
+need an entry. Neither does an API change on its own: the frontend is the API's
+only client, so the entry goes in the pull request that makes the change
+visible.
 
 `just version::bump` stamps the accumulated `[Unreleased]` section with the new
 version and today's date, so the release notes for a version are whatever was
@@ -18,46 +20,26 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
-- There is now user documentation, published on GitHub Pages: a guide for
-  hackathon owners and one for participants, with a page and a screenshot for
-  every entry in a hackathon's menu. The Settings page there explains each
-  checkbox, step by step. The documentation describes the latest development
-  version, and every page says which one.
-- The Settings page shows when you have changed a switch without saving, as
-  Manage Teams does: a bar at the top lists what is unsaved, with Save and
-  Discard, and leaving the page asks first. Saving keeps you on the page.
-- Changing your registration answers is easier to find. On a hackathon's
-  Participants page your own entry is now at the top, marked "You", and its
-  button reads "View & edit". Your profile there has an "Edit answers" button
-  that opens your answers for editing inside the hackathon, with its menu still
-  beside them, and saving takes you back to your profile.
-- Your profile in a hackathon now points you to your Account page to add your
-  GitHub, LinkedIn or Renku link. If you once typed one of those addresses into
-  a registration answer, a "Save as your GitHub link" button (or LinkedIn, or
-  Renku) next to that answer saves it as your profile link in one click.
-- Administrators' Hackathons page is now one searchable table, like the Users
-  page, and shows who owns each hackathon. Search finds a hackathon by its name
-  or by an owner's name, and each name still opens the hackathon.
-- You can change your email from your Account page: "Change email" takes you to
-  the sign-in service, where the same form also lets you correct your name, and
-  the new address is what hackathon organizers see as soon as you are back.
-  Nothing is sent to the new address to confirm it, so a typo is saved as typed.
-- You can add links to your GitHub, LinkedIn and Renku profiles on your Account
-  page; leave a box empty to remove that link. Other participants see them on
-  the Participants page and on your profile there. Only links to those three
-  sites are accepted, and each is saved in a tidied form, so a link may look
-  slightly different from what you typed.
-- Organizers have a Manage Submissions page: every team and where it stands with
-  its submission — nothing yet, drafts only, or final — with the teams still
-  owing an entry first. Tabs filter by standing, a search finds a team by its
-  name, its project or a member — while searching, the tabs count the matches,
-  so a team on another tab is never missed — and each team shows its link or
-  notes and any earlier versions. A banner says whether submissions are open,
-  and "Download CSV" saves every team as a spreadsheet. The page only shows
-  submissions: an organizer cannot submit or finalize one for a team.
+- There is now user documentation, at
+  <https://swissdatasciencecenter.github.io/hackagon/>: a guide for hackathon
+  owners and one for participants, with a page and a screenshot for every entry
+  in a hackathon's menu. The Settings page there explains each checkbox, step by
+  step. The documentation describes the latest development version, and every
+  page says which one.
 - Manage Teams can find a person by name: type part of a name to highlight
   everyone who matches, on teams and in Unassigned, and press Enter to jump from
   one to the next. Accents and case do not matter.
+- Manage Teams can filter the Unassigned column, by registration answers or by
+  project preference. Click an answer (or type into a free-text question's box),
+  or a project in the "Project preferences" box, to bring the people who match
+  to the top; everyone else stays below, greyed out. Each answer shows how many
+  unassigned people gave it. Filters are remembered in your browser and cleared
+  with "Reset filters".
+- Manage Teams lets you choose what the cards say. Give each registration
+  question a short name — "size: S" instead of "B: S" — and give a yes/no
+  question its own words for Yes and No, so a card says "remote" or "on site".
+  These names are kept in your browser. The "Show on cards" checkbox in "Project
+  preferences" hides or shows the "Prefers …" line under each name.
 - Manage Teams makes unsaved changes hard to lose: a bar at the top stays in
   view while you scroll and shows what is unsaved with Save and Discard, the
   people and teams that changed are marked until saved, and following a link
@@ -66,30 +48,49 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   published: a notice says why, and uploading and deleting teams are disabled.
   People can still be moved between teams or to Unassigned by hand, teams
   renamed, and new teams added.
-- Manage Teams can filter the Unassigned column by registration answers: click
-  an answer (or type into a free-text question's box) to bring the people who
-  gave it to the top; everyone else stays below, greyed out. Each answer shows
-  how many unassigned people gave it. Filters are remembered in your browser and
-  cleared with "Reset filters".
-- Manage Teams can also filter by project preference: click a project in the
-  "Project preferences" box to bring the unassigned people who picked it to the
-  top. Its "Show on cards" checkbox hides or shows the "Prefers …" line under
-  each name.
-- Manage Teams lets you give each registration question a short name for the
-  cards — "size: S" instead of "B: S" — and give a yes/no question its own words
-  for Yes and No, so a card says "remote" or "on site". Names are kept in your
-  browser.
+- Organizers have a Manage Submissions page: every team and where it stands with
+  its submission — nothing yet, drafts only, or final — with the teams still
+  owing an entry first. Tabs filter by standing, a search finds a team by its
+  name, its project or a member — while searching, the tabs count the matches,
+  so a team on another tab is never missed — and each team shows its link or
+  notes and any earlier versions. A banner says whether submissions are open,
+  and "Download CSV" saves every team as a spreadsheet. The page only shows
+  submissions: an organizer cannot submit or finalize one for a team.
+- The Settings page shows when you have changed a switch without saving, as
+  Manage Teams does: a bar at the top lists what is unsaved, with Save and
+  Discard, and leaving the page asks first. Saving keeps you on the page.
+- You can add links to your GitHub, LinkedIn and Renku profiles on your Account
+  page; leave a box empty to remove that link. Other participants see them on
+  the Participants page and on your profile there. Only links to those three
+  sites are accepted, and each is saved in a tidied form, so a link may look
+  slightly different from what you typed.
+- Your profile in a hackathon now points you to your Account page to add your
+  GitHub, LinkedIn or Renku link. If you once typed one of those addresses into
+  a registration answer, a "Save as your GitHub link" button (or LinkedIn, or
+  Renku) next to that answer saves it as your profile link in one click.
+- You can change your email from your Account page: "Change email" takes you to
+  the sign-in service, where the same form also lets you correct your name, and
+  the new address is what hackathon organizers see as soon as you are back.
+  Nothing is sent to the new address to confirm it, so a typo is saved as typed.
+- Changing your registration answers is easier to find. On a hackathon's
+  Participants page your own entry is now at the top, marked "You", and its
+  button reads "View & edit". Your profile there has an "Edit answers" button
+  that opens your answers for editing inside the hackathon, with its menu still
+  beside them, and saving takes you back to your profile.
+- Administrators' Hackathons page is now one searchable table, like the Users
+  page, and shows who owns each hackathon. Search finds a hackathon by its name
+  or by an owner's name, and each name still opens the hackathon.
 
 ### Changed
 
-- For organizers, the "Participant View" section of a hackathon's sidebar is now
-  folded every time you open the hackathon. Open it with its arrow when you need
-  it.
 - A hackathon's Settings page now walks organizers through the event step by
   step: registration, projects, preferences, teams, hacking, voting and results.
   Each switch sits at the step where it is turned on, with links to the pages in
   between, such as approving participants, forming teams and setting up voting.
   A private hackathon links to its invitation links.
+- For organizers, the "Participant View" section of a hackathon's sidebar is now
+  folded every time you open the hackathon. Open it with its arrow when you need
+  it.
 - "Set team preferences" is now called "Choose preferred projects", since
   participants pick projects, not teammates.
 - Manage Teams no longer has a "Suggest teams" button. Build teams by dragging
@@ -98,27 +99,30 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Teams explains itself in one place: "How assignment works" covers
   dragging, saving, when the assignment locks, and the spreadsheet steps and
   rules.
-- Uploading the team assignment spreadsheet now replaces all teams with the ones
-  in the file. A row needs both a project and a team to put someone on a team;
-  anyone else ends up unassigned, with a warning for a row that has a mistake in
-  it or is missing from the file.
-- The team assignment spreadsheet uses the project numbers shown on the page, in
-  both the project and the prefers columns; an uploaded row whose project is not
-  one of those numbers is not an assignment. Team names can be anything, even a
-  single character.
-- Saving on Manage Teams now deletes every team with nobody in it.
 - Manage Teams lists every registration question, not only the multiple-choice
   ones, and "Show on cards" puts the question's letter and the answer itself
   under each name — "A: XL" — instead of a code like "A5". A yes/no question has
   no letter and shows as "Yes" or "No"; a free-text answer shows as a line of
   its own.
-- The team assignment spreadsheet now includes free-text registration answers,
-  one column per question, alongside the multiple-choice and yes/no ones.
+- Saving on Manage Teams now deletes every team with nobody in it.
+- The team assignment spreadsheet uses the project numbers shown on the page, in
+  both the project and the prefers columns, and now includes free-text
+  registration answers, one column per question, alongside the multiple-choice
+  and yes/no ones. Team names can be anything, even a single character.
+- Uploading the team assignment spreadsheet now replaces all teams with the ones
+  in the file. A row needs both a project and a team to put someone on a team,
+  and a project that is not one of the numbers on the page does not count;
+  anyone else ends up unassigned, with a warning for a row that has a mistake in
+  it or is missing from the file.
 - The Teams page no longer shows each project's full description. The project
   title above its teams now opens the project's page instead, and "Back to
   teams" there returns you to the list.
 - Manage Voting is now the one page for running a vote. It shows the steps, how
   many people have voted, and the count so far in every category.
+- Voting has one rule for every method: you vote once in each category, and your
+  vote is final. Once you have voted, the category shows what you voted for
+  instead of the ballot. Before, a single-choice vote could be changed but a
+  points vote could not.
 - Results are made final once, with one button, after voting is closed, and can
   be published only after that.
 - A voting category can no longer be edited or deleted once anyone has voted in
@@ -140,17 +144,18 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   longer be submitted, and says how many points to take back. Why a vote was
   refused now shows next to that ballot's button instead of at the top of the
   page. Point fields drop leading zeros, so "007" reads "7".
-- Voting has one rule for every method: you vote once in each category, and your
-  vote is final. Once you have voted, the category shows what you voted for
-  instead of the ballot. Before, a single-choice vote could be changed but
-  points could not, and points re-entered on a ballot already cast were silently
-  dropped.
+- Points typed into a ballot you had already cast are no longer silently
+  dropped: once you have voted, the category shows your vote instead of a ballot
+  to fill in.
 
 ### Removed
 
 - The separate results page for each voting category, with its CSV and JSON
-  downloads and hand-editing of results.
-- Jury voting. Everyone taking part votes, by single choice or points.
+  downloads and hand-editing of results. The count in every category is on
+  Manage Voting.
+- Jury voting. Everyone taking part votes, by single choice or points. A jury
+  category that already exists is not offered on the Voting page, and Manage
+  Voting lists it as "Not votable here".
 
 ## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
 
