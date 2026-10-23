@@ -284,7 +284,7 @@ func init() {
 	// submission.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.
 	submission.UpdateDefaultModifiedAt = submissionDescModifiedAt.UpdateDefault.(func() time.Time)
 	// submissionDescVersion is the schema descriptor for version field.
-	submissionDescVersion := submissionFields[4].Descriptor()
+	submissionDescVersion := submissionFields[6].Descriptor()
 	// submission.VersionValidator is a validator for the "version" field. It is called by the builders before save.
 	submission.VersionValidator = submissionDescVersion.Validators[0].(func(int) error)
 	// submissionDescID is the schema descriptor for id field.

@@ -13,6 +13,10 @@ export const protobufPackage = "hackathon.entities";
 
 export interface Submission {
   id: string;
+  /**
+   * URL of the repository holding the submission's output.
+   * TODO: rename to `repository_url` after the hackathon.
+   */
   result?: string | undefined;
   status: SubmissionStatus;
   version: number;
@@ -22,6 +26,8 @@ export interface Submission {
   projectId: string;
   creatorId: string;
   modifierId?: string | undefined;
+  attachmentFolderUrl?: string | undefined;
+  description?: string | undefined;
 }
 
 function createBaseSubmission(): Submission {
@@ -36,6 +42,8 @@ function createBaseSubmission(): Submission {
     projectId: "",
     creatorId: "",
     modifierId: undefined,
+    attachmentFolderUrl: undefined,
+    description: undefined,
   };
 }
 
@@ -70,6 +78,12 @@ export const Submission: MessageFns<Submission> = {
     }
     if (message.modifierId !== undefined) {
       writer.uint32(82).string(message.modifierId);
+    }
+    if (message.attachmentFolderUrl !== undefined) {
+      writer.uint32(90).string(message.attachmentFolderUrl);
+    }
+    if (message.description !== undefined) {
+      writer.uint32(98).string(message.description);
     }
     return writer;
   },
@@ -161,6 +175,22 @@ export const Submission: MessageFns<Submission> = {
           message.modifierId = reader.string();
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.attachmentFolderUrl = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.description = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -206,6 +236,12 @@ export const Submission: MessageFns<Submission> = {
         : isSet(object.modifier_id)
         ? globalThis.String(object.modifier_id)
         : undefined,
+      attachmentFolderUrl: isSet(object.attachmentFolderUrl)
+        ? globalThis.String(object.attachmentFolderUrl)
+        : isSet(object.attachment_folder_url)
+        ? globalThis.String(object.attachment_folder_url)
+        : undefined,
+      description: isSet(object.description) ? globalThis.String(object.description) : undefined,
     };
   },
 
@@ -241,6 +277,12 @@ export const Submission: MessageFns<Submission> = {
     if (message.modifierId !== undefined) {
       obj.modifierId = message.modifierId;
     }
+    if (message.attachmentFolderUrl !== undefined) {
+      obj.attachmentFolderUrl = message.attachmentFolderUrl;
+    }
+    if (message.description !== undefined) {
+      obj.description = message.description;
+    }
     return obj;
   },
 
@@ -259,6 +301,8 @@ export const Submission: MessageFns<Submission> = {
     message.projectId = object.projectId ?? "";
     message.creatorId = object.creatorId ?? "";
     message.modifierId = object.modifierId ?? undefined;
+    message.attachmentFolderUrl = object.attachmentFolderUrl ?? undefined;
+    message.description = object.description ?? undefined;
     return message;
   },
 };

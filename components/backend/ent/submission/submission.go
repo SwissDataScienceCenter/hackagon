@@ -22,6 +22,10 @@ const (
 	FieldModifiedAt = "modified_at"
 	// FieldResult holds the string denoting the result field in the database.
 	FieldResult = "result"
+	// FieldAttachmentFolderURL holds the string denoting the attachment_folder_url field in the database.
+	FieldAttachmentFolderURL = "attachment_folder_url"
+	// FieldDescription holds the string denoting the description field in the database.
+	FieldDescription = "description"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldVersion holds the string denoting the version field in the database.
@@ -90,6 +94,8 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldModifiedAt,
 	FieldResult,
+	FieldAttachmentFolderURL,
+	FieldDescription,
 	FieldStatus,
 	FieldVersion,
 }
@@ -175,6 +181,16 @@ func ByModifiedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByResult orders the results by the result field.
 func ByResult(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldResult, opts...).ToFunc()
+}
+
+// ByAttachmentFolderURL orders the results by the attachment_folder_url field.
+func ByAttachmentFolderURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAttachmentFolderURL, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

@@ -23,19 +23,23 @@ const (
 )
 
 type Submission struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Result        *string                `protobuf:"bytes,2,opt,name=result,proto3,oneof" json:"result,omitempty"`
-	Status        SubmissionStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=hackathon.entities.SubmissionStatus" json:"status,omitempty"`
-	Version       int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ModifiedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
-	TeamId        string                 `protobuf:"bytes,7,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	CreatorId     string                 `protobuf:"bytes,9,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
-	ModifierId    *string                `protobuf:"bytes,10,opt,name=modifier_id,json=modifierId,proto3,oneof" json:"modifier_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// URL of the repository holding the submission's output.
+	// TODO: rename to `repository_url` after the hackathon.
+	Result              *string                `protobuf:"bytes,2,opt,name=result,proto3,oneof" json:"result,omitempty"`
+	Status              SubmissionStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=hackathon.entities.SubmissionStatus" json:"status,omitempty"`
+	Version             int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ModifiedAt          *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
+	TeamId              string                 `protobuf:"bytes,7,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	ProjectId           string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	CreatorId           string                 `protobuf:"bytes,9,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	ModifierId          *string                `protobuf:"bytes,10,opt,name=modifier_id,json=modifierId,proto3,oneof" json:"modifier_id,omitempty"`
+	AttachmentFolderUrl *string                `protobuf:"bytes,11,opt,name=attachment_folder_url,json=attachmentFolderUrl,proto3,oneof" json:"attachment_folder_url,omitempty"`
+	Description         *string                `protobuf:"bytes,12,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Submission) Reset() {
@@ -138,11 +142,25 @@ func (x *Submission) GetModifierId() string {
 	return ""
 }
 
+func (x *Submission) GetAttachmentFolderUrl() string {
+	if x != nil && x.AttachmentFolderUrl != nil {
+		return *x.AttachmentFolderUrl
+	}
+	return ""
+}
+
+func (x *Submission) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
 var File_hackathon_entities_submission_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_submission_proto_rawDesc = "" +
 	"\n" +
-	"#hackathon/entities/submission.proto\x12\x12hackathon.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*hackathon/entities/submission_status.proto\"\xa1\x03\n" +
+	"#hackathon/entities/submission.proto\x12\x12hackathon.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*hackathon/entities/submission_status.proto\"\xab\x04\n" +
 	"\n" +
 	"Submission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -160,9 +178,13 @@ const file_hackathon_entities_submission_proto_rawDesc = "" +
 	"creator_id\x18\t \x01(\tR\tcreatorId\x12$\n" +
 	"\vmodifier_id\x18\n" +
 	" \x01(\tH\x01R\n" +
-	"modifierId\x88\x01\x01B\t\n" +
+	"modifierId\x88\x01\x01\x127\n" +
+	"\x15attachment_folder_url\x18\v \x01(\tH\x02R\x13attachmentFolderUrl\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\f \x01(\tH\x03R\vdescription\x88\x01\x01B\t\n" +
 	"\a_resultB\x0e\n" +
-	"\f_modifier_idBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"\f_modifier_idB\x18\n" +
+	"\x16_attachment_folder_urlB\x0e\n" +
+	"\f_descriptionBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_submission_proto_rawDescOnce sync.Once

@@ -7,5 +7,9 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message CreateSubmissionRequest {
   string team_id = 1;
   string project_id = 2;
+  // URL of the repository holding the submission's output.
+  // TODO: rename to `repository_url` after the hackathon.
   optional string result = 3;
+  optional string attachment_folder_url = 4;
+  optional string description = 5;
 }
