@@ -1150,9 +1150,11 @@ var _ = Describe("TeamService", func() {
 			)
 
 			resp, err := teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
-				TeamId:    teamID,
-				ProjectId: projectID,
-				Result:    testutils.StringPtr("https://github.com/test/repo"),
+				TeamId:              teamID,
+				ProjectId:           projectID,
+				Result:              testutils.StringPtr("https://github.com/test/repo"),
+				AttachmentFolderUrl: testutils.StringPtr("https://drive.example.com/folder"),
+				Description:         testutils.StringPtr("What we built and why."),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.GetId()).NotTo(BeEmpty())
@@ -1164,6 +1166,9 @@ var _ = Describe("TeamService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(s.Version).To(Equal(1))
 			Expect(s.Status).To(Equal(entsubmission.StatusDraft))
+			Expect(s.Result).To(Equal("https://github.com/test/repo"))
+			Expect(s.AttachmentFolderURL).To(Equal("https://drive.example.com/folder"))
+			Expect(s.Description).To(Equal("What we built and why."))
 		})
 
 		It("increments version on subsequent submissions", func() {
@@ -1445,16 +1450,20 @@ var _ = Describe("TeamService", func() {
 			)
 
 			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
-				TeamId:    teamID,
-				ProjectId: projectID,
-				Result:    testutils.StringPtr("https://github.com/test/repo/v1"),
+				TeamId:              teamID,
+				ProjectId:           projectID,
+				Result:              testutils.StringPtr("https://github.com/test/repo/v1"),
+				AttachmentFolderUrl: testutils.StringPtr("https://drive.example.com/v1"),
+				Description:         testutils.StringPtr("Description v1"),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
-				TeamId:    teamID,
-				ProjectId: projectID,
-				Result:    testutils.StringPtr("https://github.com/test/repo/v2"),
+				TeamId:              teamID,
+				ProjectId:           projectID,
+				Result:              testutils.StringPtr("https://github.com/test/repo/v2"),
+				AttachmentFolderUrl: testutils.StringPtr("https://drive.example.com/v2"),
+				Description:         testutils.StringPtr("Description v2"),
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -1473,6 +1482,8 @@ var _ = Describe("TeamService", func() {
 			Expect(resp.GetSubmission()).NotTo(BeNil())
 			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
 			Expect(resp.GetSubmission().GetResult()).To(Equal("https://github.com/test/repo/v2"))
+			Expect(resp.GetSubmission().GetAttachmentFolderUrl()).To(Equal("https://drive.example.com/v2"))
+			Expect(resp.GetSubmission().GetDescription()).To(Equal("Description v2"))
 		})
 
 		It("returns NOT_FOUND when no submission exists for team", func() {
