@@ -1482,7 +1482,9 @@ var _ = Describe("TeamService", func() {
 			Expect(resp.GetSubmission()).NotTo(BeNil())
 			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
 			Expect(resp.GetSubmission().GetResult()).To(Equal("https://github.com/test/repo/v2"))
-			Expect(resp.GetSubmission().GetAttachmentFolderUrl()).To(Equal("https://drive.example.com/v2"))
+			Expect(
+				resp.GetSubmission().GetAttachmentFolderUrl(),
+			).To(Equal("https://drive.example.com/v2"))
 			Expect(resp.GetSubmission().GetDescription()).To(Equal("Description v2"))
 		})
 
