@@ -1081,39 +1081,84 @@ func (s *TeamService) ListSubmissions(
 	ctx context.Context,
 	req *msgs.ListSubmissionsRequest,
 ) (*msgs.ListSubmissionsResponse, error) {
-	teamID, err := uuid.Parse(req.GetTeamId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
-	}
+	query := s.dbClient.Submission.Query()
 
-	t, err := getTeamById(ctx, s, teamID)
-	if err != nil {
-		return nil, err
-	}
+	switch req.GetValue().(type) {
+	case *msgs.ListSubmissionsRequest_TeamId:
+		teamID, err := uuid.Parse(req.GetTeamId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
+		}
 
-	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
-		return nil, status.Error(codes.Internal, "team project or hackathon not found")
-	}
+		t, err := getTeamById(ctx, s, teamID)
+		if err != nil {
+			return nil, err
+		}
 
-	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
-	if err := s.enforcer.RequirePermission(
-		ctx, hackathonID, m.Submission, m.Read,
-		m.WithTeam(t.ID.String()),
-	); err != nil {
+		if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+			return nil, status.Error(codes.Internal, "team project or hackathon not found")
+		}
+
+		// Team members read their own team; owners hold submission:read
+		// hackathon-wide.
+		hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
 		if err := s.enforcer.RequirePermission(
 			ctx, hackathonID, m.Submission, m.Read,
+			m.WithTeam(t.ID.String()),
+		); err != nil {
+			if err := s.enforcer.RequirePermission(
+				ctx, hackathonID, m.Submission, m.Read,
+			); err != nil {
+				return nil, err
+			}
+		}
+
+		query = query.Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID)))
+
+	case *msgs.ListSubmissionsRequest_HackathonId:
+		hackathonID, err := uuid.Parse(req.GetHackathonId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+		}
+
+		// If the hackathon doesn't exist we still return access denied. We do this
+		// to avoid giving unnecessary information to unauthorized users.
+		if err := s.enforcer.RequirePermission(
+			ctx, hackathonID.String(), m.Submission, m.Read,
 		); err != nil {
 			return nil, err
 		}
+
+		exists, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Exist(ctx)
+		if err != nil {
+			slog.Error("query hackathon", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+		if !exists {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
+		}
+
+		query = query.Where(entsubmission.HasTeamWith(
+			entteam.HasProjectWith(entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID))),
+		))
+
+	default:
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"one of team_id or hackathon_id is required",
+		)
 	}
 
-	submissions, err := s.dbClient.Submission.Query().
-		Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID))).
+	submissions, err := query.
 		WithTeam().
 		WithProject().
 		WithCreator().
 		WithModifier().
-		Order(ent.Asc(entsubmission.FieldVersion)).
+		Order(
+			ent.Asc(entsubmission.TeamColumn),
+			ent.Asc(entsubmission.FieldVersion),
+		).
 		All(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "query submissions: %v", err)

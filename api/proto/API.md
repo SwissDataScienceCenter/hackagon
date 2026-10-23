@@ -5106,6 +5106,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | team_id | [string](#string) |  |  |
+| hackathon_id | [string](#string) |  |  |
 
 
 
@@ -5136,7 +5137,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| submissions | [hackathon.entities.Submission](#hackathon-entities-Submission) | repeated |  |
+| submissions | [hackathon.entities.Submission](#hackathon-entities-Submission) | repeated | Ordered by team_id ascending, then by version ascending (oldest first). (team_id, version) is unique, so the order is total. |
 
 
 

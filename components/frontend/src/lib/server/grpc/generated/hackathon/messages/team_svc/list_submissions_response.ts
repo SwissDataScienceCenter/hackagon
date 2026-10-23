@@ -11,6 +11,10 @@ import { Submission } from "../../entities/submission";
 export const protobufPackage = "hackathon.messages.team_svc";
 
 export interface ListSubmissionsResponse {
+  /**
+   * Ordered by team_id ascending, then by version ascending (oldest first).
+   * (team_id, version) is unique, so the order is total.
+   */
   submissions: Submission[];
 }
 
