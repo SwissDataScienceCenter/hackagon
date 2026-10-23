@@ -14,7 +14,7 @@
     let { data }: { data: PageData } = $props();
 
     type Row = PageData['hackathons'][number];
-    type Owner = NonNullable<Row['owners']>[number];
+    type Owner = Row['owners'][number];
 
     let search = $state('');
 
@@ -57,7 +57,7 @@
     const filtered = $derived(
         sorted.filter((h) => {
             const group = whenGroup(h.status);
-            const owners = (h.owners ?? []).flatMap((o) => [o.displayName, o.username]);
+            const owners = h.owners.flatMap((o) => [o.displayName, o.username]);
             return matchesAny(
                 [
                     h.name,
@@ -131,18 +131,11 @@
 {/snippet}
 
 {#snippet owners(h: Row)}
-    {#if h.owners === null}
-        <!-- Not an empty list: that would read as a hackathon nobody runs. -->
-        <span class="text-ink-3" title="The owners of this hackathon could not be read">
-            Couldn't load owners
-        </span>
-    {:else}
-        <div class="flex flex-wrap gap-1">
-            {#each h.owners as o (o.id)}
-                <span class="badge badge-neutral" title="@{o.username}">{ownerName(o)}</span>
-            {/each}
-        </div>
-    {/if}
+    <div class="flex flex-wrap gap-1">
+        {#each h.owners as o (o.id)}
+            <span class="badge badge-neutral" title="@{o.username}">{ownerName(o)}</span>
+        {/each}
+    </div>
 {/snippet}
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
