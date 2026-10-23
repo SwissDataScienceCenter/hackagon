@@ -20,6 +20,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.12.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.11.0...v0.12.0) - 2026-10-23
+
+### Added
+
 - There is now user documentation, at
   <https://swissdatasciencecenter.github.io/hackagon/>: a guide for hackathon
   owners and one for participants, with a page and a screenshot for every entry
