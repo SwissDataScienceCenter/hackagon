@@ -1,6 +1,13 @@
 # Manage Timeline
 
-Adding, editing and removing phases. It appears once the hackathon has a phase.
+:::{admonition} Owner's Manage Timeline
+
+The hackathon's phases. Appears once the hackathon has a phase. It shows:
+
+- [Phases](#phases): each phase with its dates and status
+- [A phase](#a-phase): add, edit or delete one
+
+:::
 
 ![The Manage Timeline page of a hackathon, as its owner sees it](../static/screenshots/manage-timeline.png)
 
@@ -11,6 +18,17 @@ participants can do. That is decided on [Settings](manage-settings.md).
 
 :::
 
-Phases show participants where the hackathon stands. Each has a title, a
-description, and a start and an end time. Participants see them on the
-[Timeline](../participant/member-timeline.md).
+## Phases
+
+- Status per phase: **Completed**, **In progress**, **Upcoming** or **Current
+  phase**.
+- **Make current** / **Clear current phase** moves the marker; so does
+  [Settings](manage-settings.md).
+- Participants see the phases on [Timeline](../participant/member-timeline.md).
+
+## A phase
+
+- **Add phase**: name and description, then its dates.
+- **Starts** and **Ends**: both or neither; once set they can be changed but not
+  removed.
+- **Delete this phase**.

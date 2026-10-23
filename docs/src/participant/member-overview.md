@@ -2,40 +2,55 @@
 
 :::{admonition} Participant's Overview
 
-This is page provides orientation to you about:
+The first page of a hackathon. It shows:
 
-- [the hackathon you are in](#your-hackathon): start and end data, number of participants
-- [what you can currently do](#what-you-can-do): provides direct link to the activities that are open
+- [Your hackathon](#your-hackathon): its dates and number of participants
+- [What you can do](#what-you-can-do): links to everything that is open now
+- [Your team](#your-team): your team, or how to find one
 
 It might also show:
 
-- [the phase you are in](#phases): if the hackathon has defined phases
-- [the team you are in](#team): in case you have already been assigned to a team.
-- [the projects in the hackathon](#projects): in case the hackathon has already approved projects
+- [The current phase](#the-current-phase): if the hackathon has phases
+- [Projects](#projects): once projects are approved
+- [About this hackathon](#about-this-hackathon): if the owners wrote a
+  description
 
 :::
 
 ![The Overview page of a hackathon, as a participant sees it](../static/screenshots/member-overview.png)
 
-
 ## Your hackathon
 
-- How many participants it has
-- Start and end time
+- Start and end date, and how many participants it has.
 
 ## What you can do
 
-Not all hackathons have phases. Phases are just information for an orientation of where you are in the hackathon, see [timeline](member-timeline.md)
+- One link per activity the owners have opened:
+  [propose projects](member-projects.md#propose-a-project),
+  [choose preferred projects](member-projects.md#preferences),
+  [see teams](member-teams.md), [submit work](member-submissions.md),
+  [vote](member-voting.md), [see results](member-results.md).
+- "Nothing is open right now" when the owners have opened nothing.
+- On the waitlist the links stay closed until an owner approves you.
 
-## Phases
+## The current phase
 
-Not all hackathons have phases. Phases are just information for an orientation of where you are in the hackathon, see [timeline](member-timeline.md)
+- Name, dates, countdown and description of the phase that is running.
+- Phases are for orientation only, see [Timeline](member-timeline.md).
 
 ## Your team
 
-In case you have already been assigned to a team, you will see this assignment here
+- Your team's members, its project and whether it has handed in work.
+- **Submit your work** leads to [Submissions](member-submissions.md) while
+  submitting is open.
+- Not on a team yet: **Browse the projects** leads to
+  [Projects](member-projects.md).
 
 ## Projects
 
-In case projects have been already defined you can also see the number of projects and directly [access them](member-projects.md) from here.
+- The number of approved projects, per track if there are tracks.
+- **View all** leads to [Projects](member-projects.md).
 
+## About this hackathon
+
+- The hackathon's description.
