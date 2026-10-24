@@ -24,4 +24,4 @@ It might also show:
 ## The current phase
 
 - Its dates, a countdown, its description and what is open now.
-- **See the details** leads to the [Overview](member-overview.md).
+- Click {guilabel}`See the details` to go to the [Overview](member-overview.md).

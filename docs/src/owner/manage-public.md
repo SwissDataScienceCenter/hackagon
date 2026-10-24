@@ -13,11 +13,13 @@ The hackathon as everyone outside it sees it. It shows:
 
 ## The form
 
-- **Name**, **Visibility** (public or private), **Starts at**, **Ends at**,
-  **Logo URL**, **Description**.
+- Enter the {guilabel}`Name`, {guilabel}`Starts at`, {guilabel}`Ends at`,
+  {guilabel}`Logo URL` and {guilabel}`Description`. Choose the
+  {guilabel}`Visibility`: public or private.
 - Private hackathons are reached through [Invitations](manage-invites.md).
 - Dates can be changed but not removed once set.
-- **Save changes** returns to [Settings](manage-settings.md).
+- Click {guilabel}`Save changes` to save and return to
+  [Settings](manage-settings.md).
 
 ## The preview
 

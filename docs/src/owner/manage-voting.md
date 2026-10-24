@@ -19,22 +19,26 @@ It might also show:
 ## How voting works
 
 1. Set up the categories.
-2. Open voting, then close it: **Participants can vote** on
-   [Settings](manage-settings.md).
+2. Open voting, then close it: tick, then untick
+   {guilabel}`Participants can vote` on [Settings](manage-settings.md).
 3. Make the results final, here.
-4. Publish them: **Publish results** on [Settings](manage-settings.md).
+4. Publish them: tick {guilabel}`Publish results` on
+   [Settings](manage-settings.md).
 
 ## Categories
 
-- **New category**: name, description and how people vote: **Single choice**
-  (pick one) or **Points** (spread a budget, 10 by default).
-- **Edit** and **Delete** until someone has voted in it. Then it is **Locked**.
+- Click {guilabel}`New category` and enter a name and description. Choose how
+  people vote: {guilabel}`Single choice` (pick one) or {guilabel}`Points`
+  (spread a budget, 10 by default).
+- Click {guilabel}`Edit` or {guilabel}`Delete` to change or remove a category,
+  until someone has voted in it. Then it is {guilabel}`Locked`.
 - Participants vote on [Voting](../participant/member-voting.md).
 
 ## Count so far
 
 - The ranking per category as votes come in. Participants don't see it.
-- **Make results final** works only once voting is closed. It cannot be undone.
+- Click {guilabel}`Make results final` once voting is closed. It cannot be
+  undone.
 
 ## Final results
 

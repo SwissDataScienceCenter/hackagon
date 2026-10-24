@@ -17,21 +17,22 @@ It might also show:
 
 ## Registration form
 
-- **New question** adds a question. **Edit** and **Delete** are next to each
-  question.
-- Once people have answered, type, options and **Required** are locked, and
-  deleting a question discards its answers.
+- Click {guilabel}`New question` to add a question. Click {guilabel}`Edit` or
+  {guilabel}`Delete` next to a question to change or remove it.
+- Once people have answered, type, options and {guilabel}`Required` are locked,
+  and deleting a question discards its answers.
 
 ## A question
 
-- **Key**, **Question**, **Answer type**, **Position**, **Required**.
-- **Show answers to participants**: answers are shared on
+- Enter the {guilabel}`Key`, {guilabel}`Question`, {guilabel}`Answer type` and
+  {guilabel}`Position`. Tick {guilabel}`Required` if everyone must answer.
+- Tick {guilabel}`Show answers to participants` to share the answers on
   [Participants](../participant/member-participants.md).
-- **Options** for choice questions, one per line.
+- For choice questions, enter the {guilabel}`Options`, one per line.
 
 ## Answers
 
-- **See the answers**: per question, who answered and what.
+- Click {guilabel}`See the answers` to see, per question, who answered and what.
 - Each person's answers are also on
   [Manage Participants](manage-participants.md).
 - Answers help you form teams, see [Manage Teams](manage-teams.md).

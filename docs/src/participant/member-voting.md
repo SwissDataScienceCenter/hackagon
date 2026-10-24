@@ -14,10 +14,10 @@ open. It shows:
 ## Categories
 
 - You vote once in each category, and your vote is final.
-- **Single choice**: pick one entry. **Points**: spread your points across
-  entries.
+- {guilabel}`Single choice`: pick one entry. {guilabel}`Points`: spread your
+  points across entries.
 - Your own team is not on the ballot.
-- **View entry** opens a [team](member-teams.md) and its entry. Votes you have
-  not submitted yet are lost.
+- Click {guilabel}`View entry` to open a [team](member-teams.md) and its entry.
+  Votes you have not submitted yet are lost.
 - After voting the card shows what you chose. Results come later on
   [Results](member-results.md).

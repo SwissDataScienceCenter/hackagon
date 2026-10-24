@@ -15,17 +15,19 @@ Everyone taking part in the hackathon. It shows:
 ## All participants
 
 - Search by name or role.
-- Your own entry is at the top, marked **You**.
-- **View** opens a profile. On your own entry it reads **View & edit**.
+- Your own entry is at the top, marked {guilabel}`You`.
+- Click {guilabel}`View` to open a profile. On your own entry the button reads
+  {guilabel}`View & edit`.
 
 ## A participant's profile
 
 - Name, profile links and the date they joined.
-- **Shared answers**: the registration answers they chose to share.
-- **Teams**: their teams, once teams are published. Each links to its
+- {guilabel}`Shared answers`: the registration answers they chose to share.
+- {guilabel}`Teams`: their teams, once teams are published. Each links to its
   [team](member-teams.md).
 
 On your own profile:
 
-- **Edit answers** changes your registration answers.
-- **Add your GitHub, LinkedIn or Renku link** leads to your account page.
+- Click {guilabel}`Edit answers` to change your registration answers.
+- Click {guilabel}`Add your GitHub, LinkedIn or Renku link` to go to your
+  account page.

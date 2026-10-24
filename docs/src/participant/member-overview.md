@@ -41,15 +41,15 @@ It might also show:
 ## Your team
 
 - Your team's members, its project and whether it has handed in work.
-- **Submit your work** leads to [Submissions](member-submissions.md) while
-  submitting is open.
-- Not on a team yet: **Browse the projects** leads to
+- Click {guilabel}`Submit your work` to go to
+  [Submissions](member-submissions.md) while submitting is open.
+- Not on a team yet: click {guilabel}`Browse the projects` to go to
   [Projects](member-projects.md).
 
 ## Projects
 
 - The number of approved projects, per track if there are tracks.
-- **View all** leads to [Projects](member-projects.md).
+- Click {guilabel}`View all` to go to [Projects](member-projects.md).
 
 ## About this hackathon
 

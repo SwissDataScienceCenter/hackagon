@@ -17,7 +17,7 @@ them. It shows:
 - Teams grouped under their project. The project title links to its
   [project](member-projects.md).
 - Each team shows its members and its final entry, if it has one.
-- **View** opens [a team](#a-team).
+- Click {guilabel}`View` to open [a team](#a-team).
 
 ## A team
 

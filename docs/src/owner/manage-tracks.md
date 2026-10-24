@@ -26,5 +26,6 @@ Hackathons without tracks are perfectly fine. Add the first one on
 
 ## A track
 
-- **New track**: name and description.
-- **Delete this track**: its projects stay, without a track.
+- Click {guilabel}`New track` and enter a name and description.
+- Click {guilabel}`Delete this track` to remove it. Its projects stay, without a
+  track.

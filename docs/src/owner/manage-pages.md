@@ -14,11 +14,14 @@ The hackathon's own pages, such as rules or a schedule. It shows:
 ## Pages
 
 - Drag or use the arrows to change the order in the menu.
-- The eye shows or hides a page for participants.
-- **View** shows it as participants see it. **Edit** changes it.
+- Click the eye to show or hide a page for participants.
+- Click {guilabel}`View` to see a page as participants do, or {guilabel}`Edit`
+  to change it.
 
 ## A page
 
-- **New page**: **Title**, **Visible to participants**, **Content** in Markdown.
+- Click {guilabel}`New page`, then enter a {guilabel}`Title` and the
+  {guilabel}`Content` in Markdown. Tick {guilabel}`Visible to participants` to
+  show it.
 - Visible pages appear in every participant's menu.
-- **Delete this page**.
+- Click {guilabel}`Delete this page` on a page's edit form to remove it.

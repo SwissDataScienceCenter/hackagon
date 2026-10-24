@@ -20,15 +20,16 @@ participants can do. That is decided on [Settings](manage-settings.md).
 
 ## Phases
 
-- Status per phase: **Completed**, **In progress**, **Upcoming** or **Current
-  phase**.
-- **Make current** / **Clear current phase** moves the marker. You can also move
-  it on [Settings](manage-settings.md).
+- Status per phase: {guilabel}`Completed`, {guilabel}`In progress`,
+  {guilabel}`Upcoming` or {guilabel}`Current phase`.
+- Click {guilabel}`Make current` or {guilabel}`Clear current phase` to move the
+  marker. You can also move it on [Settings](manage-settings.md).
 - Participants see the phases on [Timeline](../participant/member-timeline.md).
 
 ## A phase
 
-- **Add phase**: name and description, then its dates.
-- **Starts** and **Ends**: set both or neither. Once set, they can be changed
-  but not removed.
-- **Delete this phase**.
+- Click {guilabel}`Add phase` and enter a name and description. Add its dates
+  afterwards.
+- Enter both {guilabel}`Starts` and {guilabel}`Ends`, or neither. Once set, they
+  can be changed but not removed.
+- Click {guilabel}`Delete this phase` to remove it.

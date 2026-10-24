@@ -15,8 +15,9 @@ shows:
 ## Placings
 
 - Per category: the placed entries with medal and score.
-- **View entry** opens the [team](member-teams.md) and its entry.
+- Click {guilabel}`View entry` to open the [team](member-teams.md) and its
+  entry.
 
 ## All entries
 
-- Every team that entered. Yours is marked **Your team**.
+- Every team that entered. Yours is marked {guilabel}`Your team`.

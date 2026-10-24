@@ -19,19 +19,20 @@ It might also show:
 
 - How many there are, who has no email address, who answered the
   [registration form](manage-forms.md).
-- **Download CSV**: everyone, waitlist included.
-- **Manage** opens a person.
+- Click {guilabel}`Download CSV` to get everyone, waitlist included.
+- Click {guilabel}`Manage` to open a person.
 
 ## Waitlist
 
 - On a public hackathon, everyone who registers waits here.
-- **Review** opens the person, so you can approve or decline them.
+- Click {guilabel}`Review` to open a person and approve or decline them.
 - Only owners see the waitlist.
 
 ## A person
 
 - All registration answers, including those not shared.
 - Their teams, see [Manage Teams](manage-teams.md).
-- **Approve** or **Decline** someone waiting.
-- **Make owner** / **Remove owner**.
-- **Remove from hackathon**. For an owner, remove the owner role first.
+- Click {guilabel}`Approve` or {guilabel}`Decline` for someone waiting.
+- Click {guilabel}`Make owner` or {guilabel}`Remove owner` to change their role.
+- Click {guilabel}`Remove from hackathon` to remove them. For an owner, remove
+  the owner role first.

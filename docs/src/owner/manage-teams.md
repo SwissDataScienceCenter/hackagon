@@ -20,34 +20,38 @@ It might also show:
 
 ## Projects
 
-- One card per [approved project](manage-projects.md), with **N want in** and
-  its teams.
-- **+ Add Team** adds a team. You can also rename or delete a team.
+- One card per [approved project](manage-projects.md), with
+  {guilabel}`N want in` and its teams.
+- Click {guilabel}`+ Add Team` to add a team. You can also rename or delete a
+  team.
 - Drag people between teams.
 
 ## Unassigned
 
-- Filter by registration answer or preferred project. **Reset filters** clears
-  them.
+- Filter by registration answer or preferred project. Click
+  {guilabel}`Reset filters` to clear them.
 
 ## Filters and cards
 
-- **Registration questions**: short names, filters and **Show on cards**, see
-  [Manage Forms](manage-forms.md).
-- **Project preferences**: what participants chose on
+- {guilabel}`Registration questions`: give each question a short name and filter
+  by its answers. Tick {guilabel}`Show on cards` to show the answers on each
+  person. See [Manage Forms](manage-forms.md).
+- {guilabel}`Project preferences`: what participants chose on
   [Projects](../participant/member-projects.md#preferences).
-- **Find a person** searches the page.
+- Enter a name in {guilabel}`Find a person` to search the page.
 
 ## Spreadsheet
 
-- **Download CSV**: everyone with preferences and answers.
-- Edit the `project` and `team` columns, then **Upload CSV**. It replaces all
-  teams.
-- **How assignment works** explains the format.
+- Click {guilabel}`Download CSV` to get everyone with their preferences and
+  answers.
+- Edit the `project` and `team` columns, then click {guilabel}`Upload CSV`. It
+  replaces all teams.
+- Click {guilabel}`How assignment works` for the format.
 
 ## Saving
 
-- Nothing is stored until you **Save**. **Discard** drops your changes.
+- Nothing is stored until you click {guilabel}`Save`. Click {guilabel}`Discard`
+  to drop your changes.
 - Saving deletes empty teams.
 - Participants see the teams only once you let them, see
   [Settings](manage-settings.md).

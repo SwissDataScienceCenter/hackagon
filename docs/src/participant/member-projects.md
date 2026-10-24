@@ -23,19 +23,20 @@ It might also show:
 
 ## Propose a project
 
-- **Propose a Project**: title, description, and a track if the hackathon has
-  tracks.
+- Click {guilabel}`Propose a Project`, then enter a title, a description, and a
+  track if the hackathon has tracks.
 - An owner reviews it before it appears in the list, see
   [Manage Projects](../owner/manage-projects.md).
 
 ## Your proposals
 
-- Each with its status, for example **Rejected**, and the owner's reason.
-- **Edit** while it is still waiting for review.
+- Each with its status, for example {guilabel}`Rejected`, and the owner's
+  reason.
+- Click {guilabel}`Edit` to change it while it is still waiting for review.
 
 ## Preferences
 
-- **Prefer** marks a project you would like to work on. **★ Preferred** shows
-  you did.
+- Click {guilabel}`Prefer` to mark a project you would like to work on.
+  {guilabel}`★ Preferred` shows you did.
 - The owners use the preferences to form the teams, see
   [Manage Teams](../owner/manage-teams.md).

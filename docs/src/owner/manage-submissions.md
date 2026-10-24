@@ -13,16 +13,19 @@ Every team and where it stands with its work. It shows:
 
 ## Status
 
-- **Submissions are open** or **closed**. Change it on
+- The page says {guilabel}`Submissions are open` or
+  {guilabel}`Submissions are closed`. Change it on
   [Settings](manage-settings.md).
 
 ## Teams
 
-- Tabs **All**, **No submission**, **Draft only**, **Final**. Search by team,
+- Click the tabs {guilabel}`All`, {guilabel}`No submission`,
+  {guilabel}`Draft only` and {guilabel}`Final` to filter. Search by team,
   project or person.
-- **Download CSV**: all teams.
+- Click {guilabel}`Download CSV` to get all teams.
 - Per team: members, the entry, its version and who submitted it. Earlier
   versions are folded away.
 - Read-only: teams hand in and finalize themselves on
   [Submissions](../participant/member-submissions.md).
-- No teams yet: **Set up teams** leads to [Manage Teams](manage-teams.md).
+- No teams yet: click {guilabel}`Set up teams` to go to
+  [Manage Teams](manage-teams.md).

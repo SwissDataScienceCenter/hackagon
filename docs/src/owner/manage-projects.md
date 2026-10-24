@@ -14,19 +14,22 @@ Every project, whatever its status. It shows:
 
 ## Projects by status
 
-- Tabs **Approved**, **Awaiting review**, **Rejected**.
-- **Download CSV**: all projects.
-- **Review** or **Edit** per project.
+- Click the tabs {guilabel}`Approved`, {guilabel}`Awaiting review` and
+  {guilabel}`Rejected` to switch between statuses.
+- Click {guilabel}`Download CSV` to get all projects as a spreadsheet.
+- Click {guilabel}`Review` or {guilabel}`Edit` next to a project.
 
 ## Review
 
-- **Approve**, **Reject** (with an optional reason), **Revoke approval** or
-  **Reconsider**.
+- Click {guilabel}`Approve` or {guilabel}`Reject`. When you reject, you can give
+  a reason. {guilabel}`Revoke approval` and {guilabel}`Reconsider` undo a
+  decision.
 - Only approved projects appear on [Projects](../participant/member-projects.md)
   and on [Manage Teams](manage-teams.md).
 
 ## New project
 
-- **New Project**: the same form participants use to propose.
+- Click {guilabel}`New Project` to add one. It is the same form participants use
+  to propose.
 - Participants propose only while you allow it, see
   [Settings](manage-settings.md).

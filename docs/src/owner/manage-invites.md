@@ -18,14 +18,14 @@ It might also show:
 
 ## Live links
 
-- Copy a link into an email. **Revoke** it if it spreads.
+- Copy a link into an email. Click {guilabel}`Revoke` if it spreads.
 - Someone with a valid link joins straight away, without the waitlist.
 - Links work only while registration is open, see
   [Settings](manage-settings.md).
 
 ## New link
 
-- Add an optional note on who it is for, then **Create link**.
+- Enter an optional note on who it is for, then click {guilabel}`Create link`.
 - A link stops working when the hackathon ends.
 
 ## No longer working

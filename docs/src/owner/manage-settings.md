@@ -2,14 +2,15 @@
 
 :::{admonition} Owner's Settings
 
-The first page under **Manage Hackathon**. It shows:
+The first page under {guilabel}`Manage Hackathon`. It shows:
 
 - [What participants can do](#what-participants-can-do): the checkboxes that
   steer the hackathon
-- **Where the hackathon is**: the current and next phase, see
+- {guilabel}`Where the hackathon is`: the current and next phase, see
   [Manage Timeline](manage-timeline.md)
-- **Tracks**: optional, see [Manage Tracks](manage-tracks.md)
-- **Manage**: a tile for every other page under **Manage Hackathon**
+- {guilabel}`Tracks`: optional, see [Manage Tracks](manage-tracks.md)
+- {guilabel}`Manage`: a tile for every other page under
+  {guilabel}`Manage Hackathon`
 
 :::
 
