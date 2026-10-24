@@ -17,7 +17,8 @@ It might also show:
 
 ## Registration form
 
-- **New question**; **Edit** and **Delete** per question.
+- **New question** adds a question. **Edit** and **Delete** are next to each
+  question.
 - Once people have answered, type, options and **Required** are locked, and
   deleting a question discards its answers.
 

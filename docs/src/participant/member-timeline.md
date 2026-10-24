@@ -2,10 +2,15 @@
 
 :::{admonition} Participant's Timeline
 
-The hackathon's phases, for orientation. Appears once the hackathon has a phase.
-It shows:
+A hackathon can have phases, which show what happens when. This page appears
+only if it has some. It shows:
 
 - [Phases](#phases): every phase with its dates
+
+It might also show:
+
+- [The current phase](#the-current-phase): while a phase is running, with what
+  is open now
 
 :::
 
@@ -13,7 +18,10 @@ It shows:
 
 ## Phases
 
-- The current phase with its dates, countdown, description and what is open now;
-  **See the details** leads to the [Overview](member-overview.md).
-- The other phases with their dates; the next one with a countdown.
-- Phases don't open or close anything; the owners do that separately.
+- Every phase with its start and end date. The next one has a countdown.
+- Phases don't open or close anything. The owners do that separately.
+
+## The current phase
+
+- Its dates, a countdown, its description and what is open now.
+- **See the details** leads to the [Overview](member-overview.md).

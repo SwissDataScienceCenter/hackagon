@@ -19,4 +19,4 @@ shows:
 
 ## All entries
 
-- Every team that entered; yours is marked **Your team**.
+- Every team that entered. Yours is marked **Your team**.

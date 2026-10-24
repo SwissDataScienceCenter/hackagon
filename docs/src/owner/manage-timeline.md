@@ -22,13 +22,13 @@ participants can do. That is decided on [Settings](manage-settings.md).
 
 - Status per phase: **Completed**, **In progress**, **Upcoming** or **Current
   phase**.
-- **Make current** / **Clear current phase** moves the marker; so does
-  [Settings](manage-settings.md).
+- **Make current** / **Clear current phase** moves the marker. You can also move
+  it on [Settings](manage-settings.md).
 - Participants see the phases on [Timeline](../participant/member-timeline.md).
 
 ## A phase
 
 - **Add phase**: name and description, then its dates.
-- **Starts** and **Ends**: both or neither; once set they can be changed but not
-  removed.
+- **Starts** and **Ends**: set both or neither. Once set, they can be changed
+  but not removed.
 - **Delete this phase**.

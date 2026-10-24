@@ -22,12 +22,13 @@ It might also show:
 
 - One card per [approved project](manage-projects.md), with **N want in** and
   its teams.
-- **+ Add Team**; rename or delete a team.
+- **+ Add Team** adds a team. You can also rename or delete a team.
 - Drag people between teams.
 
 ## Unassigned
 
-- Filter by registration answer or preferred project; **Reset filters**.
+- Filter by registration answer or preferred project. **Reset filters** clears
+  them.
 
 ## Filters and cards
 
@@ -40,13 +41,13 @@ It might also show:
 ## Spreadsheet
 
 - **Download CSV**: everyone with preferences and answers.
-- Edit the `project` and `team` columns, then **Upload CSV**; it replaces all
+- Edit the `project` and `team` columns, then **Upload CSV**. It replaces all
   teams.
 - **How assignment works** explains the format.
 
 ## Saving
 
-- Nothing is stored until **Save**; **Discard** drops your changes.
+- Nothing is stored until you **Save**. **Discard** drops your changes.
 - Saving deletes empty teams.
 - Participants see the teams only once you let them, see
   [Settings](manage-settings.md).

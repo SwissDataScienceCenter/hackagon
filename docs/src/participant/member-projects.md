@@ -18,8 +18,8 @@ It might also show:
 
 ## Approved projects
 
-- Eight per page; each opens its details: description, track and who proposed
-  it.
+- Eight projects per page. Each opens its details: description, track and who
+  proposed it.
 
 ## Propose a project
 
@@ -35,7 +35,7 @@ It might also show:
 
 ## Preferences
 
-- **Prefer** marks a project you would like to work on; **★ Preferred** shows
+- **Prefer** marks a project you would like to work on. **★ Preferred** shows
   you did.
 - The owners use the preferences to form the teams, see
   [Manage Teams](../owner/manage-teams.md).

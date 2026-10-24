@@ -28,13 +28,13 @@ It might also show:
 
 - **New category**: name, description and how people vote: **Single choice**
   (pick one) or **Points** (spread a budget, 10 by default).
-- **Edit** and **Delete** until someone has voted in it; then it is **Locked**.
+- **Edit** and **Delete** until someone has voted in it. Then it is **Locked**.
 - Participants vote on [Voting](../participant/member-voting.md).
 
 ## Count so far
 
-- The ranking per category as votes come in; participants don't see it.
-- **Make results final**: only once voting is closed; it cannot be undone.
+- The ranking per category as votes come in. Participants don't see it.
+- **Make results final** works only once voting is closed. It cannot be undone.
 
 ## Final results
 

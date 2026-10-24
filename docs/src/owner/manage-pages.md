@@ -15,7 +15,7 @@ The hackathon's own pages, such as rules or a schedule. It shows:
 
 - Drag or use the arrows to change the order in the menu.
 - The eye shows or hides a page for participants.
-- **View** shows it as participants see it; **Edit** changes it.
+- **View** shows it as participants see it. **Edit** changes it.
 
 ## A page
 

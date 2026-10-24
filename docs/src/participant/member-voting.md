@@ -17,7 +17,7 @@ open. It shows:
 - **Single choice**: pick one entry. **Points**: spread your points across
   entries.
 - Your own team is not on the ballot.
-- **View entry** opens a [team](member-teams.md) and its entry; votes you have
-  not submitted are lost.
+- **View entry** opens a [team](member-teams.md) and its entry. Votes you have
+  not submitted yet are lost.
 - After voting the card shows what you chose. Results come later on
   [Results](member-results.md).

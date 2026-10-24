@@ -34,4 +34,4 @@ It might also show:
 - Their teams, see [Manage Teams](manage-teams.md).
 - **Approve** or **Decline** someone waiting.
 - **Make owner** / **Remove owner**.
-- **Remove from hackathon**; for an owner, remove the owner role first.
+- **Remove from hackathon**. For an owner, remove the owner role first.
