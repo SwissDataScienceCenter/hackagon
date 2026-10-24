@@ -20,7 +20,7 @@ It might also show:
 - How many there are, who has no email address, who answered the
   [registration form](manage-forms.md).
 - Click {guilabel}`Download CSV` to get everyone, waitlist included.
-- Click {guilabel}`Manage` to open a person.
+- Click {guilabel}`Manage` to open a [person's details](#a-person)
 
 ## Waitlist
 
