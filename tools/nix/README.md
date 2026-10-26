@@ -212,7 +212,7 @@ Tool versions are pinned in `hackagon/pkgs/build.parts.nix`:
 
 ```nix
 pkgsPinned = {
-  go      = pkgs.go_1_25;
+  go      = pkgs.go_1_27;
   python  = pkgs.python314;
   nodejs  = pkgs.nodejs_22;
   pnpm    = pkgs.pnpm_10.override { nodejs = pkgs.nodejs_22; };

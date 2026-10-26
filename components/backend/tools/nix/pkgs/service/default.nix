@@ -21,7 +21,7 @@ cnLib.build.buildGoModule {
   ];
 
   target = "service";
-  vendorHash = "sha256-fq2vUGbWPV+sDivkiQuamC1lAZjy8VT8aa0/ipU8Ec8=";
+  vendorHash = "sha256-BLWQWMH6k+H/BHkyZaggyzjcYaYUKzib9aGB24jaBXk=";
 
   meta = {
     description = compName;
