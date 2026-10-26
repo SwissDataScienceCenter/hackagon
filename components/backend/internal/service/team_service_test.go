@@ -4,6 +4,7 @@ package service_test
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1218,6 +1219,45 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		DescribeTable("rejects invalid fields with INVALID_ARGUMENT",
+			func(edit func(*teamMsgs.CreateSubmissionRequest)) {
+				token := testutils.CreateTestJWTToken(memberID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &teamMsgs.CreateSubmissionRequest{
+					TeamId:    teamID,
+					ProjectId: projectID,
+				}
+				edit(req)
+
+				_, err := teamClient.CreateSubmission(ctx, req)
+				Expect(err).To(HaveOccurred())
+				Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+
+				n, err := dbClient.Submission.Query().Count(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeZero())
+			},
+			Entry("http result", func(r *teamMsgs.CreateSubmissionRequest) {
+				r.Result = testutils.StringPtr("http://github.com/test/repo")
+			}),
+			Entry("relative attachment folder", func(r *teamMsgs.CreateSubmissionRequest) {
+				r.AttachmentFolderUrl = testutils.StringPtr("drive.example.com/folder")
+			}),
+			Entry("javascript result", func(r *teamMsgs.CreateSubmissionRequest) {
+				r.Result = testutils.StringPtr("javascript:alert(1)")
+			}),
+			Entry("result over 2048 characters", func(r *teamMsgs.CreateSubmissionRequest) {
+				r.Result = testutils.StringPtr("https://github.com/" + strings.Repeat("a", 2048))
+			}),
+			Entry("description over 10000 characters", func(r *teamMsgs.CreateSubmissionRequest) {
+				r.Description = testutils.StringPtr(strings.Repeat("a", 10001))
+			}),
+		)
 	})
 
 	Describe("FinalizeSubmission", func() {

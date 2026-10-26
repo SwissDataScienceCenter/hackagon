@@ -14,9 +14,13 @@ export interface CreateSubmissionRequest {
   projectId: string;
   /**
    * URL of the repository holding the submission's output.
+   * The backend checks that this is an absolute https URL.
    * TODO: rename to `repository_url` after the hackathon.
    */
-  result?: string | undefined;
+  result?:
+    | string
+    | undefined;
+  /** Must be an absolute https URL; checked by the handler. */
   attachmentFolderUrl?: string | undefined;
   description?: string | undefined;
 }

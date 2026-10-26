@@ -4675,8 +4675,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ----- | ---- | ----- | ----------- |
 | team_id | [string](#string) |  |  |
 | project_id | [string](#string) |  |  |
-| result | [string](#string) | optional | URL of the repository holding the submission&#39;s output. TODO: rename to `repository_url` after the hackathon. |
-| attachment_folder_url | [string](#string) | optional |  |
+| result | [string](#string) | optional | URL of the repository holding the submission&#39;s output. The backend checks that this is an absolute https URL. TODO: rename to `repository_url` after the hackathon. |
+| attachment_folder_url | [string](#string) | optional | Must be an absolute https URL; checked by the handler. |
 | description | [string](#string) | optional |  |
 
 
