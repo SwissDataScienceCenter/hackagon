@@ -61,15 +61,15 @@ export const load: PageServerLoad = async (event) => {
   // Every team, whichever tab is open. The tab is applied on the page, for two
   // reasons: a search has to see every team to say which tab its matches are
   // on, and a load that never reads `?standing=` is one SvelteKit does not
-  // re-run when only the tab changes — switching tabs would otherwise repeat a
-  // `ListSubmissions` per team.
+  // re-run when only the tab changes — switching tabs would otherwise repeat
+  // the `ListSubmissions`.
   return {
     hackathonId: hackathon.id,
     submissionsOpen,
     teamsReadable: true,
     rows: submissionOverview(
       teams,
-      await submissionsByTeam(team, teams),
+      await submissionsByTeam(team, hackathon.id),
       projectTitles,
       names,
     ),

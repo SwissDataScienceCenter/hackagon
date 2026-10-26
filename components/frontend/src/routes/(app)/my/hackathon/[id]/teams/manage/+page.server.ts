@@ -36,11 +36,9 @@ export const load: PageServerLoad = async (event) => {
 
   const { teams } = await team.list({ hackathonId: event.params.id })
 
-  // Every team, not only those on approved projects: a submission anywhere in
-  // the hackathon is one a save could take with it.
   const lockReasons = await assignmentLockReasons(
     team,
-    teams.map((t) => t.id),
+    event.params.id,
     hackathon.state,
   )
 
@@ -224,7 +222,7 @@ export const actions: Actions = {
       })
       const locked = await assignmentLockReasons(
         team,
-        all.map((t) => t.id),
+        event.params.id,
         latest?.state,
       )
 

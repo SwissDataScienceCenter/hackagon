@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest"
 import type { Submission } from "$lib/server/grpc/generated/hackathon/entities/submission"
 import type { Team } from "$lib/server/grpc/generated/hackathon/entities/team"
+import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
 import type { User } from "$lib/server/grpc/generated/user/entities/user"
 import {
   submissionOverview,
+  submissionsByTeam,
   submissionStanding,
   submissionVersions,
 } from "./submissions"
@@ -246,5 +248,31 @@ describe("submissionOverview", () => {
     )
 
     expect(rows[0]?.members).toEqual(["Amy", "anon", "Zed"])
+  })
+})
+
+describe("submissionsByTeam", () => {
+  it("asks once for the hackathon and groups by team, keeping the order", async () => {
+    const asked: unknown[] = []
+    const client = {
+      listSubmissions: async (req: unknown) => {
+        asked.push(req)
+
+        return {
+          submissions: [
+            sub({ version: 1, teamId: "team-a" }),
+            sub({ version: 2, teamId: "team-a" }),
+            sub({ version: 1, teamId: "team-b" }),
+          ],
+        }
+      },
+    } as unknown as TeamServiceClient
+
+    const byTeam = await submissionsByTeam(client, "hackathon-1")
+
+    expect(asked).toEqual([{ hackathonId: "hackathon-1" }])
+    expect(byTeam.get("team-a")?.map((s) => s.version)).toEqual([1, 2])
+    expect(byTeam.get("team-b")?.map((s) => s.version)).toEqual([1])
+    expect(byTeam.has("team-c")).toBe(false)
   })
 })

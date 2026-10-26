@@ -120,15 +120,12 @@ export interface TeamSubmissionRow extends TeamSubmissions {
 }
 
 /**
- * Every team's submissions, keyed by team id.
+ * Every submission in the hackathon, keyed by team id. A team with none has no
+ * entry.
  *
- * One `ListSubmissions` per team, in parallel: `TeamService.List` returns teams
- * without their submissions (`team_service.go:63-68`), and there is no RPC that
- * lists a hackathon's submissions in one go.
- *
- * TODO(backend: submissions-hackathon-list): one call once the backend offers
- * one — either `List` loading the submissions edge that `Get` already loads, or
- * a hackathon-scoped `ListSubmissions`.
+ * One hackathon-scoped `ListSubmissions`. It comes back ordered by team, then by
+ * version ascending, so each team's list keeps the order a team-scoped call
+ * would give it.
  *
  * `ListSubmissions` rather than the submissions nested in `team.get`, for the
  * same reason the participant page gives: only this one is meant to be complete.
@@ -137,17 +134,18 @@ export interface TeamSubmissionRow extends TeamSubmissions {
  */
 export async function submissionsByTeam(
   team: TeamServiceClient,
-  teams: Team[],
+  hackathonId: string,
 ): Promise<Map<string, Submission[]>> {
-  const lists = await Promise.all(
-    teams.map(async (t) => {
-      const { submissions } = await team.listSubmissions({ teamId: t.id })
+  const { submissions } = await team.listSubmissions({ hackathonId })
 
-      return [t.id, submissions] as const
-    }),
-  )
+  const byTeam = new Map<string, Submission[]>()
+  for (const s of submissions) {
+    const list = byTeam.get(s.teamId)
+    if (list) list.push(s)
+    else byTeam.set(s.teamId, [s])
+  }
 
-  return new Map(lists)
+  return byTeam
 }
 
 /**
