@@ -24,6 +24,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+## [0.12.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.12.0...v0.12.1) - 2026-10-27
+
 ## [0.12.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.11.0...v0.12.0) - 2026-10-23
 
 ### Added
