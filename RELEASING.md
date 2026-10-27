@@ -31,7 +31,8 @@ released ([Making an app release](#making-an-app-release)). It never receives
 features, only the fixes that prod cannot wait for — see
 [Making a hotfix](#making-a-hotfix). Its tags (`v0.12.2`, `v0.12.3`, …) are what
 prod runs. Once the next minor line is released, the old branch simply stops
-being used and can be deleted once the new release has been deployed to production.
+being used and can be deleted once the new release has been deployed to
+production.
 
 So `main` can keep moving during a hackathon while prod stays on the release it
 was installed with, and a hotfix for prod can be done on `release/X.Y`.
@@ -93,8 +94,8 @@ that exists because a `v*` tag built it.
 Nothing merged to `main` can reach prod. It changes only when someone bumps
 `appVersion`, publishes the chart, and installs that chart version.
 
-While a hackathon is running on prod, install nothing there except hotfixes in case
-the event needs them.
+While a hackathon is running on prod, install nothing there except hotfixes in
+case the event needs them.
 
 ## Three version numbers
 
@@ -157,9 +158,9 @@ Pushing the tag builds and pushes `release/backend-service:0.9.0` and
 botched tag is fixed by bumping again, not by re-tagging.
 
 Then [make the release deployable](#making-a-release-deployable). Once that
-chart pull request is merged, create the release branch from its merge
-commit — not from the tag, which does not have the chart bump yet. `main` may
-have moved on in the meantime, so name the commit:
+chart pull request is merged, create the release branch from its merge commit —
+not from the tag, which does not have the chart bump yet. `main` may have moved
+on in the meantime, so name the commit:
 
 ```bash
 git fetch origin
