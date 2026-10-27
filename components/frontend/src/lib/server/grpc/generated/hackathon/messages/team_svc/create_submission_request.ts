@@ -12,11 +12,21 @@ export const protobufPackage = "hackathon.messages.team_svc";
 export interface CreateSubmissionRequest {
   teamId: string;
   projectId: string;
-  result?: string | undefined;
+  /**
+   * URL of the repository holding the submission's output.
+   * The backend checks that this is an absolute https URL.
+   * TODO: rename to `repository_url` after the hackathon.
+   */
+  result?:
+    | string
+    | undefined;
+  /** Must be an absolute https URL; checked by the handler. */
+  attachmentFolderUrl?: string | undefined;
+  description?: string | undefined;
 }
 
 function createBaseCreateSubmissionRequest(): CreateSubmissionRequest {
-  return { teamId: "", projectId: "", result: undefined };
+  return { teamId: "", projectId: "", result: undefined, attachmentFolderUrl: undefined, description: undefined };
 }
 
 export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
@@ -29,6 +39,12 @@ export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
     }
     if (message.result !== undefined) {
       writer.uint32(26).string(message.result);
+    }
+    if (message.attachmentFolderUrl !== undefined) {
+      writer.uint32(34).string(message.attachmentFolderUrl);
+    }
+    if (message.description !== undefined) {
+      writer.uint32(42).string(message.description);
     }
     return writer;
   },
@@ -64,6 +80,22 @@ export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
           message.result = reader.string();
           continue;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.attachmentFolderUrl = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.description = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -86,6 +118,12 @@ export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
         ? globalThis.String(object.project_id)
         : "",
       result: isSet(object.result) ? globalThis.String(object.result) : undefined,
+      attachmentFolderUrl: isSet(object.attachmentFolderUrl)
+        ? globalThis.String(object.attachmentFolderUrl)
+        : isSet(object.attachment_folder_url)
+        ? globalThis.String(object.attachment_folder_url)
+        : undefined,
+      description: isSet(object.description) ? globalThis.String(object.description) : undefined,
     };
   },
 
@@ -100,6 +138,12 @@ export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
     if (message.result !== undefined) {
       obj.result = message.result;
     }
+    if (message.attachmentFolderUrl !== undefined) {
+      obj.attachmentFolderUrl = message.attachmentFolderUrl;
+    }
+    if (message.description !== undefined) {
+      obj.description = message.description;
+    }
     return obj;
   },
 
@@ -111,6 +155,8 @@ export const CreateSubmissionRequest: MessageFns<CreateSubmissionRequest> = {
     message.teamId = object.teamId ?? "";
     message.projectId = object.projectId ?? "";
     message.result = object.result ?? undefined;
+    message.attachmentFolderUrl = object.attachmentFolderUrl ?? undefined;
+    message.description = object.description ?? undefined;
     return message;
   },
 };

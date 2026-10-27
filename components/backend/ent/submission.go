@@ -25,8 +25,12 @@ type Submission struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last modification.
 	ModifiedAt time.Time `json:"modified_at,omitempty"`
-	// Result or output of the submission (e.g. a URL).
+	// URL of the repository that contains the output of the submission.
 	Result string `json:"result,omitempty"`
+	// URL of the folder that contains the attachments.
+	AttachmentFolderURL string `json:"attachment_folder_url,omitempty"`
+	// Description of the submission.
+	Description string `json:"description,omitempty"`
 	// Whether the submission is a draft or final.
 	Status submission.Status `json:"status,omitempty"`
 	// Monotonically increasing version number, unique per project+team.
@@ -129,7 +133,7 @@ func (*Submission) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case submission.FieldVersion:
 			values[i] = new(sql.NullInt64)
-		case submission.FieldResult, submission.FieldStatus:
+		case submission.FieldResult, submission.FieldAttachmentFolderURL, submission.FieldDescription, submission.FieldStatus:
 			values[i] = new(sql.NullString)
 		case submission.FieldCreatedAt, submission.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
@@ -181,6 +185,18 @@ func (_m *Submission) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field result", values[i])
 			} else if value.Valid {
 				_m.Result = value.String
+			}
+		case submission.FieldAttachmentFolderURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field attachment_folder_url", values[i])
+			} else if value.Valid {
+				_m.AttachmentFolderURL = value.String
+			}
+		case submission.FieldDescription:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description", values[i])
+			} else if value.Valid {
+				_m.Description = value.String
 			}
 		case submission.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -296,6 +312,12 @@ func (_m *Submission) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("result=")
 	builder.WriteString(_m.Result)
+	builder.WriteString(", ")
+	builder.WriteString("attachment_folder_url=")
+	builder.WriteString(_m.AttachmentFolderURL)
+	builder.WriteString(", ")
+	builder.WriteString("description=")
+	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))

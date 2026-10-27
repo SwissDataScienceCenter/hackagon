@@ -71,6 +71,34 @@ func (_c *SubmissionCreate) SetNillableResult(v *string) *SubmissionCreate {
 	return _c
 }
 
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (_c *SubmissionCreate) SetAttachmentFolderURL(v string) *SubmissionCreate {
+	_c.mutation.SetAttachmentFolderURL(v)
+	return _c
+}
+
+// SetNillableAttachmentFolderURL sets the "attachment_folder_url" field if the given value is not nil.
+func (_c *SubmissionCreate) SetNillableAttachmentFolderURL(v *string) *SubmissionCreate {
+	if v != nil {
+		_c.SetAttachmentFolderURL(*v)
+	}
+	return _c
+}
+
+// SetDescription sets the "description" field.
+func (_c *SubmissionCreate) SetDescription(v string) *SubmissionCreate {
+	_c.mutation.SetDescription(v)
+	return _c
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_c *SubmissionCreate) SetNillableDescription(v *string) *SubmissionCreate {
+	if v != nil {
+		_c.SetDescription(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *SubmissionCreate) SetStatus(v submission.Status) *SubmissionCreate {
 	_c.mutation.SetStatus(v)
@@ -309,6 +337,14 @@ func (_c *SubmissionCreate) createSpec() (*Submission, *sqlgraph.CreateSpec) {
 		_spec.SetField(submission.FieldResult, field.TypeString, value)
 		_node.Result = value
 	}
+	if value, ok := _c.mutation.AttachmentFolderURL(); ok {
+		_spec.SetField(submission.FieldAttachmentFolderURL, field.TypeString, value)
+		_node.AttachmentFolderURL = value
+	}
+	if value, ok := _c.mutation.Description(); ok {
+		_spec.SetField(submission.FieldDescription, field.TypeString, value)
+		_node.Description = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(submission.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
@@ -499,6 +535,42 @@ func (u *SubmissionUpsert) ClearResult() *SubmissionUpsert {
 	return u
 }
 
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (u *SubmissionUpsert) SetAttachmentFolderURL(v string) *SubmissionUpsert {
+	u.Set(submission.FieldAttachmentFolderURL, v)
+	return u
+}
+
+// UpdateAttachmentFolderURL sets the "attachment_folder_url" field to the value that was provided on create.
+func (u *SubmissionUpsert) UpdateAttachmentFolderURL() *SubmissionUpsert {
+	u.SetExcluded(submission.FieldAttachmentFolderURL)
+	return u
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (u *SubmissionUpsert) ClearAttachmentFolderURL() *SubmissionUpsert {
+	u.SetNull(submission.FieldAttachmentFolderURL)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *SubmissionUpsert) SetDescription(v string) *SubmissionUpsert {
+	u.Set(submission.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *SubmissionUpsert) UpdateDescription() *SubmissionUpsert {
+	u.SetExcluded(submission.FieldDescription)
+	return u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *SubmissionUpsert) ClearDescription() *SubmissionUpsert {
+	u.SetNull(submission.FieldDescription)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *SubmissionUpsert) SetStatus(v submission.Status) *SubmissionUpsert {
 	u.Set(submission.FieldStatus, v)
@@ -612,6 +684,48 @@ func (u *SubmissionUpsertOne) UpdateResult() *SubmissionUpsertOne {
 func (u *SubmissionUpsertOne) ClearResult() *SubmissionUpsertOne {
 	return u.Update(func(s *SubmissionUpsert) {
 		s.ClearResult()
+	})
+}
+
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (u *SubmissionUpsertOne) SetAttachmentFolderURL(v string) *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.SetAttachmentFolderURL(v)
+	})
+}
+
+// UpdateAttachmentFolderURL sets the "attachment_folder_url" field to the value that was provided on create.
+func (u *SubmissionUpsertOne) UpdateAttachmentFolderURL() *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.UpdateAttachmentFolderURL()
+	})
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (u *SubmissionUpsertOne) ClearAttachmentFolderURL() *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.ClearAttachmentFolderURL()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *SubmissionUpsertOne) SetDescription(v string) *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *SubmissionUpsertOne) UpdateDescription() *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *SubmissionUpsertOne) ClearDescription() *SubmissionUpsertOne {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.ClearDescription()
 	})
 }
 
@@ -900,6 +1014,48 @@ func (u *SubmissionUpsertBulk) UpdateResult() *SubmissionUpsertBulk {
 func (u *SubmissionUpsertBulk) ClearResult() *SubmissionUpsertBulk {
 	return u.Update(func(s *SubmissionUpsert) {
 		s.ClearResult()
+	})
+}
+
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (u *SubmissionUpsertBulk) SetAttachmentFolderURL(v string) *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.SetAttachmentFolderURL(v)
+	})
+}
+
+// UpdateAttachmentFolderURL sets the "attachment_folder_url" field to the value that was provided on create.
+func (u *SubmissionUpsertBulk) UpdateAttachmentFolderURL() *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.UpdateAttachmentFolderURL()
+	})
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (u *SubmissionUpsertBulk) ClearAttachmentFolderURL() *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.ClearAttachmentFolderURL()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *SubmissionUpsertBulk) SetDescription(v string) *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *SubmissionUpsertBulk) UpdateDescription() *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *SubmissionUpsertBulk) ClearDescription() *SubmissionUpsertBulk {
+	return u.Update(func(s *SubmissionUpsert) {
+		s.ClearDescription()
 	})
 }
 

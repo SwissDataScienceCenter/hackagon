@@ -7,6 +7,7 @@
 package team_svc
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -22,12 +23,18 @@ const (
 )
 
 type CreateSubmissionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TeamId        string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Result        *string                `protobuf:"bytes,3,opt,name=result,proto3,oneof" json:"result,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TeamId    string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	ProjectId string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// URL of the repository holding the submission's output.
+	// The backend checks that this is an absolute https URL.
+	// TODO: rename to `repository_url` after the hackathon.
+	Result *string `protobuf:"bytes,3,opt,name=result,proto3,oneof" json:"result,omitempty"`
+	// Must be an absolute https URL; checked by the handler.
+	AttachmentFolderUrl *string `protobuf:"bytes,4,opt,name=attachment_folder_url,json=attachmentFolderUrl,proto3,oneof" json:"attachment_folder_url,omitempty"`
+	Description         *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateSubmissionRequest) Reset() {
@@ -81,17 +88,35 @@ func (x *CreateSubmissionRequest) GetResult() string {
 	return ""
 }
 
+func (x *CreateSubmissionRequest) GetAttachmentFolderUrl() string {
+	if x != nil && x.AttachmentFolderUrl != nil {
+		return *x.AttachmentFolderUrl
+	}
+	return ""
+}
+
+func (x *CreateSubmissionRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
 var File_hackathon_messages_team_svc_create_submission_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_team_svc_create_submission_request_proto_rawDesc = "" +
 	"\n" +
-	";hackathon/messages/team_svc/create_submission_request.proto\x12\x1bhackathon.messages.team_svc\"y\n" +
+	";hackathon/messages/team_svc/create_submission_request.proto\x12\x1bhackathon.messages.team_svc\x1a\x1bbuf/validate/validate.proto\"\xa1\x02\n" +
 	"\x17CreateSubmissionRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x1b\n" +
-	"\x06result\x18\x03 \x01(\tH\x00R\x06result\x88\x01\x01B\t\n" +
-	"\a_resultBjZhgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svcb\x06proto3"
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12%\n" +
+	"\x06result\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x00R\x06result\x88\x01\x01\x12A\n" +
+	"\x15attachment_folder_url\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x01R\x13attachmentFolderUrl\x88\x01\x01\x12/\n" +
+	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x90NH\x02R\vdescription\x88\x01\x01B\t\n" +
+	"\a_resultB\x18\n" +
+	"\x16_attachment_folder_urlB\x0e\n" +
+	"\f_descriptionBjZhgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_team_svc_create_submission_request_proto_rawDescOnce sync.Once

@@ -286,18 +286,22 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 	// one finalized.
 	if _, err := h.createSubmissions(teams, projects, []submissionSpec{
 		{
-			by:      alice,
-			team:    "Team Alpha",
-			project: "AutoML Pipeline Builder",
-			result:  "",
-			final:   false,
+			by:                  alice,
+			team:                "Team Alpha",
+			project:             "AutoML Pipeline Builder",
+			result:              "",
+			description:         "First pass at the search space; no evaluation yet.",
+			attachmentFolderURL: "",
+			final:               false,
 		},
 		{
-			by:      alice,
-			team:    "Team Alpha",
-			project: "AutoML Pipeline Builder",
-			result:  "https://github.com/team-alpha/automl-pipeline",
-			final:   true,
+			by:                  alice,
+			team:                "Team Alpha",
+			project:             "AutoML Pipeline Builder",
+			result:              "https://github.com/team-alpha/automl-pipeline",
+			description:         "End-to-end AutoML pipeline with model search and a benchmark report.",
+			attachmentFolderURL: "https://drive.example.com/team-alpha/automl-pipeline",
+			final:               true,
 		},
 	}); err != nil {
 		return err

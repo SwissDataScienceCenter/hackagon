@@ -1409,7 +1409,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
-| result | [string](#string) | optional |  |
+| result | [string](#string) | optional | URL of the repository holding the submission&#39;s output. TODO: rename to `repository_url` after the hackathon. |
 | status | [SubmissionStatus](#hackathon-entities-SubmissionStatus) |  |  |
 | version | [int32](#int32) |  |  |
 | created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
@@ -1418,6 +1418,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | project_id | [string](#string) |  |  |
 | creator_id | [string](#string) |  |  |
 | modifier_id | [string](#string) | optional |  |
+| attachment_folder_url | [string](#string) | optional |  |
+| description | [string](#string) | optional |  |
 
 
 
@@ -4673,7 +4675,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ----- | ---- | ----- | ----------- |
 | team_id | [string](#string) |  |  |
 | project_id | [string](#string) |  |  |
-| result | [string](#string) | optional |  |
+| result | [string](#string) | optional | URL of the repository holding the submission&#39;s output. The backend checks that this is an absolute https URL. TODO: rename to `repository_url` after the hackathon. |
+| attachment_folder_url | [string](#string) | optional | Must be an absolute https URL; checked by the handler. |
+| description | [string](#string) | optional |  |
 
 
 

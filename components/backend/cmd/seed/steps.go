@@ -623,13 +623,16 @@ func (h *harness) createTeams(
 // Versions are not stated because they are not the seed's to choose: the
 // handler counts what the team has already submitted for the project, so the
 // order of the specs is the version order. `final` finalizes it afterwards;
-// without it the submission stays a draft.
+// without it the submission stays a draft. An empty `result`, `description`
+// or `attachmentFolderURL` is left unset on the submission.
 type submissionSpec struct {
-	by      *actor
-	team    string
-	project string
-	result  string
-	final   bool
+	by                  *actor
+	team                string
+	project             string
+	result              string
+	description         string
+	attachmentFolderURL string
+	final               bool
 }
 
 // createSubmissions writes submissions in order and returns each team's last
@@ -650,12 +653,20 @@ func (h *harness) createSubmissions(
 		}
 
 		req := &teamMsgs.CreateSubmissionRequest{
-			TeamId:    teamID,
-			ProjectId: projectID,
-			Result:    nil,
+			TeamId:              teamID,
+			ProjectId:           projectID,
+			Result:              nil,
+			AttachmentFolderUrl: nil,
+			Description:         nil,
 		}
 		if spec.result != "" {
 			req.Result = &spec.result
+		}
+		if spec.description != "" {
+			req.Description = &spec.description
+		}
+		if spec.attachmentFolderURL != "" {
+			req.AttachmentFolderUrl = &spec.attachmentFolderURL
 		}
 
 		resp, err := h.team.CreateSubmission(spec.by.ctx, req)

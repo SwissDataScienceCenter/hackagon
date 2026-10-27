@@ -475,6 +475,8 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "result", Type: field.TypeString, Nullable: true},
+		{Name: "attachment_folder_url", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "final"}},
 		{Name: "version", Type: field.TypeInt},
 		{Name: "project_submissions", Type: field.TypeUUID},
@@ -490,25 +492,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "submissions_projects_submissions",
-				Columns:    []*schema.Column{SubmissionsColumns[6]},
+				Columns:    []*schema.Column{SubmissionsColumns[8]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "submissions_teams_submissions",
-				Columns:    []*schema.Column{SubmissionsColumns[7]},
+				Columns:    []*schema.Column{SubmissionsColumns[9]},
 				RefColumns: []*schema.Column{TeamsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "submissions_users_created_submissions",
-				Columns:    []*schema.Column{SubmissionsColumns[8]},
+				Columns:    []*schema.Column{SubmissionsColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
 			{
 				Symbol:     "submissions_users_modified_submissions",
-				Columns:    []*schema.Column{SubmissionsColumns[9]},
+				Columns:    []*schema.Column{SubmissionsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
@@ -517,7 +519,7 @@ var (
 			{
 				Name:    "submission_version_project_submissions_team_submissions",
 				Unique:  true,
-				Columns: []*schema.Column{SubmissionsColumns[5], SubmissionsColumns[6], SubmissionsColumns[7]},
+				Columns: []*schema.Column{SubmissionsColumns[7], SubmissionsColumns[8], SubmissionsColumns[9]},
 			},
 		},
 	}

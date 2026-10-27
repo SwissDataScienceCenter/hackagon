@@ -9411,33 +9411,35 @@ func (m *QuestionMutation) ResetEdge(name string) error {
 // SubmissionMutation represents an operation that mutates the Submission nodes in the graph.
 type SubmissionMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uuid.UUID
-	created_at          *time.Time
-	modified_at         *time.Time
-	result              *string
-	status              *submission.Status
-	version             *int
-	addversion          *int
-	clearedFields       map[string]struct{}
-	team                *uuid.UUID
-	clearedteam         bool
-	project             *uuid.UUID
-	clearedproject      bool
-	creator             *uuid.UUID
-	clearedcreator      bool
-	modifier            *uuid.UUID
-	clearedmodifier     bool
-	votes               map[uuid.UUID]struct{}
-	removedvotes        map[uuid.UUID]struct{}
-	clearedvotes        bool
-	vote_results        map[uuid.UUID]struct{}
-	removedvote_results map[uuid.UUID]struct{}
-	clearedvote_results bool
-	done                bool
-	oldValue            func(context.Context) (*Submission, error)
-	predicates          []predicate.Submission
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	created_at            *time.Time
+	modified_at           *time.Time
+	result                *string
+	attachment_folder_url *string
+	description           *string
+	status                *submission.Status
+	version               *int
+	addversion            *int
+	clearedFields         map[string]struct{}
+	team                  *uuid.UUID
+	clearedteam           bool
+	project               *uuid.UUID
+	clearedproject        bool
+	creator               *uuid.UUID
+	clearedcreator        bool
+	modifier              *uuid.UUID
+	clearedmodifier       bool
+	votes                 map[uuid.UUID]struct{}
+	removedvotes          map[uuid.UUID]struct{}
+	clearedvotes          bool
+	vote_results          map[uuid.UUID]struct{}
+	removedvote_results   map[uuid.UUID]struct{}
+	clearedvote_results   bool
+	done                  bool
+	oldValue              func(context.Context) (*Submission, error)
+	predicates            []predicate.Submission
 }
 
 var _ ent.Mutation = (*SubmissionMutation)(nil)
@@ -9663,6 +9665,104 @@ func (m *SubmissionMutation) ResultCleared() bool {
 func (m *SubmissionMutation) ResetResult() {
 	m.result = nil
 	delete(m.clearedFields, submission.FieldResult)
+}
+
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (m *SubmissionMutation) SetAttachmentFolderURL(s string) {
+	m.attachment_folder_url = &s
+}
+
+// AttachmentFolderURL returns the value of the "attachment_folder_url" field in the mutation.
+func (m *SubmissionMutation) AttachmentFolderURL() (r string, exists bool) {
+	v := m.attachment_folder_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttachmentFolderURL returns the old "attachment_folder_url" field's value of the Submission entity.
+// If the Submission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubmissionMutation) OldAttachmentFolderURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttachmentFolderURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttachmentFolderURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttachmentFolderURL: %w", err)
+	}
+	return oldValue.AttachmentFolderURL, nil
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (m *SubmissionMutation) ClearAttachmentFolderURL() {
+	m.attachment_folder_url = nil
+	m.clearedFields[submission.FieldAttachmentFolderURL] = struct{}{}
+}
+
+// AttachmentFolderURLCleared returns if the "attachment_folder_url" field was cleared in this mutation.
+func (m *SubmissionMutation) AttachmentFolderURLCleared() bool {
+	_, ok := m.clearedFields[submission.FieldAttachmentFolderURL]
+	return ok
+}
+
+// ResetAttachmentFolderURL resets all changes to the "attachment_folder_url" field.
+func (m *SubmissionMutation) ResetAttachmentFolderURL() {
+	m.attachment_folder_url = nil
+	delete(m.clearedFields, submission.FieldAttachmentFolderURL)
+}
+
+// SetDescription sets the "description" field.
+func (m *SubmissionMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *SubmissionMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Submission entity.
+// If the Submission object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubmissionMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *SubmissionMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[submission.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *SubmissionMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[submission.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *SubmissionMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, submission.FieldDescription)
 }
 
 // SetStatus sets the "status" field.
@@ -10055,7 +10155,7 @@ func (m *SubmissionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubmissionMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 7)
 	if m.created_at != nil {
 		fields = append(fields, submission.FieldCreatedAt)
 	}
@@ -10064,6 +10164,12 @@ func (m *SubmissionMutation) Fields() []string {
 	}
 	if m.result != nil {
 		fields = append(fields, submission.FieldResult)
+	}
+	if m.attachment_folder_url != nil {
+		fields = append(fields, submission.FieldAttachmentFolderURL)
+	}
+	if m.description != nil {
+		fields = append(fields, submission.FieldDescription)
 	}
 	if m.status != nil {
 		fields = append(fields, submission.FieldStatus)
@@ -10085,6 +10191,10 @@ func (m *SubmissionMutation) Field(name string) (ent.Value, bool) {
 		return m.ModifiedAt()
 	case submission.FieldResult:
 		return m.Result()
+	case submission.FieldAttachmentFolderURL:
+		return m.AttachmentFolderURL()
+	case submission.FieldDescription:
+		return m.Description()
 	case submission.FieldStatus:
 		return m.Status()
 	case submission.FieldVersion:
@@ -10104,6 +10214,10 @@ func (m *SubmissionMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldModifiedAt(ctx)
 	case submission.FieldResult:
 		return m.OldResult(ctx)
+	case submission.FieldAttachmentFolderURL:
+		return m.OldAttachmentFolderURL(ctx)
+	case submission.FieldDescription:
+		return m.OldDescription(ctx)
 	case submission.FieldStatus:
 		return m.OldStatus(ctx)
 	case submission.FieldVersion:
@@ -10137,6 +10251,20 @@ func (m *SubmissionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetResult(v)
+		return nil
+	case submission.FieldAttachmentFolderURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttachmentFolderURL(v)
+		return nil
+	case submission.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
 		return nil
 	case submission.FieldStatus:
 		v, ok := value.(submission.Status)
@@ -10200,6 +10328,12 @@ func (m *SubmissionMutation) ClearedFields() []string {
 	if m.FieldCleared(submission.FieldResult) {
 		fields = append(fields, submission.FieldResult)
 	}
+	if m.FieldCleared(submission.FieldAttachmentFolderURL) {
+		fields = append(fields, submission.FieldAttachmentFolderURL)
+	}
+	if m.FieldCleared(submission.FieldDescription) {
+		fields = append(fields, submission.FieldDescription)
+	}
 	return fields
 }
 
@@ -10217,6 +10351,12 @@ func (m *SubmissionMutation) ClearField(name string) error {
 	case submission.FieldResult:
 		m.ClearResult()
 		return nil
+	case submission.FieldAttachmentFolderURL:
+		m.ClearAttachmentFolderURL()
+		return nil
+	case submission.FieldDescription:
+		m.ClearDescription()
+		return nil
 	}
 	return fmt.Errorf("unknown Submission nullable field %s", name)
 }
@@ -10233,6 +10373,12 @@ func (m *SubmissionMutation) ResetField(name string) error {
 		return nil
 	case submission.FieldResult:
 		m.ResetResult()
+		return nil
+	case submission.FieldAttachmentFolderURL:
+		m.ResetAttachmentFolderURL()
+		return nil
+	case submission.FieldDescription:
+		m.ResetDescription()
 		return nil
 	case submission.FieldStatus:
 		m.ResetStatus()

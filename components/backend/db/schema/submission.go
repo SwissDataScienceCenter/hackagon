@@ -31,9 +31,16 @@ func (Submission) Fields() []ent.Field {
 		field.Time("modified_at").
 			Default(time.Now).UpdateDefault(time.Now).
 			Comment("Timestamp of the last modification."),
+		// TODO: rename to `repository_url` after the hackathon.
 		field.String("result").
 			Optional().
-			Comment("Result or output of the submission (e.g. a URL)."),
+			Comment("URL of the repository that contains the output of the submission."),
+		field.String("attachment_folder_url").
+			Optional().
+			Comment("URL of the folder that contains the attachments."),
+		field.String("description").
+			Optional().
+			Comment("Description of the submission."),
 		field.Enum("status").
 			Values("draft", "final").
 			Comment("Whether the submission is a draft or final."),

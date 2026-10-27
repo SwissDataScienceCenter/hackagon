@@ -60,6 +60,46 @@ func (_u *SubmissionUpdate) ClearResult() *SubmissionUpdate {
 	return _u
 }
 
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (_u *SubmissionUpdate) SetAttachmentFolderURL(v string) *SubmissionUpdate {
+	_u.mutation.SetAttachmentFolderURL(v)
+	return _u
+}
+
+// SetNillableAttachmentFolderURL sets the "attachment_folder_url" field if the given value is not nil.
+func (_u *SubmissionUpdate) SetNillableAttachmentFolderURL(v *string) *SubmissionUpdate {
+	if v != nil {
+		_u.SetAttachmentFolderURL(*v)
+	}
+	return _u
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (_u *SubmissionUpdate) ClearAttachmentFolderURL() *SubmissionUpdate {
+	_u.mutation.ClearAttachmentFolderURL()
+	return _u
+}
+
+// SetDescription sets the "description" field.
+func (_u *SubmissionUpdate) SetDescription(v string) *SubmissionUpdate {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *SubmissionUpdate) SetNillableDescription(v *string) *SubmissionUpdate {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (_u *SubmissionUpdate) ClearDescription() *SubmissionUpdate {
+	_u.mutation.ClearDescription()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *SubmissionUpdate) SetStatus(v submission.Status) *SubmissionUpdate {
 	_u.mutation.SetStatus(v)
@@ -312,6 +352,18 @@ func (_u *SubmissionUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.ResultCleared() {
 		_spec.ClearField(submission.FieldResult, field.TypeString)
 	}
+	if value, ok := _u.mutation.AttachmentFolderURL(); ok {
+		_spec.SetField(submission.FieldAttachmentFolderURL, field.TypeString, value)
+	}
+	if _u.mutation.AttachmentFolderURLCleared() {
+		_spec.ClearField(submission.FieldAttachmentFolderURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(submission.FieldDescription, field.TypeString, value)
+	}
+	if _u.mutation.DescriptionCleared() {
+		_spec.ClearField(submission.FieldDescription, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(submission.FieldStatus, field.TypeEnum, value)
 	}
@@ -541,6 +593,46 @@ func (_u *SubmissionUpdateOne) SetNillableResult(v *string) *SubmissionUpdateOne
 // ClearResult clears the value of the "result" field.
 func (_u *SubmissionUpdateOne) ClearResult() *SubmissionUpdateOne {
 	_u.mutation.ClearResult()
+	return _u
+}
+
+// SetAttachmentFolderURL sets the "attachment_folder_url" field.
+func (_u *SubmissionUpdateOne) SetAttachmentFolderURL(v string) *SubmissionUpdateOne {
+	_u.mutation.SetAttachmentFolderURL(v)
+	return _u
+}
+
+// SetNillableAttachmentFolderURL sets the "attachment_folder_url" field if the given value is not nil.
+func (_u *SubmissionUpdateOne) SetNillableAttachmentFolderURL(v *string) *SubmissionUpdateOne {
+	if v != nil {
+		_u.SetAttachmentFolderURL(*v)
+	}
+	return _u
+}
+
+// ClearAttachmentFolderURL clears the value of the "attachment_folder_url" field.
+func (_u *SubmissionUpdateOne) ClearAttachmentFolderURL() *SubmissionUpdateOne {
+	_u.mutation.ClearAttachmentFolderURL()
+	return _u
+}
+
+// SetDescription sets the "description" field.
+func (_u *SubmissionUpdateOne) SetDescription(v string) *SubmissionUpdateOne {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *SubmissionUpdateOne) SetNillableDescription(v *string) *SubmissionUpdateOne {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (_u *SubmissionUpdateOne) ClearDescription() *SubmissionUpdateOne {
+	_u.mutation.ClearDescription()
 	return _u
 }
 
@@ -825,6 +917,18 @@ func (_u *SubmissionUpdateOne) sqlSave(ctx context.Context) (_node *Submission, 
 	}
 	if _u.mutation.ResultCleared() {
 		_spec.ClearField(submission.FieldResult, field.TypeString)
+	}
+	if value, ok := _u.mutation.AttachmentFolderURL(); ok {
+		_spec.SetField(submission.FieldAttachmentFolderURL, field.TypeString, value)
+	}
+	if _u.mutation.AttachmentFolderURLCleared() {
+		_spec.ClearField(submission.FieldAttachmentFolderURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(submission.FieldDescription, field.TypeString, value)
+	}
+	if _u.mutation.DescriptionCleared() {
+		_spec.ClearField(submission.FieldDescription, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(submission.FieldStatus, field.TypeEnum, value)

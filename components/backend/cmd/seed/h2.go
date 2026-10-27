@@ -238,11 +238,13 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 	// authored by somebody who is not an organizer.
 	if _, err := h.createSubmissions(teams, projects, []submissionSpec{
 		{
-			by:      bob,
-			team:    "Team Gamma",
-			project: "Solar Panel Optimizer",
-			result:  "https://github.com/team-gamma/solar-optimizer",
-			final:   true,
+			by:                  bob,
+			team:                "Team Gamma",
+			project:             "Solar Panel Optimizer",
+			result:              "https://github.com/team-gamma/solar-optimizer",
+			description:         "Optimizes panel tilt from local irradiance data.",
+			attachmentFolderURL: "https://drive.example.com/team-gamma/solar-optimizer",
+			final:               true,
 		},
 	}); err != nil {
 		return err

@@ -971,9 +971,18 @@ func (s *TeamService) CreateSubmission(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
+
 	projectID, err := uuid.Parse(req.GetProjectId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
+	}
+
+	if err := requireHTTPSURL(req.GetResult(), "result"); err != nil {
+		return nil, err
+	}
+
+	if err := requireHTTPSURL(req.GetAttachmentFolderUrl(), "attachment_folder_url"); err != nil {
+		return nil, err
 	}
 
 	t, err := getTeamById(ctx, s, teamID)
@@ -1012,6 +1021,8 @@ func (s *TeamService) CreateSubmission(
 		SetTeamID(teamID).
 		SetProjectID(projectID).
 		SetResult(req.GetResult()).
+		SetAttachmentFolderURL(req.GetAttachmentFolderUrl()).
+		SetDescription(req.GetDescription()).
 		SetStatus(entsubmission.StatusDraft).
 		SetVersion(version + 1).
 		SetCreatorID(u.ID).
