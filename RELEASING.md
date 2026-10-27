@@ -27,15 +27,14 @@ request per change, reviewed and merged on its own, is what keeps the history
 readable and the changelog honest.
 
 `release/X.Y` is one branch per released minor line, created when that line is
-released ([Cutting an app release](#cutting-an-app-release)). It never receives
+released ([Making an app release](#making-an-app-release)). It never receives
 features, only the fixes that prod cannot wait for — see
 [Making a hotfix](#making-a-hotfix). Its tags (`v0.12.2`, `v0.12.3`, …) are what
 prod runs. Once the next minor line is released, the old branch simply stops
-being used.
+being used and can be deleted once the new release has been deployed to production.
 
 So `main` can keep moving during a hackathon while prod stays on the release it
-was installed with, and a fix for prod does not have to wait for whatever else
-is on `main`.
+was installed with, and a hotfix for prod can be done on `release/X.Y`.
 
 A pull request runs the full CI suite, whichever branch it targets: codegen
 drift, lint, version consistency, chart lint, build, tests, and an image build.
@@ -94,8 +93,8 @@ that exists because a `v*` tag built it.
 Nothing merged to `main` can reach prod. It changes only when someone bumps
 `appVersion`, publishes the chart, and installs that chart version.
 
-While a hackathon is running on prod, install nothing there but a hotfix that
-the event needs.
+While a hackathon is running on prod, install nothing there except hotfixes in case
+the event needs them.
 
 ## Three version numbers
 
@@ -134,7 +133,7 @@ Concurrent pull requests both appending under `[Unreleased]` will conflict on
 those lines. The conflict is trivial to resolve — keep both entries — and is the
 price of a file anyone can read without tooling.
 
-## Cutting an app release
+## Making an app release
 
 From an up-to-date, clean `main`:
 
@@ -158,8 +157,8 @@ Pushing the tag builds and pushes `release/backend-service:0.9.0` and
 botched tag is fixed by bumping again, not by re-tagging.
 
 Then [make the release deployable](#making-a-release-deployable). Once that
-chart pull request is merged, create the release branch **from its merge
-commit** — not from the tag, which does not have the chart bump yet. `main` may
+chart pull request is merged, create the release branch from its merge
+commit — not from the tag, which does not have the chart bump yet. `main` may
 have moved on in the meantime, so name the commit:
 
 ```bash
