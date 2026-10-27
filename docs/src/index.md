@@ -4,22 +4,22 @@ Hackagon is the Swiss Data Science Center's platform for running hackathons.
 
 ## What is a hackathon on Hackagon?
 
-On this platform a hackathon is:
+On this platform:
 
-- an **event** that lasts one or several days;
-- **run by** one or several **hackathon owners**;
-- joined by **participants**, whose registrations the owners approve or reject;
-- **public or private**;
-- built around **projects**, which owners add or participants propose, and which
-  the owners approve or reject;
-- worked on in **teams**, which the owners form from the participants'
-  registration answers and their project preferences;
-- handed in as **submissions**: every member of a team can submit, submissions
-  are versioned, and one can be marked as final; other teams can see final
-  submissions;
-- decided by **voting**, which the owners set up in categories: in each category
-  participants either pick one project or spread a budget of points across the
-  projects.
+- A hackathon is an **event** that lasts one or several days.
+- It is **run by** one or several **hackathon owners**.
+- **Participants** join it. The owners approve or reject their registrations.
+- A hackathon is **public or private**.
+- It is built around **projects**. Owners add projects or participants propose
+  them, and the owners approve or reject them.
+- Participants work in **teams**. The owners form the teams from the
+  participants' registration answers and project preferences.
+- Teams hand in **submissions**. Every team member can submit, submissions are
+  versioned, and one can be marked as final. Other teams can see final
+  submissions.
+- **Voting** decides the outcome. The owners set it up in categories. In each
+  category participants either pick one project or spread a budget of points
+  across the projects.
 
 ## Roles
 
@@ -38,11 +38,11 @@ This first version covers hackathon owners and participants.
 
 ## Limitations
 
-- The platform is not a place for data and code to live;
+- The platform is not a place for data and code to live.
   [Renku](https://renkulab.io/) is one such place.
 - The platform does not organize anything on site. To get help organizing a
   hackathon, email us at
-  [hackathon@datascience.ch](mailto:hackathon@datascience.ch); we offer
+  [hackathon@datascience.ch](mailto:hackathon@datascience.ch). We offer
   different packages.
 
 ```{toctree}
