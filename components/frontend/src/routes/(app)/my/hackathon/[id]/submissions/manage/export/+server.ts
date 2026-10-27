@@ -69,7 +69,7 @@ export const GET: RequestHandler = async (event) => {
 
   const overview = submissionOverview(
     teams,
-    await submissionsByTeam(team, teams),
+    await submissionsByTeam(team, h.id),
     new Map(h.projects.map((p) => [p.id, p.title])),
     namesByUserId(h.members, h.owners),
   )

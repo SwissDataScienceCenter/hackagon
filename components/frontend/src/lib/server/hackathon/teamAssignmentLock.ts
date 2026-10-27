@@ -32,26 +32,22 @@ import { enabledCapabilities } from "./phaseForm"
  */
 export async function assignmentLockReasons(
   team: TeamServiceClient,
-  teamIds: readonly string[],
+  hackathonId: string,
   state: HackathonState | undefined,
 ): Promise<string[]> {
   const published = enabledCapabilities(state).includes(
     Capability.CAPABILITY_VIEW_TEAMS,
   )
 
-  // `TeamService.List` does not load submissions, so each team is asked. A
-  // refusal or failure counts as "cannot tell", which locks: unlocking wrongly
-  // can delete a submission, locking wrongly costs a reload.
+  // Every team's submissions in one hackathon-scoped call, not only those on
+  // approved projects: a submission anywhere in the hackathon is one a save
+  // could take with it. A refusal or failure counts as "cannot tell", which
+  // locks: unlocking wrongly can delete a submission, locking wrongly costs a
+  // reload.
   let submissions: number | null = 0
   try {
-    const counts = await Promise.all(
-      teamIds.map(async (teamId) => {
-        const { submissions } = await team.listSubmissions({ teamId })
-
-        return submissions.length
-      }),
-    )
-    submissions = counts.reduce((n, c) => n + c, 0)
+    submissions = (await team.listSubmissions({ hackathonId })).submissions
+      .length
   } catch {
     submissions = null
   }
