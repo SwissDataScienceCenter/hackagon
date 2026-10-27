@@ -149,13 +149,19 @@ describe("submissionVersions", () => {
     expect(r.latest?.finalizedBy).toBeUndefined()
   })
 
+  it("carries the proto's result through as the repository URL", () => {
+    const r = submissionVersions([sub({ version: 1 })], names)
+
+    expect(r.latest?.repositoryUrl).toBe("result-v1")
+  })
+
   it("carries an absent result through as undefined", () => {
     const r = submissionVersions(
       [sub({ version: 1, result: undefined })],
       names,
     )
 
-    expect(r.latest?.result).toBeUndefined()
+    expect(r.latest?.repositoryUrl).toBeUndefined()
   })
 })
 
