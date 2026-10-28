@@ -48,9 +48,8 @@ func (s *VoteService) ListVoteCategories(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	// Reading results needs the categories to know which results to fetch, and
-	// results are usually published after voting has closed — so a member who
-	// may read results may list categories too, even without vote_category:read.
+	// Results are fetched per category, so anyone who may read results must
+	// also be able to list the categories, even once voting is off.
 	canReadCategories, err := s.enforcer.Enforce(
 		ctx,
 		hackathonID.String(),
