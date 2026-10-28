@@ -47,11 +47,25 @@ export const load: PageServerLoad = async (event) => {
   // Every category, including ranked and jury ones the booth cannot cast a
   // vote for — results are results however they were produced, and a category
   // decided elsewhere (a jury meeting off the platform, say) still deserves to
-  // show its podium. Reading a result needs only `vote_result:read`, which the
-  // capability grants to every member.
-  const { voteCategories } = await vote.listVoteCategories({
-    hackathonId: event.params.id,
-  })
+  // show its podium. Listing categories takes `vote_category:read` *or*
+  // `vote_result:read`, and the capability grants the latter to every member,
+  // so this works after voting has closed.
+  //
+  // The catch is a guard, same as the per-category one below: a refusal here
+  // once took the whole page down with a 500. Losing the podiums still leaves
+  // the entries directory.
+  let voteCategories: Awaited<
+    ReturnType<typeof vote.listVoteCategories>
+  >["voteCategories"] = []
+  try {
+    ;({ voteCategories } = await vote.listVoteCategories({
+      hackathonId: event.params.id,
+    }))
+  } catch (e) {
+    if (!(e instanceof ClientError && e.code === Status.PERMISSION_DENIED)) {
+      throw e
+    }
+  }
 
   const categories = await Promise.all(
     voteCategories.map(async (c) => {
