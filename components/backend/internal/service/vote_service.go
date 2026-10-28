@@ -48,13 +48,29 @@ func (s *VoteService) ListVoteCategories(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(
+	// Reading results needs the categories to know which results to fetch, and
+	// results are usually published after voting has closed — so a member who
+	// may read results may list categories too, even without vote_category:read.
+	canReadCategories, err := s.enforcer.Enforce(
 		ctx,
 		hackathonID.String(),
 		m.VoteCategory,
 		m.Read,
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		slog.Error("enforce list vote categories", "err", err)
+
+		return nil, status.Error(codes.Internal, "authorization error")
+	}
+	if !canReadCategories {
+		if err := s.enforcer.RequirePermission(
+			ctx,
+			hackathonID.String(),
+			m.VoteResult,
+			m.Read,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	categories, err := s.dbClient.VoteCategory.Query().
