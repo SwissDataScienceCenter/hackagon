@@ -165,11 +165,13 @@ These hold across the whole codebase; the skills explain the mechanisms.
   image tag, so `just version::check` (a CI stage) fails where these disagree.
   The frontend reads `VERSION` at build time (`vite.config.ts` → `$lib/version`
   → the footer) and displays it.
-- **`main` is the only long-lived branch, and merging to it deploys to dev.**
-  One focused pull request per change, each carrying its manually added
-  `CHANGELOG.md` entry. Both clusters install the same chart from the GitOps
-  setup in `sdsc-ordes/cloud-infra` and differ only in image overrides: **dev**
-  runs `temporary/*:latest` with `pullPolicy: Always`, so every push to `main`
+- **`main` is where development happens, and merging to it deploys to dev.** One
+  focused pull request per change, each carrying its manually added
+  `CHANGELOG.md` entry. Each released minor line has a `release/X.Y` branch that
+  takes hotfixes only, released from its own tags and cherry-picked back to
+  `main`. Both clusters install the same chart from the GitOps setup in
+  `sdsc-ordes/cloud-infra` and differ only in image overrides: **dev** runs
+  `temporary/*:latest` with `pullPolicy: Always`, so every push to `main`
   reaches it on the next container restart; **prod** takes the chart defaults,
   `release/*` at `appVersion`, so nothing merged can reach it until someone
   bumps `appVersion` and installs the new chart version. See `RELEASING.md`.
