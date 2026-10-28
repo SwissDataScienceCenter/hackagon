@@ -24,6 +24,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+## [0.12.2](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.12.1...v0.12.2) - 2026-10-28
+
+### Fixed
+
 - Participants can see published results after voting has closed; the results
   page used to fail with an error once an organizer turned voting off.
 
