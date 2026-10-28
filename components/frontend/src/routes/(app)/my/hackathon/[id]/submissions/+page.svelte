@@ -5,7 +5,9 @@
         submissionStatusLabel,
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
-    import { isHttpUrl } from '$lib/utils/url';
+    import { isHttpUrl, isHttpsUrl } from '$lib/utils/url';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -25,23 +27,36 @@
             minute: '2-digit',
         });
     }
+
+    /**
+     * A link from the latest version, to start the next one from — or nothing,
+     * when it is notes from before the backend required https. Prefilling those
+     * would have the form refuse its own starting value.
+     */
+    function prefillLink(value: string | undefined): string {
+        return value && isHttpsUrl(value) ? value : '';
+    }
 </script>
 
-{#snippet resultLine(result: string)}
-    {#if isHttpUrl(result)}
-        <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
-        <a
-            href={result}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="m-0 block text-xs leading-snug break-all text-accent-ink hover:underline"
-        >
-            {result}
-        </a>
-        <!-- eslint-enable svelte/no-navigation-without-resolve -->
-    {:else}
-        <p class="m-0 text-xs leading-snug text-ink-2">{result}</p>
-    {/if}
+{#snippet linkLine(label: string, value: string)}
+    <p class="m-0 text-xs leading-snug">
+        <span class="text-ink-3">{label}:</span>
+        {#if isHttpUrl(value)}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
+            <a
+                href={value}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="break-all text-accent-ink hover:underline"
+            >
+                {value}
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+        {:else}
+            <!-- Notes typed into the link field before it had to be one. -->
+            <span class="break-words text-ink-2">{value}</span>
+        {/if}
+    </p>
 {/snippet}
 
 {#snippet version(v: Version, heading: string)}
@@ -61,12 +76,22 @@
             </span>
         {/if}
         {#if v.repositoryUrl}
-            {@render resultLine(v.repositoryUrl)}
-        {:else}
-            <!-- Said outright: `result` is optional on the backend, and a blank
-                 one would otherwise be indistinguishable from a broken render. -->
+            {@render linkLine('Repository', v.repositoryUrl)}
+        {/if}
+        {#if v.attachmentFolderUrl}
+            {@render linkLine('Attachments', v.attachmentFolderUrl)}
+        {/if}
+        {#if v.description}
+            <div class="min-w-0 text-xs leading-snug text-ink-2">
+                <MarkdownContent content={v.description} />
+            </div>
+        {/if}
+        {#if !v.repositoryUrl && !v.attachmentFolderUrl && !v.description}
+            <!-- Said outright: every field is optional on the backend, and a
+                 blank version would otherwise be indistinguishable from a
+                 broken render. -->
             <p class="m-0 text-xs leading-snug text-ink-3 italic">
-                No link or notes on this version.
+                Nothing filled in on this version.
             </p>
         {/if}
     </div>
@@ -131,29 +156,62 @@
                     <form
                         method="POST"
                         action="?/createSubmission"
-                        class="flex flex-col gap-2 border-t border-line pt-3"
+                        class="flex flex-col gap-3 border-t border-line pt-3"
                         use:enhance={() => {
                             pending = true;
                             return async ({ update }) => {
-                                await update();
+                                // Not reset: the fields start from the latest
+                                // version, and after a save that is what was
+                                // just typed — clearing them would lose it.
+                                await update({ reset: false });
                                 pending = false;
                             };
                         }}
                     >
                         <input type="hidden" name="teamId" value={group.teamId} />
                         <input type="hidden" name="projectId" value={group.projectId} />
-                        <label class="flex flex-col gap-1">
-                            <span class="text-xs text-ink-3">
-                                {group.latest ? 'Submit a new version' : 'Submission link or notes'}
-                            </span>
+                        <span class="text-xs font-semibold text-ink">
+                            {group.latest
+                                ? 'Submit a new version — starts from your latest one'
+                                : 'Submit your work'}
+                        </span>
+                        <!-- None is required on its own; the action refuses only a
+                             version with all three empty. -->
+                        <label class="field-label">
+                            Repository link
                             <input
-                                type="text"
-                                name="result"
-                                required
+                                type="url"
+                                name="repositoryUrl"
+                                maxlength={2048}
+                                value={prefillLink(group.latest?.repositoryUrl)}
                                 placeholder="https://github.com/your-team/your-repo"
                                 class="field h-8 px-2 text-xs"
                             />
                         </label>
+                        <label class="field-label">
+                            Attachments folder link
+                            <input
+                                type="url"
+                                name="attachmentFolderUrl"
+                                maxlength={2048}
+                                value={prefillLink(group.latest?.attachmentFolderUrl)}
+                                placeholder="https://drive.example.org/your-slides-and-data"
+                                class="field h-8 px-2 text-xs"
+                            />
+                        </label>
+                        <div class="field-label">
+                            <label for="submission-description-{group.teamId}">
+                                Description
+                            </label>
+                            <MarkdownEditor
+                                id="submission-description-{group.teamId}"
+                                name="description"
+                                rows={6}
+                                maxlength={10000}
+                                value={group.latest?.description ?? ''}
+                                placeholder="What did you build, and how do the pieces fit together?"
+                            />
+                        </div>
                         <button
                             type="submit"
                             class="btn btn-sm btn-ghost self-start"

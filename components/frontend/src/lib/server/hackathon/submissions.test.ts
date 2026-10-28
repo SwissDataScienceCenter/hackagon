@@ -155,6 +155,24 @@ describe("submissionVersions", () => {
     expect(r.latest?.repositoryUrl).toBe("result-v1")
   })
 
+  it("carries the attachments link and the description through", () => {
+    const r = submissionVersions(
+      [
+        sub({
+          version: 1,
+          attachmentFolderUrl: "https://drive.example.org/floods",
+          description: "Flood maps for **every** canton.",
+        }),
+      ],
+      names,
+    )
+
+    expect(r.latest?.attachmentFolderUrl).toBe(
+      "https://drive.example.org/floods",
+    )
+    expect(r.latest?.description).toBe("Flood maps for **every** canton.")
+  })
+
   it("carries an absent result through as undefined", () => {
     const r = submissionVersions(
       [sub({ version: 1, result: undefined })],
