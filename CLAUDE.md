@@ -71,6 +71,7 @@ docs/                             # user documentation: Sphinx + Markdown (MyST)
 helm-chart/                       # Helm chart; published as an OCI artifact on a v* tag
 CHANGELOG.md                      # user-visible changes; the entry lands in the PR
 RELEASING.md                      # branch model + how a change reaches a cluster
+HOTFIX.md                         # step-by-step protocol for a fix prod cannot wait for
 tools/helm/lint-values.yaml       # throwaway values so the chart can be rendered in CI
 tools/nix/                        # Nix flake + process-compose config (toolchain.nix)
 tools/just/*.just                 # just modules — see Dev commands
@@ -104,6 +105,11 @@ just ci::all                    # everything CI runs, locally
 just version::show              # declared version + what a build stamps in the footer
 just version::check             # fail if a component version has drifted from VERSION
 just version::bump patch|minor|major   # edit VERSION everywhere, commit, annotated tag
+                                       # on release/*: patch only, runs hotfix::check first
+
+just hotfix::start <name> [line]        # hotfix/<name> from the newest release/*, chart bump committed
+just hotfix::check                      # fail unless the release branch is ready for bump patch
+just hotfix::to-main <commit> <name>    # cherry-pick a hotfix onto fix/<name> from main, main's numbers kept
 
 just docs::build                # build the user docs; any Sphinx warning (e.g. a broken link) fails
 just docs::serve [port]         # live preview of the docs while writing, default :8090
