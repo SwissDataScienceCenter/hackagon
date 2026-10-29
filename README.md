@@ -42,7 +42,9 @@ just db::summary
 Recipes are grouped into namespaced modules (`tools/just/*.just`) addressed with
 `::`. Run `just --list` for everything, or `just <module>::help` for a module.
 After changing `*.proto` use `just api-change`; after changing `db/schema/*.go`
-use `just schema-change`; `just changes` will tell you which you need.
+use `just schema-change`; `just changes` will tell you which you need. To start
+over from freshly seeded data — say after switching between `main` and a release
+branch — use `just fresh`.
 
 > Note: `just api-change` depends on `protoc-gen-ts_proto` which is installed by
 > the frontend. You must build the frontend once before calling

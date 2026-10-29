@@ -87,7 +87,8 @@ Recipes are **namespaced modules** (`tools/just/*.just`), addressed with `::`.
 just start              # sync deps + start the whole stack, then attach
 just down               # stop everything
 just api-change         # regen proto stubs, then start   (after *.proto edits)
-just schema-change      # regen ent + Schema.md, then start (after db/schema edits)
+just schema-change      # regen ent + Schema.md, then fresh (after db/schema edits)
+just fresh              # wipe state, start, seed, restart, attach (after switching branches)
 just changes [ref]      # classify a diff and tell you which of the three to run
 
 just codegen::proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)

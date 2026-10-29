@@ -87,12 +87,11 @@ Re-seed when one of these is true:
 How:
 
 ```bash
-# Locally — wipes Postgres and Keycloak state
-just clean::state && just start      # then, in another shell:
-just db::seed
-just deploy::down && just deploy::up # reload the casbin policy, see below
+# Locally — wipes Postgres and Keycloak state, starts, seeds, and restarts the
+# backend so it loads the seeded policy (see below)
+just fresh
 
-# Or all of that at once, regenerating code too
+# The same, regenerating proto and ent code first
 just schema-change
 
 # The dev cluster — backs up, wipes the app database (Keycloak is kept),
@@ -158,10 +157,10 @@ bug in the handler.
 just deploy::down && just deploy::up   # keeps the data, reloads the policy
 ```
 
-This applies to the documented order too
-(`just clean::state && just start && just db::seed`), since the backend is up
-before the seed runs. `just schema-change` restarts the stack after seeding, so
-it needs no manual restart.
+This applies whenever the seed runs against a backend that is already up, as it
+does after `just clean::state && just start && just db::seed`. `just fresh` (and
+`just schema-change`, which ends in it) restarts the stack after seeding, so it
+needs no manual restart.
 
 ## Users
 
