@@ -144,15 +144,8 @@ git reset --hard origin/main
 git tag -d v0.9.0
 ```
 
-If `main` has moved past something you cannot ship and a released version needs
-a fix, branch from the tag rather than from `main`:
-
-```bash
-git switch -c hotfix/thing v0.8.0
-```
-
-Open the pull request against `main` if the fix belongs there too. Create such a
-branch when a fix actually needs one — not in advance.
+A fix prod cannot wait for goes onto this release branch, not through `main` —
+see [HOTFIX.md](HOTFIX.md) for the protocol.
 
 ## Making a release deployable
 
