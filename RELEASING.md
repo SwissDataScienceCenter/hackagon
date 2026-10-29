@@ -178,59 +178,8 @@ git reset --hard origin/main
 git tag -d v0.9.0
 ```
 
-## Making a hotfix
-
-A hotfix goes on the release branch prod runs, never through `main`. Take
-`release/0.12` and a fix that becomes `v0.12.2`:
-
-1. **Branch from the release branch**, not from `main`:
-
-   ```bash
-   git fetch origin
-   git switch -c hotfix/thing origin/release/0.12
-   ```
-
-2. **Fix it, in one pull request into `release/0.12`** — set that as the base;
-   GitHub suggests `main`. The pull request carries:
-   - the fix itself,
-   - its line under `[Unreleased]` → `### Fixed` in `CHANGELOG.md`,
-   - the chart bump for the release it will become: `Chart.yaml` `version` up
-     one patch, `appVersion: "0.12.2"`.
-
-   The chart bump belongs here, not in a pull request afterwards: CI publishes
-   charts only for pushes to `main` and for tags, so on a release branch the
-   chart has to be in the commit that gets tagged.
-
-3. **Release it from the release branch**, once the pull request is merged:
-
-   ```bash
-   git switch release/0.12 && git pull
-   just version::bump patch
-   git show                      # read the release commit before it leaves
-   git push && git push origin v0.12.2
-   ```
-
-   The tag builds `release/*:0.12.2`, then publishes the chart from the tagged
-   commit. Installing that chart version on prod is what ships the fix. A wrong
-   bump is undone as [above](#if-you-bumped-the-wrong-way), resetting to
-   `origin/release/0.12` instead of `origin/main`.
-
-4. **Bring the fix to `main`**, or the next minor release brings the bug back.
-   Cherry-pick the fix commit onto a new branch and open a pull request into
-   `main`:
-
-   ```bash
-   git switch -c fix/thing origin/main
-   git cherry-pick --no-commit <fix commit>
-   git restore --source=origin/main --staged --worktree helm-chart/Chart.yaml
-   git commit
-   ```
-
-   Pick only the fix. The hotfix commit also carries the release's chart bump,
-   which is why `Chart.yaml` is put back to `main`'s before committing; merging
-   the release branch into `main` would bring its release commits and changelog
-   headings as well. `CHANGELOG.md` will conflict: keep the entry, under
-   `main`'s own `[Unreleased]`.
+A fix prod cannot wait for goes onto this release branch, not through `main` —
+see [HOTFIX.md](HOTFIX.md) for the protocol.
 
 ## Making a release deployable
 
