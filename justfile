@@ -38,13 +38,44 @@ start *args:
     #!/usr/bin/env bash
     set -eu
     just deploy::down 2>/dev/null || true
-    echo "==> Syncing Go modules..."
-    (cd components/backend && GOWORK=off go mod tidy)
-    echo "==> Syncing frontend deps..."
-    (cd components/frontend && pnpm install --frozen-lockfile)
-    echo "==> Ensuring go.work is up to date..."
-    just _setup
+    just _sync-deps
     just deploy::up "$@"
+    just deploy::attach
+
+# Start over from an empty database: sync deps, wipe Postgres + Keycloak, start,
+# seed, and restart so the backend loads the seeded roles. Use after switching
+# to a branch with a different DB schema (main <-> release/X.Y): migrations only
+# ever add, so a database another branch migrated can break this one.
+[group('general')]
+fresh:
+    #!/usr/bin/env bash
+    set -eu
+
+    echo "==> Wiping Postgres + Keycloak state..."
+    just clean::state
+
+    just _sync-deps
+
+    echo "==> Starting services..."
+    just deploy::up
+
+    echo "==> Waiting for Postgres to be ready..."
+    until pg_isready -h 127.0.0.1 -p 5432 -U postgres 2>/dev/null; do
+        echo "    Postgres not ready yet, waiting..."
+        sleep 2
+    done
+    echo "    Postgres ready."
+
+    echo "==> Seeding database..."
+    just db::seed
+
+    # The backend loads its casbin policy once at startup, so it has not seen
+    # the roles the seed just wrote. See cmd/seed/README.md.
+    echo "==> Restarting services so the backend loads the seeded policy..."
+    just deploy::down
+    just deploy::up
+
+    echo "==> Done! Attaching to TUI..."
     just deploy::attach
 
 # Regenerate proto stubs then start. Use after changing *.proto files.
@@ -81,11 +112,11 @@ changes ref="HEAD~1":
     fi
     if echo "$changed" | grep -qE 'cmd/seed/'; then
         echo ""
-        echo "  Seed script changed — if dev data needs refreshing: just schema-change"
+        echo "  Seed script changed — if dev data needs refreshing: just fresh"
     fi
 
 
-# Handle a DB schema change: regenerate proto + ent, wipe state, restart and reseed.
+# Handle a DB schema change: regenerate proto + ent, then start over with 'just fresh'.
 # Run after changing db/schema/*.go (also safe to run after *.proto changes).
 [group('general')]
 schema-change:
@@ -101,30 +132,7 @@ schema-change:
     echo "==> Regenerating Ent ORM code..."
     just codegen::db-schema
 
-    echo "==> Wiping Postgres + Keycloak state..."
-    just clean::state
-
-    echo "==> Starting services..."
-    just deploy::up
-
-    echo "==> Waiting for Postgres to be ready..."
-    until pg_isready -h 127.0.0.1 -p 5432 -U postgres 2>/dev/null; do
-        echo "    Postgres not ready yet, waiting..."
-        sleep 2
-    done
-    echo "    Postgres ready."
-
-    echo "==> Seeding database..."
-    just db::seed
-
-    # The backend loads its casbin policy once at startup, so it has not seen
-    # the roles the seed just wrote. See cmd/seed/README.md.
-    echo "==> Restarting services so the backend loads the seeded policy..."
-    just deploy::down
-    just deploy::up
-
-    echo "==> Done! Attaching to TUI..."
-    just deploy::attach
+    just fresh
 
 # ─── Development ─────────────────────────────────────────────────────
 
@@ -182,3 +190,15 @@ quitsh-nocd *args:
 [private]
 _setup *args:
     just quitsh setup "$@"
+
+# Bring Go modules, frontend deps and go.work in line with the checkout.
+[private]
+_sync-deps:
+    #!/usr/bin/env bash
+    set -eu
+    echo "==> Syncing Go modules..."
+    (cd components/backend && GOWORK=off go mod tidy)
+    echo "==> Syncing frontend deps..."
+    (cd components/frontend && pnpm install --frozen-lockfile)
+    echo "==> Ensuring go.work is up to date..."
+    just _setup
