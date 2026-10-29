@@ -370,6 +370,55 @@ var _ = Describe("VoteService", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.GetVoteCategories()).To(BeEmpty())
 			})
+
+			Context("as a member", func() {
+				var memberCtx context.Context
+				BeforeEach(func() {
+					createVoteCategory(
+						hackathonID,
+						"Best",
+						voteEntities.VotingMethod_VOTING_METHOD_SINGLE_CHOICE,
+						voteEntities.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
+						nil,
+					)
+					_, kc := createAndJoin(hackathonID, "member")
+					memberCtx = metadata.NewOutgoingContext(
+						context.Background(),
+						metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(kc)),
+					)
+				})
+
+				It("lists categories while voting is enabled", func() {
+					setCapabilities(hackathonID, hackathonEntities.Capability_CAPABILITY_VOTE)
+					resp, err := voteClient.ListVoteCategories(
+						memberCtx,
+						&voteMsgs.ListVoteCategoriesRequest{HackathonId: hackathonID},
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.GetVoteCategories()).To(HaveLen(1))
+				})
+
+				It("lists categories when only results are visible", func() {
+					setCapabilities(
+						hackathonID,
+						hackathonEntities.Capability_CAPABILITY_VIEW_RESULTS,
+					)
+					resp, err := voteClient.ListVoteCategories(
+						memberCtx,
+						&voteMsgs.ListVoteCategoriesRequest{HackathonId: hackathonID},
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.GetVoteCategories()).To(HaveLen(1))
+				})
+
+				It("is denied when neither voting nor results are enabled", func() {
+					_, err := voteClient.ListVoteCategories(
+						memberCtx,
+						&voteMsgs.ListVoteCategoriesRequest{HackathonId: hackathonID},
+					)
+					Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+				})
+			})
 		})
 
 		Describe("EditVoteCategory", func() {
