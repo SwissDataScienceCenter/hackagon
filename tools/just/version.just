@@ -47,6 +47,9 @@ help:
     echo -e "  ${dim}becomes the notes for the version being cut. Write the entry in the${reset}"
     echo -e "  ${dim}pull request that makes the change — see RELEASING.md.${reset}"
     echo ""
+    echo -e "  ${dim}On a release/* branch bump takes patch only, and runs${reset}"
+    echo -e "  ${dim}just hotfix::check first — see HOTFIX.md.${reset}"
+    echo ""
 
 # Print the declared version and the string a build stamps into the footer.
 [group('version')]
@@ -135,6 +138,18 @@ bump part="patch":
         echo "Working tree is not clean — a release commit should carry only the" >&2
         echo "version bump. Commit or stash your changes first." >&2
         exit 1
+    fi
+
+    # A release branch takes patches only, and only once it is ready for one —
+    # above all, with the chart already pointing at the new version, because
+    # there the tag is the only thing that publishes a chart. See HOTFIX.md.
+    branch=$(git -C "{{ root_dir }}" symbolic-ref --short -q HEAD || true)
+    if [[ "$branch" == release/* ]]; then
+        if [ "{{ part }}" != "patch" ]; then
+            echo "$branch takes patch releases only. A {{ part }} release is cut from main." >&2
+            exit 1
+        fi
+        just --justfile "{{ root_dir }}/justfile" hotfix::check
     fi
 
     current=$(tr -d '[:space:]' <"{{ version_file }}")

@@ -145,11 +145,11 @@ psql -h 127.0.0.1 -U postgres -d postgres -c 'DROP DATABASE hackagon_seedtest'
 Table and column names are ent's (`team_submissions`, `vote_category_votes`, …);
 read them from `ent/migrate/schema.go` with grep rather than guessing.
 
-To use the new fixture locally for real: `just clean::state && just start`,
-`just db::seed`, then **restart the backend**
-(`just deploy::down && just deploy::up`) — the running server loaded its casbin
-policy before the seed wrote any, and until it restarts, owners are refused
-their own hackathons.
+To use the new fixture locally for real: `just fresh` — it wipes state, starts,
+seeds, then **restarts the backend**, which matters: the running server loaded
+its casbin policy before the seed wrote any, and until it restarts, owners are
+refused their own hackathons. Seeding by hand means that restart
+(`just deploy::down && just deploy::up`) is yours to do.
 
 On the dev cluster, `just cluster::reseed <context>` backs up, wipes the app
 database, seeds from your checkout and restarts the backend. It refuses unless
