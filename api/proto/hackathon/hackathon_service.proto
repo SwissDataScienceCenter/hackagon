@@ -20,6 +20,8 @@ import "hackathon/messages/hackathon_svc/get_request.proto";
 import "hackathon/messages/hackathon_svc/get_response.proto";
 import "hackathon/messages/hackathon_svc/join_request.proto";
 import "hackathon/messages/hackathon_svc/join_response.proto";
+import "hackathon/messages/hackathon_svc/leave_request.proto";
+import "hackathon/messages/hackathon_svc/leave_response.proto";
 import "hackathon/messages/hackathon_svc/list_invites_request.proto";
 import "hackathon/messages/hackathon_svc/list_invites_response.proto";
 import "hackathon/messages/hackathon_svc/list_participant_answers_request.proto";
@@ -61,6 +63,7 @@ service HackathonService {
   rpc Join(hackathon.messages.hackathon_svc.JoinRequest) returns (hackathon.messages.hackathon_svc.JoinResponse);
   rpc ApproveParticipant(hackathon.messages.hackathon_svc.ApproveParticipantRequest) returns (hackathon.messages.hackathon_svc.ApproveParticipantResponse);
   rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);
+  rpc Leave(hackathon.messages.hackathon_svc.LeaveRequest) returns (hackathon.messages.hackathon_svc.LeaveResponse);
   rpc AddOwner(hackathon.messages.hackathon_svc.AddOwnerRequest) returns (hackathon.messages.hackathon_svc.AddOwnerResponse);
   rpc RemoveOwner(hackathon.messages.hackathon_svc.RemoveOwnerRequest) returns (hackathon.messages.hackathon_svc.RemoveOwnerResponse);
   // Registration questions
