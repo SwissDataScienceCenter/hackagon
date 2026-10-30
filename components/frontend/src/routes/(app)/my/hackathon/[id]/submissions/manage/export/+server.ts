@@ -93,7 +93,7 @@ export const GET: RequestHandler = async (event) => {
       finalizedAt: entry?.finalizedAt,
       finalizedBy: entry?.finalizedBy,
       newerDraft,
-      result: entry?.result,
+      repositoryUrl: entry?.repositoryUrl,
     }
   })
 

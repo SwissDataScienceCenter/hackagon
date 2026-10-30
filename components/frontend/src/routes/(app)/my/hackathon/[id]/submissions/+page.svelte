@@ -60,8 +60,8 @@
                 Finalized {formatDate(v.finalizedAt)}{#if v.finalizedBy} by {v.finalizedBy}{/if}
             </span>
         {/if}
-        {#if v.result}
-            {@render resultLine(v.result)}
+        {#if v.repositoryUrl}
+            {@render resultLine(v.repositoryUrl)}
         {:else}
             <!-- Said outright: `result` is optional on the backend, and a blank
                  one would otherwise be indistinguishable from a broken render. -->

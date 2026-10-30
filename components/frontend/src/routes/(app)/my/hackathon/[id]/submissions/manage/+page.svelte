@@ -298,7 +298,7 @@
 
                         {#if entry}
                             <div class="flex flex-col gap-1 border-t border-line pt-2">
-                                {@render resultLine(entry.result)}
+                                {@render resultLine(entry.repositoryUrl)}
                                 {@render versionMeta(entry)}
                             </div>
                         {/if}
@@ -311,7 +311,7 @@
                                 <span class="text-xs font-semibold text-warning-ink">
                                     Newer draft, not finalized
                                 </span>
-                                {@render resultLine(row.latest.result)}
+                                {@render resultLine(row.latest.repositoryUrl)}
                                 {@render versionMeta(row.latest)}
                             </div>
                         {/if}
@@ -329,7 +329,7 @@
                                             <span class="text-xs text-ink-2">
                                                 {submissionStatusLabel(v.status) ?? 'Unknown'}
                                             </span>
-                                            {@render resultLine(v.result)}
+                                            {@render resultLine(v.repositoryUrl)}
                                             {@render versionMeta(v)}
                                         </div>
                                     {/each}

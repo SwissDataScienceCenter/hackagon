@@ -23,7 +23,7 @@ export interface SubmissionCsvRow {
   finalizedBy: string | undefined
   /** A draft newer than the final entry, which does not count unless finalized. */
   newerDraft: number | undefined
-  result: string | undefined
+  repositoryUrl: string | undefined
 }
 
 /**
@@ -74,7 +74,7 @@ export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
           sheetTime(r.finalizedAt),
           r.finalizedBy ?? "",
           num(r.newerDraft),
-          r.result ?? "",
+          r.repositoryUrl ?? "",
         ]),
       )
       .join("")

@@ -17,7 +17,7 @@
     // over a plain object, already narrowed to the one version that counts.
     type FinalEntry = {
         version: number;
-        result?: string;
+        repositoryUrl?: string;
         finalizedAt?: Date;
         finalizedBy?: string;
     };
@@ -184,21 +184,21 @@
                         <span class="text-xs text-ink-3">version {entry.version}</span>
                     </div>
 
-                    {#if entry.result}
-                        {#if isHttpUrl(entry.result)}
+                    {#if entry.repositoryUrl}
+                        {#if isHttpUrl(entry.repositoryUrl)}
                             <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
                             <a
-                                href={entry.result}
+                                href={entry.repositoryUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="m-0 block break-all text-xs leading-snug
                                        text-accent-ink hover:underline"
                             >
-                                {entry.result}
+                                {entry.repositoryUrl}
                             </a>
                             <!-- eslint-enable svelte/no-navigation-without-resolve -->
                         {:else}
-                            <p class="m-0 text-xs leading-snug text-ink-2">{entry.result}</p>
+                            <p class="m-0 text-xs leading-snug text-ink-2">{entry.repositoryUrl}</p>
                         {/if}
                     {:else}
                         <p class="m-0 text-xs italic leading-snug text-ink-3">

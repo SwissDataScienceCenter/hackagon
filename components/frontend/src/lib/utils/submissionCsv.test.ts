@@ -17,7 +17,7 @@ const row = (over: Partial<SubmissionCsvRow> = {}): SubmissionCsvRow => ({
   finalizedAt: new Date("2026-08-02T09:00:00Z"),
   finalizedBy: "Alice",
   newerDraft: undefined,
-  result: "https://github.com/byte-me/floods",
+  repositoryUrl: "https://github.com/byte-me/floods",
   ...over,
 })
 
@@ -67,7 +67,7 @@ describe("submissionCsv", () => {
           submittedBy: undefined,
           finalizedAt: undefined,
           finalizedBy: undefined,
-          result: undefined,
+          repositoryUrl: undefined,
         }),
       ]),
     )
@@ -92,7 +92,7 @@ describe("submissionCsv", () => {
 
   it("survives notes holding commas, quotes and line breaks", () => {
     const result = 'Repo is "private", ask us\nDemo on Friday'
-    const parsed = parseCsv(submissionCsv([row({ result })]))
+    const parsed = parseCsv(submissionCsv([row({ repositoryUrl: result })]))
 
     expect(parsed).toHaveLength(2)
     expect(parsed[1]?.[10]).toBe(result)

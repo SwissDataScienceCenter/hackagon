@@ -82,7 +82,7 @@ export interface BallotSubmission {
   teamId: string
   teamName: string
   projectTitle: string
-  result: string | undefined
+  repositoryUrl: string | undefined
   /** True when the viewer is on the team that filed it. */
   isOwnTeam: boolean
 }
@@ -171,7 +171,7 @@ export async function ballotSubmissions(
         teamId: t.id,
         teamName: t.name,
         projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        result: latestFinal.result,
+        repositoryUrl: latestFinal.repositoryUrl,
         // SubmitVote refuses a vote on a submission by a team you are on
         // (`vote_service.go:588`), so the booth needs this per submission to
         // leave those off the ballot rather than let someone pick one and take
