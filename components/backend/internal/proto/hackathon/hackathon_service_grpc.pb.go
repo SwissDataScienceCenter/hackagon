@@ -33,6 +33,7 @@ const (
 	HackathonService_Join_FullMethodName                   = "/hackathon.HackathonService/Join"
 	HackathonService_ApproveParticipant_FullMethodName     = "/hackathon.HackathonService/ApproveParticipant"
 	HackathonService_RemoveParticipant_FullMethodName      = "/hackathon.HackathonService/RemoveParticipant"
+	HackathonService_Leave_FullMethodName                  = "/hackathon.HackathonService/Leave"
 	HackathonService_AddOwner_FullMethodName               = "/hackathon.HackathonService/AddOwner"
 	HackathonService_RemoveOwner_FullMethodName            = "/hackathon.HackathonService/RemoveOwner"
 	HackathonService_CreateQuestion_FullMethodName         = "/hackathon.HackathonService/CreateQuestion"
@@ -60,6 +61,7 @@ type HackathonServiceClient interface {
 	Join(ctx context.Context, in *hackathon_svc.JoinRequest, opts ...grpc.CallOption) (*hackathon_svc.JoinResponse, error)
 	ApproveParticipant(ctx context.Context, in *hackathon_svc.ApproveParticipantRequest, opts ...grpc.CallOption) (*hackathon_svc.ApproveParticipantResponse, error)
 	RemoveParticipant(ctx context.Context, in *hackathon_svc.RemoveParticipantRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveParticipantResponse, error)
+	Leave(ctx context.Context, in *hackathon_svc.LeaveRequest, opts ...grpc.CallOption) (*hackathon_svc.LeaveResponse, error)
 	AddOwner(ctx context.Context, in *hackathon_svc.AddOwnerRequest, opts ...grpc.CallOption) (*hackathon_svc.AddOwnerResponse, error)
 	RemoveOwner(ctx context.Context, in *hackathon_svc.RemoveOwnerRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveOwnerResponse, error)
 	// Registration questions
@@ -209,6 +211,16 @@ func (c *hackathonServiceClient) RemoveParticipant(ctx context.Context, in *hack
 	return out, nil
 }
 
+func (c *hackathonServiceClient) Leave(ctx context.Context, in *hackathon_svc.LeaveRequest, opts ...grpc.CallOption) (*hackathon_svc.LeaveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.LeaveResponse)
+	err := c.cc.Invoke(ctx, HackathonService_Leave_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *hackathonServiceClient) AddOwner(ctx context.Context, in *hackathon_svc.AddOwnerRequest, opts ...grpc.CallOption) (*hackathon_svc.AddOwnerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(hackathon_svc.AddOwnerResponse)
@@ -306,6 +318,7 @@ type HackathonServiceServer interface {
 	Join(context.Context, *hackathon_svc.JoinRequest) (*hackathon_svc.JoinResponse, error)
 	ApproveParticipant(context.Context, *hackathon_svc.ApproveParticipantRequest) (*hackathon_svc.ApproveParticipantResponse, error)
 	RemoveParticipant(context.Context, *hackathon_svc.RemoveParticipantRequest) (*hackathon_svc.RemoveParticipantResponse, error)
+	Leave(context.Context, *hackathon_svc.LeaveRequest) (*hackathon_svc.LeaveResponse, error)
 	AddOwner(context.Context, *hackathon_svc.AddOwnerRequest) (*hackathon_svc.AddOwnerResponse, error)
 	RemoveOwner(context.Context, *hackathon_svc.RemoveOwnerRequest) (*hackathon_svc.RemoveOwnerResponse, error)
 	// Registration questions
@@ -363,6 +376,9 @@ func (UnimplementedHackathonServiceServer) ApproveParticipant(context.Context, *
 }
 func (UnimplementedHackathonServiceServer) RemoveParticipant(context.Context, *hackathon_svc.RemoveParticipantRequest) (*hackathon_svc.RemoveParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveParticipant not implemented")
+}
+func (UnimplementedHackathonServiceServer) Leave(context.Context, *hackathon_svc.LeaveRequest) (*hackathon_svc.LeaveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Leave not implemented")
 }
 func (UnimplementedHackathonServiceServer) AddOwner(context.Context, *hackathon_svc.AddOwnerRequest) (*hackathon_svc.AddOwnerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddOwner not implemented")
@@ -643,6 +659,24 @@ func _HackathonService_RemoveParticipant_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HackathonService_Leave_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.LeaveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).Leave(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_Leave_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).Leave(ctx, req.(*hackathon_svc.LeaveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HackathonService_AddOwner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(hackathon_svc.AddOwnerRequest)
 	if err := dec(in); err != nil {
@@ -845,6 +879,10 @@ var HackathonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveParticipant",
 			Handler:    _HackathonService_RemoveParticipant_Handler,
+		},
+		{
+			MethodName: "Leave",
+			Handler:    _HackathonService_Leave_Handler,
 		},
 		{
 			MethodName: "AddOwner",

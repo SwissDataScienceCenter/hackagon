@@ -13,7 +13,9 @@ import (
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
+	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
+	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
@@ -729,68 +731,13 @@ func (s *HackathonService) ApproveParticipant(
 	ctx context.Context,
 	req *msgs.ApproveParticipantRequest,
 ) (*msgs.ApproveParticipantResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	id, user, err := s.participantToManage(ctx, req.GetHackathonId(), req.GetUserId())
 	if err != nil {
 		return nil, err
-	}
-
-	// Reject anonymous users
-	if uid == mw.AnonSubject {
-		return nil, status.Error(
-			codes.Unauthenticated,
-			"anonymous users cannot remove participants",
-		)
-	}
-
-	id, err := uuid.Parse(req.GetHackathonId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
-	}
-
-	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
-		return nil, err
-	}
-
-	// Verify hackathon exists
-	userId, err := uuid.Parse(req.GetUserId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
-	}
-	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).WithParticipants(
-		func(pq *ent.ParticipantQuery) {
-			pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
-		},
-	).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
-	}
-	if len(h.Edges.Participants) == 0 {
-		return nil, status.Errorf(codes.NotFound, "Participant %s not found", userId)
-	}
-
-	// Find the user to approve
-	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
-		}
-		slog.Error("query user to approve", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// The same confirmation a private hackathon does for itself in `Join`.
-	if err := s.grantMembership(ctx, h.ID, user); err != nil {
+	if err := s.grantMembership(ctx, id, user); err != nil {
 		return nil, err
 	}
 
@@ -801,17 +748,89 @@ func (s *HackathonService) RemoveParticipant(
 	ctx context.Context,
 	req *msgs.RemoveParticipantRequest,
 ) (*msgs.RemoveParticipantResponse, error) {
+	id, user, err := s.participantToManage(ctx, req.GetHackathonId(), req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.removeParticipant(ctx, id, user); err != nil {
+		return nil, err
+	}
+
+	return &msgs.RemoveParticipantResponse{}, nil
+}
+
+// participantToManage checks that the caller is allowed to manage this
+// hackathon's participants, then returns the participant they want to act on.
+// It returns NotFound if that user hasn't joined the hackathon.
+func (s *HackathonService) participantToManage(
+	ctx context.Context,
+	hackathonID, userID string,
+) (hackathon uuid.UUID, participant *ent.User, err error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return uuid.Nil, nil, err
+	}
+
+	if uid == mw.AnonSubject {
+		return uuid.Nil, nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot manage participants",
+		)
+	}
+
+	id, err := uuid.Parse(hackathonID)
+	if err != nil {
+		return uuid.Nil, nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Write on the hackathon: owners and organizers only.
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+		return uuid.Nil, nil, err
+	}
+
+	uID, err := uuid.Parse(userID)
+	if err != nil {
+		return uuid.Nil, nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).
+		WithParticipants(
+			func(pq *ent.ParticipantQuery) {
+				pq.Where(entparticipant.UserIDEQ(uID)).WithUser()
+			},
+		).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.Nil, nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				hackathonID,
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return uuid.Nil, nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if len(h.Edges.Participants) == 0 {
+		return uuid.Nil, nil, status.Errorf(codes.NotFound, "Participant %s not found", uID)
+	}
+
+	return h.ID, h.Edges.Participants[0].Edges.User, nil
+}
+
+// Leave removes the caller from a hackathon, whether they were confirmed or
+// still waitlisted.
+func (s *HackathonService) Leave(
+	ctx context.Context,
+	req *msgs.LeaveRequest,
+) (*msgs.LeaveResponse, error) {
 	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Reject anonymous users
 	if uid == mw.AnonSubject {
-		return nil, status.Error(
-			codes.Unauthenticated,
-			"anonymous users cannot remove participants",
-		)
+		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot leave hackathons")
 	}
 
 	id, err := uuid.Parse(req.GetHackathonId())
@@ -819,22 +838,7 @@ func (s *HackathonService) RemoveParticipant(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	// Check Write permission on hackathon (owners/organizers only)
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
-		return nil, err
-	}
-
-	// Verify hackathon exists
-	userId, err := uuid.Parse(req.GetUserId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
-	}
-	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).
-		WithParticipants(
-			func(pq *ent.ParticipantQuery) {
-				pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
-			},
-		).Only(ctx)
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -847,72 +851,165 @@ func (s *HackathonService) RemoveParticipant(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	if len(h.Edges.Participants) == 0 {
-		return nil, status.Errorf(codes.NotFound, "Participant %s not found", userId)
+
+	// Once it is over, the roster, teams and results are the record of the event.
+	if hackathonFinished(h) {
+		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 
-	// Find the user to remove
-	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+			return nil, status.Errorf(codes.NotFound, "user %s not found", uid)
 		}
-		slog.Error("query user to remove", "err", err)
+		slog.Error("query user", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// We remove the role first because casbin and the DB cannot share a transaction.
-	// If the DB step fails, the person still shows on the roster and Remove can be
-	// clicked again. Calling RemoveRole has no effect when the role is already gone.
-	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
-		slog.Error("remove hackathon member", "err", err)
+	isParticipant, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(id),
+		entparticipant.UserID(user.ID),
+	).Exist(ctx)
+	if err != nil {
+		slog.Error("check existing participant", "err", err)
 
-		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon member permission")
+		return nil, status.Error(codes.Internal, "couldn't check participant status")
+	}
+	if !isParticipant {
+		return nil, status.Errorf(codes.NotFound, "not a participant of hackathon %s", id)
 	}
 
-	// Delete the participant and their answers to this hackathon's questions.
+	// There is no casbin check because the only user this can remove is the caller,
+	// and their participant row is what proves they are in. A `Member` policy would
+	// refuse waitlisted users (no role yet) and owners holding no `Member` row.
+	if err := s.removeParticipant(ctx, id, user); err != nil {
+		return nil, err
+	}
+
+	return &msgs.LeaveResponse{}, nil
+}
+
+// removeParticipant takes `user` out of a hackathon and everything their
+// participation gave them in it: the hackathon `Member` role, their team
+// memberships and team roles, the `Owner` role on projects they proposed,
+// their project preferences and their answers. The projects stay, as well
+// as votes and submissions, which belong to the team.
+func (s *HackathonService) removeParticipant(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	user *ent.User,
+) error {
+	inHackathon := entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID))
+	isUser := entuser.IDEQ(user.ID)
+
+	teamIDs, err := s.dbClient.Team.Query().
+		Where(entteam.HasProjectWith(inHackathon), entteam.HasMembersWith(isUser)).
+		IDs(ctx)
+	if err != nil {
+		slog.Error("query participant teams", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+
+	proposedIDs, err := s.dbClient.Project.Query().
+		Where(inHackathon, entproject.HasCreatorWith(isUser)).
+		IDs(ctx)
+	if err != nil {
+		slog.Error("query participant projects", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+
+	preferredIDs, err := s.dbClient.Project.Query().
+		Where(inHackathon, entproject.HasPreferredByUsersWith(isUser)).
+		IDs(ctx)
+	if err != nil {
+		slog.Error("query participant preferences", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+
+	hID := hackathonID.String()
+
+	// We remove the role first because casbin and the DB cannot share a transaction.
+	// If a later step fails, the person still shows on the roster and Remove can be
+	// repeated. Calling RemoveRole has no effect when the role is already gone.
+	if _, e := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, hID); e != nil {
+		slog.Error("remove hackathon member", "err", e)
+
+		return status.Error(codes.Internal, "couldn't remove hackathon member permission")
+	}
+	for _, teamID := range teamIDs {
+		if _, e := s.enforcer.RemoveRole(
+			user.KeycloakID, mw.Member, hID, mw.WithTeam(teamID.String()),
+		); e != nil {
+			slog.Error("remove team member", "err", e)
+
+			return status.Error(codes.Internal, "couldn't remove team member permission")
+		}
+	}
+	for _, projectID := range proposedIDs {
+		if _, e := s.enforcer.RemoveRole(
+			user.KeycloakID, mw.Owner, hID, mw.WithProject(projectID.String()),
+		); e != nil {
+			slog.Error("remove project owner", "err", e)
+
+			return status.Error(codes.Internal, "couldn't remove project owner permission")
+		}
+	}
+
 	tx, err := s.dbClient.Tx(ctx)
 	if err != nil {
 		slog.Error("start transaction", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't start transaction")
+		return status.Error(codes.Internal, "couldn't start transaction")
 	}
 
 	_, err = tx.Participant.Delete().
 		Where(
-			entparticipant.HackathonIDEQ(id),
+			entparticipant.HackathonIDEQ(hackathonID),
 			entparticipant.UserID(user.ID),
 		).
 		Exec(ctx)
-
 	if err != nil {
 		_ = tx.Rollback()
 		slog.Error("delete participant", "err", err)
 
-		return nil, status.Errorf(codes.Internal, "couldn't remove participant")
+		return status.Error(codes.Internal, "couldn't remove participant")
 	}
 
 	_, err = tx.Answer.Delete().
 		Where(
 			entanswer.UserID(user.ID),
-			entanswer.HasQuestionWith(entquestion.HackathonID(id)),
+			entanswer.HasQuestionWith(entquestion.HackathonID(hackathonID)),
 		).
 		Exec(ctx)
 	if err != nil {
 		_ = tx.Rollback()
 		slog.Error("delete participant answers", "err", err)
 
-		return nil, status.Errorf(codes.Internal, "couldn't remove participant answers")
+		return status.Error(codes.Internal, "couldn't remove participant answers")
+	}
+
+	err = tx.User.UpdateOneID(user.ID).
+		RemoveParticipatesInTeamIDs(teamIDs...).
+		RemovePreferredProjectIDs(preferredIDs...).
+		Exec(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		slog.Error("remove participant teams and preferences", "err", err)
+
+		return status.Error(codes.Internal, "couldn't remove participant from teams")
 	}
 
 	if err := tx.Commit(); err != nil {
 		slog.Error("commit transaction", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't commit transaction")
+		return status.Error(codes.Internal, "couldn't commit transaction")
 	}
 
-	return &msgs.RemoveParticipantResponse{}, nil
+	return nil
 }
 
 func (s *HackathonService) Edit(
