@@ -24,6 +24,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   a folder of attachments, alongside the link to their repository. A new version
   starts out filled in from the previous one, so fixing a single link means
   retyping nothing.
+- The Manage Submissions CSV now has an "Attachments" column with each entry's
+  attachments link.
 
 ### Changed
 

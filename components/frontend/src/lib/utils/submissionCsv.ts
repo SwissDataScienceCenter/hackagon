@@ -23,6 +23,7 @@ export interface SubmissionCsvRow {
   finalizedBy: string | undefined
   /** A draft newer than the final entry, which does not count unless finalized. */
   newerDraft: number | undefined
+  attachmentFolderUrl: string | undefined
   repositoryUrl: string | undefined
 }
 
@@ -43,6 +44,9 @@ export function sheetTime(d: Date | undefined): string {
  *
  * `Result` last, because it is the one column that may hold a paragraph of
  * notes rather than a link, and anything after it would sit beyond a tall cell.
+ * `Attachments` sits just before it: always a link, since the backend required
+ * https for it from the start. The description is left out — it is Markdown
+ * meant to be read on the page, not in a cell.
  */
 export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
   const num = (n: number | undefined) => (n === undefined ? "" : String(n))
@@ -59,6 +63,7 @@ export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
       "Finalized (UTC)",
       "Finalized By",
       "Newer Draft",
+      "Attachments",
       "Result",
     ]) +
     rows
@@ -74,6 +79,7 @@ export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
           sheetTime(r.finalizedAt),
           r.finalizedBy ?? "",
           num(r.newerDraft),
+          r.attachmentFolderUrl ?? "",
           r.repositoryUrl ?? "",
         ]),
       )

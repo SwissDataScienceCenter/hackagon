@@ -17,6 +17,7 @@ const row = (over: Partial<SubmissionCsvRow> = {}): SubmissionCsvRow => ({
   finalizedAt: new Date("2026-08-02T09:00:00Z"),
   finalizedBy: "Alice",
   newerDraft: undefined,
+  attachmentFolderUrl: "https://drive.example.org/byte-me",
   repositoryUrl: "https://github.com/byte-me/floods",
   ...over,
 })
@@ -36,6 +37,7 @@ describe("submissionCsv", () => {
       "Finalized (UTC)",
       "Finalized By",
       "Newer Draft",
+      "Attachments",
       "Result",
     ])
     expect(parsed[1]).toEqual([
@@ -49,6 +51,7 @@ describe("submissionCsv", () => {
       "2026-08-02 09:00",
       "Alice",
       "",
+      "https://drive.example.org/byte-me",
       "https://github.com/byte-me/floods",
     ])
   })
@@ -67,6 +70,7 @@ describe("submissionCsv", () => {
           submittedBy: undefined,
           finalizedAt: undefined,
           finalizedBy: undefined,
+          attachmentFolderUrl: undefined,
           repositoryUrl: undefined,
         }),
       ]),
@@ -74,6 +78,7 @@ describe("submissionCsv", () => {
 
     expect(parsed[1]?.slice(3)).toEqual([
       "No submission",
+      "",
       "",
       "",
       "",
@@ -95,7 +100,7 @@ describe("submissionCsv", () => {
     const parsed = parseCsv(submissionCsv([row({ repositoryUrl: result })]))
 
     expect(parsed).toHaveLength(2)
-    expect(parsed[1]?.[10]).toBe(result)
+    expect(parsed[1]?.[11]).toBe(result)
   })
 })
 
