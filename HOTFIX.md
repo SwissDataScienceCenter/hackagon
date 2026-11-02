@@ -11,7 +11,7 @@ Hotfixes are tagged `v0.x.1`, `v0.x.2`, etc.
 
 For each hotfix tag, images are built as `release/backend-service:0.x.1` and
 `release/frontend-service:0.x.1`, etc. Once the images are there, the chart can
-be deployed to prod. Dev gets the fix through `main` (last step).
+be deployed first to dev and then to prod.
 
 ## Order of steps:
 
