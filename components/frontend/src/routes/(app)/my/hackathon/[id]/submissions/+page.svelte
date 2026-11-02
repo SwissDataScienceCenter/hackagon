@@ -5,9 +5,9 @@
         submissionStatusLabel,
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
-    import { isHttpUrl, isHttpsUrl } from '$lib/utils/url';
-    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import { isHttpsUrl } from '$lib/utils/url';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -38,27 +38,6 @@
     }
 </script>
 
-{#snippet linkLine(label: string, value: string)}
-    <p class="m-0 text-xs leading-snug">
-        <span class="text-ink-3">{label}:</span>
-        {#if isHttpUrl(value)}
-            <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
-            <a
-                href={value}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="break-all text-accent-ink hover:underline"
-            >
-                {value}
-            </a>
-            <!-- eslint-enable svelte/no-navigation-without-resolve -->
-        {:else}
-            <!-- Notes typed into the link field before it had to be one. -->
-            <span class="break-words text-ink-2">{value}</span>
-        {/if}
-    </p>
-{/snippet}
-
 {#snippet version(v: Version, heading: string)}
     <div class="flex flex-col gap-1 border-t border-line pt-3">
         <div class="flex flex-wrap items-center gap-2">
@@ -75,25 +54,11 @@
                 Finalized {formatDate(v.finalizedAt)}{#if v.finalizedBy} by {v.finalizedBy}{/if}
             </span>
         {/if}
-        {#if v.repositoryUrl}
-            {@render linkLine('Repository', v.repositoryUrl)}
-        {/if}
-        {#if v.attachmentFolderUrl}
-            {@render linkLine('Attachments', v.attachmentFolderUrl)}
-        {/if}
-        {#if v.description}
-            <div class="min-w-0 text-xs leading-snug text-ink-2">
-                <MarkdownContent content={v.description} />
-            </div>
-        {/if}
-        {#if !v.repositoryUrl && !v.attachmentFolderUrl && !v.description}
-            <!-- Said outright: every field is optional on the backend, and a
-                 blank version would otherwise be indistinguishable from a
-                 broken render. -->
-            <p class="m-0 text-xs leading-snug text-ink-3 italic">
-                Nothing filled in on this version.
-            </p>
-        {/if}
+        <SubmissionContent
+            repositoryUrl={v.repositoryUrl}
+            attachmentFolderUrl={v.attachmentFolderUrl}
+            description={v.description}
+        />
     </div>
 {/snippet}
 
