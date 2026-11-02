@@ -8,11 +8,17 @@
         repositoryUrl,
         attachmentFolderUrl,
         description,
+        collapseDescription = false,
     }: {
         repositoryUrl?: string;
         attachmentFolderUrl?: string;
         /** Markdown, as the team typed it. */
         description?: string;
+        /**
+         * Fold the description behind a "Description" toggle — for a list of
+         * many teams, where one long description would push the rest down.
+         */
+        collapseDescription?: boolean;
     } = $props();
 </script>
 
@@ -50,10 +56,19 @@
 {#if attachmentFolderUrl}
     {@render linkLine('Attachments', attachmentFolderUrl)}
 {/if}
-{#if description}
+{#snippet descriptionBody(content: string)}
     <div class="min-w-0 text-xs leading-snug text-ink-2">
-        <MarkdownContent content={description} />
+        <MarkdownContent {content} />
     </div>
+{/snippet}
+
+{#if description && collapseDescription}
+    <details>
+        <summary class="cursor-pointer text-xs text-ink-3">Description</summary>
+        <div class="mt-1">{@render descriptionBody(description)}</div>
+    </details>
+{:else if description}
+    {@render descriptionBody(description)}
 {/if}
 {#if !repositoryUrl && !attachmentFolderUrl && !description}
     <!-- Said outright: every field is optional on the backend, and a blank

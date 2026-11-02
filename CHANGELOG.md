@@ -26,6 +26,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   retyping nothing.
 - The Manage Submissions CSV now has an "Attachments" column with each entry's
   attachments link.
+- Manage Submissions now shows each version's attachments link and, folded away
+  until opened, its description.
 
 ### Changed
 

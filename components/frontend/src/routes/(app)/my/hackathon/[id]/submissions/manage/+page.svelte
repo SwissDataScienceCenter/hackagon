@@ -16,7 +16,7 @@
         submissionFilterQuery,
         type SubmissionStanding
     } from '$lib/utils/submissionFilter';
-    import { isHttpUrl } from '$lib/utils/url';
+    import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -97,25 +97,15 @@
                 >{:else}{s.text}{/if}{/each}{:else}{text}{/if}
 {/snippet}
 
-{#snippet resultLine(result: string | undefined)}
-    {#if !result}
-        <!-- Said outright: `result` is optional on the backend, and a blank
-             one would otherwise be indistinguishable from a broken render. -->
-        <p class="m-0 text-xs leading-snug text-ink-3 italic">No link or notes.</p>
-    {:else if isHttpUrl(result)}
-        <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
-        <a
-            href={result}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="m-0 block text-xs leading-snug break-all text-accent-ink hover:underline"
-        >
-            {result}
-        </a>
-        <!-- eslint-enable svelte/no-navigation-without-resolve -->
-    {:else}
-        <p class="m-0 text-xs leading-snug break-words text-ink-2">{result}</p>
-    {/if}
+{#snippet content(v: Version)}
+    <!-- Description folded: one long one would push every team below it down
+         a page that exists to scan many teams. -->
+    <SubmissionContent
+        repositoryUrl={v.repositoryUrl}
+        attachmentFolderUrl={v.attachmentFolderUrl}
+        description={v.description}
+        collapseDescription
+    />
 {/snippet}
 
 {#snippet versionMeta(v: Version)}
@@ -298,7 +288,7 @@
 
                         {#if entry}
                             <div class="flex flex-col gap-1 border-t border-line pt-2">
-                                {@render resultLine(entry.repositoryUrl)}
+                                {@render content(entry)}
                                 {@render versionMeta(entry)}
                             </div>
                         {/if}
@@ -311,7 +301,7 @@
                                 <span class="text-xs font-semibold text-warning-ink">
                                     Newer draft, not finalized
                                 </span>
-                                {@render resultLine(row.latest.repositoryUrl)}
+                                {@render content(row.latest)}
                                 {@render versionMeta(row.latest)}
                             </div>
                         {/if}
@@ -329,7 +319,7 @@
                                             <span class="text-xs text-ink-2">
                                                 {submissionStatusLabel(v.status) ?? 'Unknown'}
                                             </span>
-                                            {@render resultLine(v.repositoryUrl)}
+                                            {@render content(v)}
                                             {@render versionMeta(v)}
                                         </div>
                                     {/each}

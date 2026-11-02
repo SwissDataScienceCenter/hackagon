@@ -38,6 +38,18 @@ describe("SubmissionContent", () => {
     expect(screen.getByText("Nothing filled in on this version.")).toBeTruthy()
   })
 
+  it("folds the description behind a toggle when asked to", () => {
+    render(SubmissionContent, {
+      description: "We built **flood maps**.",
+      collapseDescription: true,
+    })
+
+    const details = screen.getByText("flood maps").closest("details")
+    expect(details).not.toBeNull()
+    expect(details?.open).toBe(false)
+    expect(screen.getByText("Description").tagName).toBe("SUMMARY")
+  })
+
   it("does not say so when only the description is filled in", () => {
     render(SubmissionContent, { description: "Just notes" })
 
