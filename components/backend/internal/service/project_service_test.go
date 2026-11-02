@@ -45,6 +45,60 @@ var _ = Describe("ProjectService", func() {
 		hackathonClient = hackathonSvc.NewHackathonServiceClient(conn)
 	})
 
+	adminContext := func() context.Context {
+		return metadata.NewOutgoingContext(
+			context.Background(),
+			metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(testAdmin)),
+		)
+	}
+
+	// proposeAsMember makes keycloakID an approved member of the hackathon and
+	// has them propose a project, returning their context and the project id.
+	// The proposer then holds only the project-scoped Owner role, not the
+	// hackathon's, which is what the creator-specific rules are about.
+	proposeAsMember := func(hackathonID, keycloakID string) (context.Context, string) {
+		_, err := dbClient.User.Create().
+			SetKeycloakID(keycloakID).
+			SetUsername(keycloakID).
+			Save(context.Background())
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = hackathonClient.SetCapabilities(adminContext(), &msgs.SetCapabilitiesRequest{
+			HackathonId: hackathonID,
+			Capabilities: []*msgs.CapabilityState{
+				{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		ctx := metadata.NewOutgoingContext(
+			context.Background(),
+			metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(keycloakID)),
+		)
+		_, err = hackathonClient.Join(ctx, &msgs.JoinRequest{HackathonId: hackathonID})
+		Expect(err).NotTo(HaveOccurred())
+
+		user, err := dbClient.User.Query().
+			Where(entuser.KeycloakIDEQ(keycloakID)).
+			Only(context.Background())
+		Expect(err).NotTo(HaveOccurred())
+		_, err = hackathonClient.ApproveParticipant(adminContext(), &msgs.ApproveParticipantRequest{
+			HackathonId: hackathonID,
+			UserId:      user.ID.String(),
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		resp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+			HackathonId: hackathonID,
+			Title:       "Proposed by " + keycloakID,
+			Description: "A member's proposal",
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		return ctx, resp.GetProjectId()
+	}
+
 	Describe("Propose", func() {
 
 		It("creates project successfully with admin token and no track", func() {
@@ -1245,6 +1299,46 @@ var _ = Describe("ProjectService", func() {
 			Expect(p.Title).To(Equal(newTitle))
 		})
 
+		It("allows creator to edit their project after it was approved", func() {
+			creatorCtx, creatorProjectID := proposeAsMember(hackathonID, "approved-project-editor")
+			_, err := projectClient.Approve(adminContext(), &projectMsgs.ApproveRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			newTitle := "Edited after approval"
+			_, err = projectClient.Edit(creatorCtx, &projectMsgs.EditRequest{
+				ProjectId: creatorProjectID,
+				Title:     &newTitle,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Project.Get(context.Background(), uuid.MustParse(creatorProjectID))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Title).To(Equal(newTitle))
+			Expect(p.Status).To(Equal(entproject.StatusApproved))
+		})
+
+		It("allows creator to edit their project after it was rejected", func() {
+			creatorCtx, creatorProjectID := proposeAsMember(hackathonID, "rejected-project-editor")
+			_, err := projectClient.Reject(adminContext(), &projectMsgs.RejectRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			newTitle := "Edited after rejection"
+			_, err = projectClient.Edit(creatorCtx, &projectMsgs.EditRequest{
+				ProjectId: creatorProjectID,
+				Title:     &newTitle,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Project.Get(context.Background(), uuid.MustParse(creatorProjectID))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Title).To(Equal(newTitle))
+			Expect(p.Status).To(Equal(entproject.StatusRejected))
+		})
+
 		It("allows partial updates", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
@@ -1708,6 +1802,44 @@ var _ = Describe("ProjectService", func() {
 				Only(context.Background())
 			Expect(err).To(HaveOccurred())
 			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("refuses creator deleting their project after it was approved", func() {
+			creatorCtx, creatorProjectID := proposeAsMember(hackathonID, "approved-project-deleter")
+			_, err := projectClient.Approve(adminContext(), &projectMsgs.ApproveRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = projectClient.Delete(creatorCtx, &projectMsgs.DeleteRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+
+			exists, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(creatorProjectID))).
+				Exist(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+
+		It("refuses creator deleting their project after it was rejected", func() {
+			creatorCtx, creatorProjectID := proposeAsMember(hackathonID, "rejected-project-deleter")
+			_, err := projectClient.Reject(adminContext(), &projectMsgs.RejectRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = projectClient.Delete(creatorCtx, &projectMsgs.DeleteRequest{
+				ProjectId: creatorProjectID,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+
+			exists, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(creatorProjectID))).
+				Exist(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeTrue())
 		})
 
 		It("returns NOT_FOUND for invalid project ID", func() {

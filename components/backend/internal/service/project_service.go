@@ -796,17 +796,26 @@ func (s *ProjectService) Delete(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	err = s.enforcer.RequirePermission(
-		ctx,
-		hackathonID.String(),
-		mw.Project,
-		mw.Write,
-		mw.WithProject(projectID.String()),
-	)
+	// An organiser may delete a project at any status. Its proposer may only
+	// withdraw it while it awaits review: once decided, the project is the
+	// hackathon's, and the proposer can still edit it but no longer delete it.
+	err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
 	if err != nil {
-		err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
+		err = s.enforcer.RequirePermission(
+			ctx,
+			hackathonID.String(),
+			mw.Project,
+			mw.Write,
+			mw.WithProject(projectID.String()),
+		)
 		if err != nil {
 			return nil, status.Error(codes.PermissionDenied, "permission denied")
+		}
+		if project.Status != entproject.StatusProposed {
+			return nil, status.Error(
+				codes.PermissionDenied,
+				"a reviewed project can only be deleted by an organizer",
+			)
 		}
 	}
 
