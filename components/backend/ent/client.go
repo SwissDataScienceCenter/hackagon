@@ -797,6 +797,22 @@ func (c *HackathonClient) QueryModifier(_m *Hackathon) *UserQuery {
 	return query
 }
 
+// QueryDeleter queries the deleter edge of a Hackathon.
+func (c *HackathonClient) QueryDeleter(_m *Hackathon) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathon.Table, hackathon.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, hackathon.DeleterTable, hackathon.DeleterColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryParticipants queries the participants edge of a Hackathon.
 func (c *HackathonClient) QueryParticipants(_m *Hackathon) *ParticipantQuery {
 	query := (&ParticipantClient{config: c.config}).Query()
@@ -3269,6 +3285,22 @@ func (c *UserClient) QueryModifiedHackathons(_m *User) *HackathonQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(hackathon.Table, hackathon.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedHackathonsTable, user.ModifiedHackathonsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDeletedHackathons queries the deleted_hackathons edge of a User.
+func (c *UserClient) QueryDeletedHackathons(_m *User) *HackathonQuery {
+	query := (&HackathonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.DeletedHackathonsTable, user.DeletedHackathonsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

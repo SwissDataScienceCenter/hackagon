@@ -58,6 +58,9 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_hackathons", Hackathon.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Hackathons this user last modified."),
+		edge.To("deleted_hackathons", Hackathon.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathons this user deleted."),
 		edge.To("created_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user created."),

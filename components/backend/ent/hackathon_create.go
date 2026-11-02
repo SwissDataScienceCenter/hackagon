@@ -94,6 +94,20 @@ func (_c *HackathonCreate) SetNillableModifiedAt(v *time.Time) *HackathonCreate 
 	return _c
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (_c *HackathonCreate) SetDeletedAt(v time.Time) *HackathonCreate {
+	_c.mutation.SetDeletedAt(v)
+	return _c
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_c *HackathonCreate) SetNillableDeletedAt(v *time.Time) *HackathonCreate {
+	if v != nil {
+		_c.SetDeletedAt(*v)
+	}
+	return _c
+}
+
 // SetVisibility sets the "visibility" field.
 func (_c *HackathonCreate) SetVisibility(v hackathon.Visibility) *HackathonCreate {
 	_c.mutation.SetVisibility(v)
@@ -303,6 +317,25 @@ func (_c *HackathonCreate) SetModifier(v *User) *HackathonCreate {
 	return _c.SetModifierID(v.ID)
 }
 
+// SetDeleterID sets the "deleter" edge to the User entity by ID.
+func (_c *HackathonCreate) SetDeleterID(id uuid.UUID) *HackathonCreate {
+	_c.mutation.SetDeleterID(id)
+	return _c
+}
+
+// SetNillableDeleterID sets the "deleter" edge to the User entity by ID if the given value is not nil.
+func (_c *HackathonCreate) SetNillableDeleterID(id *uuid.UUID) *HackathonCreate {
+	if id != nil {
+		_c = _c.SetDeleterID(*id)
+	}
+	return _c
+}
+
+// SetDeleter sets the "deleter" edge to the User entity.
+func (_c *HackathonCreate) SetDeleter(v *User) *HackathonCreate {
+	return _c.SetDeleterID(v.ID)
+}
+
 // Mutation returns the HackathonMutation object of the builder.
 func (_c *HackathonCreate) Mutation() *HackathonMutation {
 	return _c.mutation
@@ -437,6 +470,10 @@ func (_c *HackathonCreate) createSpec() (*Hackathon, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ModifiedAt(); ok {
 		_spec.SetField(hackathon.FieldModifiedAt, field.TypeTime, value)
 		_node.ModifiedAt = value
+	}
+	if value, ok := _c.mutation.DeletedAt(); ok {
+		_spec.SetField(hackathon.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := _c.mutation.Visibility(); ok {
 		_spec.SetField(hackathon.FieldVisibility, field.TypeEnum, value)
@@ -632,6 +669,23 @@ func (_c *HackathonCreate) createSpec() (*Hackathon, *sqlgraph.CreateSpec) {
 		_node.user_modified_hackathons = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := _c.mutation.DeleterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hackathon.DeleterTable,
+			Columns: []string{hackathon.DeleterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_deleted_hackathons = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -741,6 +795,24 @@ func (u *HackathonUpsert) SetModifiedAt(v time.Time) *HackathonUpsert {
 // UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
 func (u *HackathonUpsert) UpdateModifiedAt() *HackathonUpsert {
 	u.SetExcluded(hackathon.FieldModifiedAt)
+	return u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *HackathonUpsert) SetDeletedAt(v time.Time) *HackathonUpsert {
+	u.Set(hackathon.FieldDeletedAt, v)
+	return u
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateDeletedAt() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldDeletedAt)
+	return u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *HackathonUpsert) ClearDeletedAt() *HackathonUpsert {
+	u.SetNull(hackathon.FieldDeletedAt)
 	return u
 }
 
@@ -910,6 +982,27 @@ func (u *HackathonUpsertOne) SetModifiedAt(v time.Time) *HackathonUpsertOne {
 func (u *HackathonUpsertOne) UpdateModifiedAt() *HackathonUpsertOne {
 	return u.Update(func(s *HackathonUpsert) {
 		s.UpdateModifiedAt()
+	})
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *HackathonUpsertOne) SetDeletedAt(v time.Time) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetDeletedAt(v)
+	})
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateDeletedAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateDeletedAt()
+	})
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *HackathonUpsertOne) ClearDeletedAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearDeletedAt()
 	})
 }
 
@@ -1254,6 +1347,27 @@ func (u *HackathonUpsertBulk) SetModifiedAt(v time.Time) *HackathonUpsertBulk {
 func (u *HackathonUpsertBulk) UpdateModifiedAt() *HackathonUpsertBulk {
 	return u.Update(func(s *HackathonUpsert) {
 		s.UpdateModifiedAt()
+	})
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (u *HackathonUpsertBulk) SetDeletedAt(v time.Time) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetDeletedAt(v)
+	})
+}
+
+// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateDeletedAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateDeletedAt()
+	})
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (u *HackathonUpsertBulk) ClearDeletedAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearDeletedAt()
 	})
 }
 

@@ -97,6 +97,26 @@ func (_u *HackathonUpdate) SetModifiedAt(v time.Time) *HackathonUpdate {
 	return _u
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *HackathonUpdate) SetDeletedAt(v time.Time) *HackathonUpdate {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *HackathonUpdate) SetNillableDeletedAt(v *time.Time) *HackathonUpdate {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *HackathonUpdate) ClearDeletedAt() *HackathonUpdate {
+	_u.mutation.ClearDeletedAt()
+	return _u
+}
+
 // SetVisibility sets the "visibility" field.
 func (_u *HackathonUpdate) SetVisibility(v hackathon.Visibility) *HackathonUpdate {
 	_u.mutation.SetVisibility(v)
@@ -301,6 +321,25 @@ func (_u *HackathonUpdate) SetModifier(v *User) *HackathonUpdate {
 	return _u.SetModifierID(v.ID)
 }
 
+// SetDeleterID sets the "deleter" edge to the User entity by ID.
+func (_u *HackathonUpdate) SetDeleterID(id uuid.UUID) *HackathonUpdate {
+	_u.mutation.SetDeleterID(id)
+	return _u
+}
+
+// SetNillableDeleterID sets the "deleter" edge to the User entity by ID if the given value is not nil.
+func (_u *HackathonUpdate) SetNillableDeleterID(id *uuid.UUID) *HackathonUpdate {
+	if id != nil {
+		_u = _u.SetDeleterID(*id)
+	}
+	return _u
+}
+
+// SetDeleter sets the "deleter" edge to the User entity.
+func (_u *HackathonUpdate) SetDeleter(v *User) *HackathonUpdate {
+	return _u.SetDeleterID(v.ID)
+}
+
 // Mutation returns the HackathonMutation object of the builder.
 func (_u *HackathonUpdate) Mutation() *HackathonMutation {
 	return _u.mutation
@@ -486,6 +525,12 @@ func (_u *HackathonUpdate) ClearModifier() *HackathonUpdate {
 	return _u
 }
 
+// ClearDeleter clears the "deleter" edge to the User entity.
+func (_u *HackathonUpdate) ClearDeleter() *HackathonUpdate {
+	_u.mutation.ClearDeleter()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *HackathonUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -572,6 +617,12 @@ func (_u *HackathonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(hackathon.FieldModifiedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(hackathon.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(hackathon.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
 		_spec.SetField(hackathon.FieldVisibility, field.TypeEnum, value)
@@ -1018,6 +1069,35 @@ func (_u *HackathonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.DeleterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hackathon.DeleterTable,
+			Columns: []string{hackathon.DeleterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeleterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hackathon.DeleterTable,
+			Columns: []string{hackathon.DeleterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{hackathon.Label}
@@ -1095,6 +1175,26 @@ func (_u *HackathonUpdateOne) ClearEndsAt() *HackathonUpdateOne {
 // SetModifiedAt sets the "modified_at" field.
 func (_u *HackathonUpdateOne) SetModifiedAt(v time.Time) *HackathonUpdateOne {
 	_u.mutation.SetModifiedAt(v)
+	return _u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *HackathonUpdateOne) SetDeletedAt(v time.Time) *HackathonUpdateOne {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *HackathonUpdateOne) SetNillableDeletedAt(v *time.Time) *HackathonUpdateOne {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *HackathonUpdateOne) ClearDeletedAt() *HackathonUpdateOne {
+	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -1302,6 +1402,25 @@ func (_u *HackathonUpdateOne) SetModifier(v *User) *HackathonUpdateOne {
 	return _u.SetModifierID(v.ID)
 }
 
+// SetDeleterID sets the "deleter" edge to the User entity by ID.
+func (_u *HackathonUpdateOne) SetDeleterID(id uuid.UUID) *HackathonUpdateOne {
+	_u.mutation.SetDeleterID(id)
+	return _u
+}
+
+// SetNillableDeleterID sets the "deleter" edge to the User entity by ID if the given value is not nil.
+func (_u *HackathonUpdateOne) SetNillableDeleterID(id *uuid.UUID) *HackathonUpdateOne {
+	if id != nil {
+		_u = _u.SetDeleterID(*id)
+	}
+	return _u
+}
+
+// SetDeleter sets the "deleter" edge to the User entity.
+func (_u *HackathonUpdateOne) SetDeleter(v *User) *HackathonUpdateOne {
+	return _u.SetDeleterID(v.ID)
+}
+
 // Mutation returns the HackathonMutation object of the builder.
 func (_u *HackathonUpdateOne) Mutation() *HackathonMutation {
 	return _u.mutation
@@ -1487,6 +1606,12 @@ func (_u *HackathonUpdateOne) ClearModifier() *HackathonUpdateOne {
 	return _u
 }
 
+// ClearDeleter clears the "deleter" edge to the User entity.
+func (_u *HackathonUpdateOne) ClearDeleter() *HackathonUpdateOne {
+	_u.mutation.ClearDeleter()
+	return _u
+}
+
 // Where appends a list predicates to the HackathonUpdate builder.
 func (_u *HackathonUpdateOne) Where(ps ...predicate.Hackathon) *HackathonUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1603,6 +1728,12 @@ func (_u *HackathonUpdateOne) sqlSave(ctx context.Context) (_node *Hackathon, er
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(hackathon.FieldModifiedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(hackathon.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(hackathon.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
 		_spec.SetField(hackathon.FieldVisibility, field.TypeEnum, value)
@@ -2039,6 +2170,35 @@ func (_u *HackathonUpdateOne) sqlSave(ctx context.Context) (_node *Hackathon, er
 			Inverse: true,
 			Table:   hackathon.ModifierTable,
 			Columns: []string{hackathon.ModifierColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeleterCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hackathon.DeleterTable,
+			Columns: []string{hackathon.DeleterColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeleterIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hackathon.DeleterTable,
+			Columns: []string{hackathon.DeleterColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),

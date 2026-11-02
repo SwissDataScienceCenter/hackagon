@@ -755,6 +755,29 @@ func HasModifiedHackathonsWith(preds ...predicate.Hackathon) predicate.User {
 	})
 }
 
+// HasDeletedHackathons applies the HasEdge predicate on the "deleted_hackathons" edge.
+func HasDeletedHackathons() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DeletedHackathonsTable, DeletedHackathonsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDeletedHackathonsWith applies the HasEdge predicate on the "deleted_hackathons" edge with a given conditions (other predicates).
+func HasDeletedHackathonsWith(preds ...predicate.Hackathon) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newDeletedHackathonsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasCreatedProjects applies the HasEdge predicate on the "created_projects" edge.
 func HasCreatedProjects() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

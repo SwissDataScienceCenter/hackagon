@@ -222,6 +222,21 @@ func (_u *UserUpdate) AddModifiedHackathons(v ...*Hackathon) *UserUpdate {
 	return _u.AddModifiedHackathonIDs(ids...)
 }
 
+// AddDeletedHackathonIDs adds the "deleted_hackathons" edge to the Hackathon entity by IDs.
+func (_u *UserUpdate) AddDeletedHackathonIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddDeletedHackathonIDs(ids...)
+	return _u
+}
+
+// AddDeletedHackathons adds the "deleted_hackathons" edges to the Hackathon entity.
+func (_u *UserUpdate) AddDeletedHackathons(v ...*Hackathon) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDeletedHackathonIDs(ids...)
+}
+
 // AddCreatedProjectIDs adds the "created_projects" edge to the Project entity by IDs.
 func (_u *UserUpdate) AddCreatedProjectIDs(ids ...uuid.UUID) *UserUpdate {
 	_u.mutation.AddCreatedProjectIDs(ids...)
@@ -633,6 +648,27 @@ func (_u *UserUpdate) RemoveModifiedHackathons(v ...*Hackathon) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveModifiedHackathonIDs(ids...)
+}
+
+// ClearDeletedHackathons clears all "deleted_hackathons" edges to the Hackathon entity.
+func (_u *UserUpdate) ClearDeletedHackathons() *UserUpdate {
+	_u.mutation.ClearDeletedHackathons()
+	return _u
+}
+
+// RemoveDeletedHackathonIDs removes the "deleted_hackathons" edge to Hackathon entities by IDs.
+func (_u *UserUpdate) RemoveDeletedHackathonIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveDeletedHackathonIDs(ids...)
+	return _u
+}
+
+// RemoveDeletedHackathons removes "deleted_hackathons" edges to Hackathon entities.
+func (_u *UserUpdate) RemoveDeletedHackathons(v ...*Hackathon) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDeletedHackathonIDs(ids...)
 }
 
 // ClearCreatedProjects clears all "created_projects" edges to the Project entity.
@@ -1340,6 +1376,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Inverse: false,
 			Table:   user.ModifiedHackathonsTable,
 			Columns: []string{user.ModifiedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeletedHackathonsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDeletedHackathonsIDs(); len(nodes) > 0 && !_u.mutation.DeletedHackathonsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeletedHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
@@ -2608,6 +2689,21 @@ func (_u *UserUpdateOne) AddModifiedHackathons(v ...*Hackathon) *UserUpdateOne {
 	return _u.AddModifiedHackathonIDs(ids...)
 }
 
+// AddDeletedHackathonIDs adds the "deleted_hackathons" edge to the Hackathon entity by IDs.
+func (_u *UserUpdateOne) AddDeletedHackathonIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddDeletedHackathonIDs(ids...)
+	return _u
+}
+
+// AddDeletedHackathons adds the "deleted_hackathons" edges to the Hackathon entity.
+func (_u *UserUpdateOne) AddDeletedHackathons(v ...*Hackathon) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDeletedHackathonIDs(ids...)
+}
+
 // AddCreatedProjectIDs adds the "created_projects" edge to the Project entity by IDs.
 func (_u *UserUpdateOne) AddCreatedProjectIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddCreatedProjectIDs(ids...)
@@ -3019,6 +3115,27 @@ func (_u *UserUpdateOne) RemoveModifiedHackathons(v ...*Hackathon) *UserUpdateOn
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveModifiedHackathonIDs(ids...)
+}
+
+// ClearDeletedHackathons clears all "deleted_hackathons" edges to the Hackathon entity.
+func (_u *UserUpdateOne) ClearDeletedHackathons() *UserUpdateOne {
+	_u.mutation.ClearDeletedHackathons()
+	return _u
+}
+
+// RemoveDeletedHackathonIDs removes the "deleted_hackathons" edge to Hackathon entities by IDs.
+func (_u *UserUpdateOne) RemoveDeletedHackathonIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveDeletedHackathonIDs(ids...)
+	return _u
+}
+
+// RemoveDeletedHackathons removes "deleted_hackathons" edges to Hackathon entities.
+func (_u *UserUpdateOne) RemoveDeletedHackathons(v ...*Hackathon) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDeletedHackathonIDs(ids...)
 }
 
 // ClearCreatedProjects clears all "created_projects" edges to the Project entity.
@@ -3756,6 +3873,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Inverse: false,
 			Table:   user.ModifiedHackathonsTable,
 			Columns: []string{user.ModifiedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeletedHackathonsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDeletedHackathonsIDs(); len(nodes) > 0 && !_u.mutation.DeletedHackathonsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeletedHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),

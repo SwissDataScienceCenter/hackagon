@@ -207,6 +207,21 @@ func (_c *UserCreate) AddModifiedHackathons(v ...*Hackathon) *UserCreate {
 	return _c.AddModifiedHackathonIDs(ids...)
 }
 
+// AddDeletedHackathonIDs adds the "deleted_hackathons" edge to the Hackathon entity by IDs.
+func (_c *UserCreate) AddDeletedHackathonIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddDeletedHackathonIDs(ids...)
+	return _c
+}
+
+// AddDeletedHackathons adds the "deleted_hackathons" edges to the Hackathon entity.
+func (_c *UserCreate) AddDeletedHackathons(v ...*Hackathon) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddDeletedHackathonIDs(ids...)
+}
+
 // AddCreatedProjectIDs adds the "created_projects" edge to the Project entity by IDs.
 func (_c *UserCreate) AddCreatedProjectIDs(ids ...uuid.UUID) *UserCreate {
 	_c.mutation.AddCreatedProjectIDs(ids...)
@@ -750,6 +765,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Inverse: false,
 			Table:   user.ModifiedHackathonsTable,
 			Columns: []string{user.ModifiedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DeletedHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.DeletedHackathonsTable,
+			Columns: []string{user.DeletedHackathonsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),

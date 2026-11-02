@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -47,17 +48,19 @@ var (
 	// HackathonsColumns holds the columns for the "hackathons" table.
 	HackathonsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
 		{Name: "starts_at", Type: field.TypeTime, Nullable: true},
 		{Name: "ends_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "visibility", Type: field.TypeEnum, Enums: []string{"public", "private"}},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "logo", Type: field.TypeString, Nullable: true},
 		{Name: "phase_current_of", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_created_hackathons", Type: field.TypeUUID},
 		{Name: "user_modified_hackathons", Type: field.TypeUUID},
+		{Name: "user_deleted_hackathons", Type: field.TypeUUID, Nullable: true},
 	}
 	// HackathonsTable holds the schema information for the "hackathons" table.
 	HackathonsTable = &schema.Table{
@@ -67,28 +70,37 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "hackathons_phases_current_of",
-				Columns:    []*schema.Column{HackathonsColumns[9]},
+				Columns:    []*schema.Column{HackathonsColumns[10]},
 				RefColumns: []*schema.Column{PhasesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "hackathons_users_created_hackathons",
-				Columns:    []*schema.Column{HackathonsColumns[10]},
+				Columns:    []*schema.Column{HackathonsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
 			{
 				Symbol:     "hackathons_users_modified_hackathons",
-				Columns:    []*schema.Column{HackathonsColumns[11]},
+				Columns:    []*schema.Column{HackathonsColumns[12]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+			{
+				Symbol:     "hackathons_users_deleted_hackathons",
+				Columns:    []*schema.Column{HackathonsColumns[13]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "hackathon_name",
-				Unique:  false,
+				Name:    "hackathons_name_key",
+				Unique:  true,
 				Columns: []*schema.Column{HackathonsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 			{
 				Name:    "hackathon_starts_at",
@@ -103,7 +115,7 @@ var (
 			{
 				Name:    "hackathon_visibility",
 				Unique:  false,
-				Columns: []*schema.Column{HackathonsColumns[6]},
+				Columns: []*schema.Column{HackathonsColumns[7]},
 			},
 		},
 	}
@@ -856,6 +868,7 @@ func init() {
 	HackathonsTable.ForeignKeys[0].RefTable = PhasesTable
 	HackathonsTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonsTable.ForeignKeys[2].RefTable = UsersTable
+	HackathonsTable.ForeignKeys[3].RefTable = UsersTable
 	HackathonInvitesTable.ForeignKeys[0].RefTable = HackathonsTable
 	HackathonInvitesTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonStatesTable.ForeignKeys[0].RefTable = HackathonsTable
