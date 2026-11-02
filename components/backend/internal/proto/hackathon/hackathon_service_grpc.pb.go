@@ -23,6 +23,7 @@ const (
 	HackathonService_List_FullMethodName                   = "/hackathon.HackathonService/List"
 	HackathonService_Get_FullMethodName                    = "/hackathon.HackathonService/Get"
 	HackathonService_Create_FullMethodName                 = "/hackathon.HackathonService/Create"
+	HackathonService_Delete_FullMethodName                 = "/hackathon.HackathonService/Delete"
 	HackathonService_Edit_FullMethodName                   = "/hackathon.HackathonService/Edit"
 	HackathonService_SetCapabilities_FullMethodName        = "/hackathon.HackathonService/SetCapabilities"
 	HackathonService_SetCurrentPhase_FullMethodName        = "/hackathon.HackathonService/SetCurrentPhase"
@@ -51,6 +52,9 @@ type HackathonServiceClient interface {
 	List(ctx context.Context, in *hackathon_svc.ListRequest, opts ...grpc.CallOption) (*hackathon_svc.ListResponse, error)
 	Get(ctx context.Context, in *hackathon_svc.GetRequest, opts ...grpc.CallOption) (*hackathon_svc.GetResponse, error)
 	Create(ctx context.Context, in *hackathon_svc.CreateRequest, opts ...grpc.CallOption) (*hackathon_svc.CreateResponse, error)
+	// Delete hides a hackathon: it disappears from List, and Get and every
+	// RPC scoped to it return NotFound. Its data and roles are kept.
+	Delete(ctx context.Context, in *hackathon_svc.DeleteRequest, opts ...grpc.CallOption) (*hackathon_svc.DeleteResponse, error)
 	Edit(ctx context.Context, in *hackathon_svc.EditRequest, opts ...grpc.CallOption) (*hackathon_svc.EditResponse, error)
 	SetCapabilities(ctx context.Context, in *hackathon_svc.SetCapabilitiesRequest, opts ...grpc.CallOption) (*hackathon_svc.SetCapabilitiesResponse, error)
 	SetCurrentPhase(ctx context.Context, in *hackathon_svc.SetCurrentPhaseRequest, opts ...grpc.CallOption) (*hackathon_svc.SetCurrentPhaseResponse, error)
@@ -105,6 +109,16 @@ func (c *hackathonServiceClient) Create(ctx context.Context, in *hackathon_svc.C
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(hackathon_svc.CreateResponse)
 	err := c.cc.Invoke(ctx, HackathonService_Create_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) Delete(ctx context.Context, in *hackathon_svc.DeleteRequest, opts ...grpc.CallOption) (*hackathon_svc.DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.DeleteResponse)
+	err := c.cc.Invoke(ctx, HackathonService_Delete_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -308,6 +322,9 @@ type HackathonServiceServer interface {
 	List(context.Context, *hackathon_svc.ListRequest) (*hackathon_svc.ListResponse, error)
 	Get(context.Context, *hackathon_svc.GetRequest) (*hackathon_svc.GetResponse, error)
 	Create(context.Context, *hackathon_svc.CreateRequest) (*hackathon_svc.CreateResponse, error)
+	// Delete hides a hackathon: it disappears from List, and Get and every
+	// RPC scoped to it return NotFound. Its data and roles are kept.
+	Delete(context.Context, *hackathon_svc.DeleteRequest) (*hackathon_svc.DeleteResponse, error)
 	Edit(context.Context, *hackathon_svc.EditRequest) (*hackathon_svc.EditResponse, error)
 	SetCapabilities(context.Context, *hackathon_svc.SetCapabilitiesRequest) (*hackathon_svc.SetCapabilitiesResponse, error)
 	SetCurrentPhase(context.Context, *hackathon_svc.SetCurrentPhaseRequest) (*hackathon_svc.SetCurrentPhaseResponse, error)
@@ -346,6 +363,9 @@ func (UnimplementedHackathonServiceServer) Get(context.Context, *hackathon_svc.G
 }
 func (UnimplementedHackathonServiceServer) Create(context.Context, *hackathon_svc.CreateRequest) (*hackathon_svc.CreateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedHackathonServiceServer) Delete(context.Context, *hackathon_svc.DeleteRequest) (*hackathon_svc.DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedHackathonServiceServer) Edit(context.Context, *hackathon_svc.EditRequest) (*hackathon_svc.EditResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Edit not implemented")
@@ -475,6 +495,24 @@ func _HackathonService_Create_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HackathonServiceServer).Create(ctx, req.(*hackathon_svc.CreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_Delete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).Delete(ctx, req.(*hackathon_svc.DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -839,6 +877,10 @@ var HackathonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _HackathonService_Create_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _HackathonService_Delete_Handler,
 		},
 		{
 			MethodName: "Edit",
