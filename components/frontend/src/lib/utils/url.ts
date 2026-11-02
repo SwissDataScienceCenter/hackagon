@@ -6,8 +6,8 @@
  * Linkifying only what parses as http(s) keeps those from becoming dead links,
  * and keeps a `javascript:`/`data:` string out of an `href`.
  *
- * Shared by the submissions page and the team card: both render the same
- * link, so both have to make the same call about it.
+ * Every page that shows a submission renders it through `SubmissionContent`,
+ * so they all make the same call about it.
  */
 export function isHttpUrl(value: string): boolean {
   try {

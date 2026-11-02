@@ -113,6 +113,8 @@ export const load: PageServerLoad = async (event) => {
       ? {
           version: latestFinal.version,
           repositoryUrl: latestFinal.repositoryUrl,
+          attachmentFolderUrl: latestFinal.attachmentFolderUrl,
+          description: latestFinal.description,
           finalizedAt: latestFinal.finalizedAt,
           finalizedBy: latestFinal.finalizedBy,
         }

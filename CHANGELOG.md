@@ -28,6 +28,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   attachments link.
 - Manage Submissions now shows each version's attachments link and, folded away
   until opened, its description.
+- A team's page now shows its entry's attachments link and description, next to
+  the repository link.
 
 ### Changed
 

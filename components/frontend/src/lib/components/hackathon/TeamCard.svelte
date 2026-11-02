@@ -4,7 +4,7 @@
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import { isHttpUrl } from '$lib/utils/url';
+    import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
     import type { Snippet } from 'svelte';
 
     type TeamMember = {
@@ -18,6 +18,8 @@
     type FinalEntry = {
         version: number;
         repositoryUrl?: string;
+        attachmentFolderUrl?: string;
+        description?: string;
         finalizedAt?: Date;
         finalizedBy?: string;
     };
@@ -184,27 +186,13 @@
                         <span class="text-xs text-ink-3">version {entry.version}</span>
                     </div>
 
-                    {#if entry.repositoryUrl}
-                        {#if isHttpUrl(entry.repositoryUrl)}
-                            <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
-                            <a
-                                href={entry.repositoryUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="m-0 block break-all text-xs leading-snug
-                                       text-accent-ink hover:underline"
-                            >
-                                {entry.repositoryUrl}
-                            </a>
-                            <!-- eslint-enable svelte/no-navigation-without-resolve -->
-                        {:else}
-                            <p class="m-0 text-xs leading-snug text-ink-2">{entry.repositoryUrl}</p>
-                        {/if}
-                    {:else}
-                        <p class="m-0 text-xs italic leading-snug text-ink-3">
-                            No link or notes on this version.
-                        </p>
-                    {/if}
+                    <!-- Description in full: this card shows one team, on a page
+                         a voter opens to read that team's entry. -->
+                    <SubmissionContent
+                        repositoryUrl={entry.repositoryUrl}
+                        attachmentFolderUrl={entry.attachmentFolderUrl}
+                        description={entry.description}
+                    />
 
                     {#if entry.finalizedAt}
                         <span class="text-xs text-ink-3">
