@@ -24,6 +24,8 @@ import { GetRequest } from "./messages/hackathon_svc/get_request";
 import { GetResponse } from "./messages/hackathon_svc/get_response";
 import { JoinRequest } from "./messages/hackathon_svc/join_request";
 import { JoinResponse } from "./messages/hackathon_svc/join_response";
+import { LeaveRequest } from "./messages/hackathon_svc/leave_request";
+import { LeaveResponse } from "./messages/hackathon_svc/leave_response";
 import { ListInvitesRequest } from "./messages/hackathon_svc/list_invites_request";
 import { ListInvitesResponse } from "./messages/hackathon_svc/list_invites_response";
 import { ListParticipantAnswersRequest } from "./messages/hackathon_svc/list_participant_answers_request";
@@ -160,6 +162,14 @@ export const HackathonServiceDefinition = {
       responseStream: false,
       options: {},
     },
+    leave: {
+      name: "Leave",
+      requestType: LeaveRequest as typeof LeaveRequest,
+      requestStream: false,
+      responseType: LeaveResponse as typeof LeaveResponse,
+      responseStream: false,
+      options: {},
+    },
     addOwner: {
       name: "AddOwner",
       requestType: AddOwnerRequest as typeof AddOwnerRequest,
@@ -266,6 +276,7 @@ export interface HackathonServiceImplementation<CallContextExt = {}> {
     request: RemoveParticipantRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<RemoveParticipantResponse>>;
+  leave(request: LeaveRequest, context: CallContext & CallContextExt): Promise<DeepPartial<LeaveResponse>>;
   addOwner(request: AddOwnerRequest, context: CallContext & CallContextExt): Promise<DeepPartial<AddOwnerResponse>>;
   removeOwner(
     request: RemoveOwnerRequest,
@@ -336,6 +347,7 @@ export interface HackathonServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<RemoveParticipantRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<RemoveParticipantResponse>;
+  leave(request: DeepPartial<LeaveRequest>, options?: CallOptions & CallOptionsExt): Promise<LeaveResponse>;
   addOwner(request: DeepPartial<AddOwnerRequest>, options?: CallOptions & CallOptionsExt): Promise<AddOwnerResponse>;
   removeOwner(
     request: DeepPartial<RemoveOwnerRequest>,

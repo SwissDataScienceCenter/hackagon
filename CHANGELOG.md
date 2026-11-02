@@ -29,6 +29,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 - Participants can see published results after voting has closed; the results
   page used to fail with an error once an organizer turned voting off.
+- A participant removed from a hackathon by an organizer is now also taken off
+  their team, loses edit rights on the projects they proposed, and has their
+  project preferences cleared. They used to stay on their team's roster and
+  could still act for it.
 
 ## [0.12.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.12.0...v0.12.1) - 2026-10-27
 

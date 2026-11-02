@@ -262,8 +262,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	return nil
 }
 
-func hackathonIdToPath(hackathonId string) string {
-	return fmt.Sprintf("/hackathon/%s", hackathonId)
+func hackathonIDToPath(hackathonID string) string {
+	return fmt.Sprintf("/hackathon/%s", hackathonID)
 }
 
 // teamDomainPath returns the full domain path for a team resource,
@@ -278,14 +278,14 @@ func projectDomainPath(domain, projectId string) string {
 	return fmt.Sprintf("%s/project/%s", domain, projectId)
 }
 
-func enforceOptsToPath(hackathonId string, opts ...EnforceOption) string {
+func enforceOptsToPath(hackathonID string, opts ...EnforceOption) string {
 	//exhaustruct:ignore
 	options := &enforceOptions{}
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	domain := hackathonIdToPath(hackathonId)
+	domain := hackathonIDToPath(hackathonID)
 	if options.projectID != "" {
 		domain = projectDomainPath(domain, options.projectID)
 	}
@@ -298,10 +298,10 @@ func enforceOptsToPath(hackathonId string, opts ...EnforceOption) string {
 func (e *Enforcer) AddRole(
 	user string,
 	role Role,
-	hackathonId string,
+	hackathonID string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 
 	return e.enforcer.AddGroupingPolicy(user, role.String(), domain)
 }
@@ -309,21 +309,33 @@ func (e *Enforcer) AddRole(
 func (e *Enforcer) RemoveRole(
 	user string,
 	role Role,
-	hackathonId string,
+	hackathonID string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 
 	return e.enforcer.RemoveGroupingPolicy(user, role.String(), domain)
+}
+
+// HasRole reports whether `user` holds `role` in exactly this domain.
+func (e *Enforcer) HasRole(
+	user string,
+	role Role,
+	hackathonID string,
+	opts ...EnforceOption,
+) (bool, error) {
+	domain := enforceOptsToPath(hackathonID, opts...)
+
+	return e.enforcer.HasGroupingPolicy(user, role.String(), domain)
 }
 
 func (e *Enforcer) AddRoleBatch(
 	users []string,
 	role Role,
-	hackathonId string,
+	hackathonID string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 	policies := make([][]string, 0, len(users))
 	for _, user := range users {
 		policies = append(policies, []string{user, role.String(), domain})
@@ -335,10 +347,10 @@ func (e *Enforcer) AddRoleBatch(
 func (e *Enforcer) RemoveRoleBatch(
 	users []string,
 	role Role,
-	hackathonId string,
+	hackathonID string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 	policies := make([][]string, 0, len(users))
 	for _, user := range users {
 		policies = append(policies, []string{user, role.String(), domain})
@@ -369,8 +381,8 @@ var publicHackathonGrants = []publicGrant{
 }
 
 // AllowPublicHackathonAccess grants every publicHackathonGrants row to anyone.
-func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
-	domain := hackathonIdToPath(hackathonId)
+func (e *Enforcer) AllowPublicHackathonAccess(hackathonID string) (bool, error) {
+	domain := hackathonIDToPath(hackathonID)
 	changed := false
 	for _, g := range publicHackathonGrants {
 		added, err := e.enforcer.AddPolicy(anySubject, domain, g.obj.String(), g.perm.String())
@@ -384,8 +396,8 @@ func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) 
 }
 
 // RemovePublicHackathonAccess revokes what AllowPublicHackathonAccess granted.
-func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
-	domain := hackathonIdToPath(hackathonId)
+func (e *Enforcer) RemovePublicHackathonAccess(hackathonID string) (bool, error) {
+	domain := hackathonIDToPath(hackathonID)
 	changed := false
 	for _, g := range publicHackathonGrants {
 		removed, err := e.enforcer.RemovePolicy(
@@ -405,7 +417,7 @@ func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error)
 
 func (e *Enforcer) AddPolicy(
 	role *Role,
-	hackathonId string,
+	hackathonID string,
 	obj ObjectType,
 	perm Permission,
 	opts ...EnforceOption,
@@ -416,14 +428,14 @@ func (e *Enforcer) AddPolicy(
 	} else {
 		actualRole = role.String()
 	}
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 	_, err := e.enforcer.AddPolicy(actualRole, domain, obj.String(), perm.String())
 	return err
 }
 
 func (e *Enforcer) RemovePolicy(
 	role *Role,
-	hackathonId string,
+	hackathonID string,
 	obj ObjectType,
 	perm Permission,
 	opts ...EnforceOption,
@@ -434,7 +446,7 @@ func (e *Enforcer) RemovePolicy(
 	} else {
 		actualRole = role.String()
 	}
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 	_, err := e.enforcer.RemovePolicy(actualRole, domain, obj.String(), perm.String())
 	return err
 }
@@ -442,11 +454,11 @@ func (e *Enforcer) RemovePolicy(
 // CheckPermission checks if the given subject has permission for the given hackathon, object, and action.
 // This is a low-level method that doesn't require a JWT token in the context.
 func (e *Enforcer) CheckPermission(
-	subject, hackathonId string, object ObjectType, permission Permission,
+	subject, hackathonID string, object ObjectType, permission Permission,
 ) (bool, error) {
 	return e.enforcer.Enforce(
 		subject,
-		hackathonIdToPath(hackathonId),
+		hackathonIDToPath(hackathonID),
 		object.String(),
 		permission.String(),
 	)
@@ -463,7 +475,7 @@ func (e *Enforcer) ListG2Policies() ([][]string, error) {
 func (e *Enforcer) GetHackathonRole(
 	keycloakID, hackathonID string,
 ) (hackEnts.HackathonRole, error) {
-	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonIdToPath(hackathonID))
+	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonIDToPath(hackathonID))
 	if err != nil {
 		slog.Error(
 			"get roles for user",
@@ -521,12 +533,12 @@ func WithProject(projectID string) EnforceOption {
 
 func (e *Enforcer) Enforce(
 	ctx context.Context,
-	hackathonId string,
+	hackathonID string,
 	object ObjectType,
 	permission Permission,
 	opts ...EnforceOption,
 ) (bool, error) {
-	domain := enforceOptsToPath(hackathonId, opts...)
+	domain := enforceOptsToPath(hackathonID, opts...)
 
 	claims, ok := GetClaims(ctx)
 	if !ok {
@@ -591,12 +603,12 @@ func globalRolesFromPolicies(policies [][]string) []userEnts.GlobalRole {
 // Accepts optional EnforceOption values (e.g. WithDomain) to override the default domain.
 func (e *Enforcer) RequirePermission(
 	ctx context.Context,
-	hackathonId string,
+	hackathonID string,
 	object ObjectType,
 	permission Permission,
 	opts ...EnforceOption,
 ) error {
-	ok, err := e.Enforce(ctx, hackathonId, object, permission, opts...)
+	ok, err := e.Enforce(ctx, hackathonID, object, permission, opts...)
 	if err != nil {
 		slog.Error("enforce permission", "err", err)
 

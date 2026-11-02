@@ -23,13 +23,17 @@ import (
 	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
+	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
 	phaseMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc"
+	projectMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/project_svc"
+	teamMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svc"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 )
 
@@ -1169,6 +1173,161 @@ var _ = Describe("HackathonService", func() {
 
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("takes the participant off their team, project and preferences", func() {
+			bg := context.Background()
+			fx := setUpTeamedParticipant(
+				conn, dbClient, enf, testAdmin, createdHackathonID, participantUser,
+			)
+
+			_, err := client.RemoveParticipant(fx.adminCtx, &msgs.RemoveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      participantUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			fx.expectFullyRemoved(bg)
+		})
+	})
+
+	Describe("Leave", func() {
+		var (
+			hackathonID string
+			leaver      *ent.User
+			leaverCtx   context.Context
+		)
+
+		BeforeEach(func() {
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(testAdmin)),
+			)
+			now := time.Now()
+			createResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Leave Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+
+			leaver, err = dbClient.User.Create().
+				SetKeycloakID("leave-test-user").
+				SetUsername("leave-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			leaverCtx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(leaver.KeycloakID),
+				),
+			)
+		})
+
+		join := func(isWaiting bool) {
+			_, err := dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(hackathonID)).
+				SetUserID(leaver.ID).
+				SetIsWaiting(isWaiting).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			if !isWaiting {
+				_, err = enf.AddRole(leaver.KeycloakID, middleware.Member, hackathonID)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
+
+		isParticipant := func(userID uuid.UUID) bool {
+			ok, err := dbClient.Participant.Query().Where(
+				entparticipant.HackathonIDEQ(uuid.MustParse(hackathonID)),
+				entparticipant.UserID(userID),
+			).Exist(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			return ok
+		}
+
+		It("lets a confirmed participant leave", func() {
+			join(false)
+
+			_, err := client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(isParticipant(leaver.ID)).To(BeFalse())
+			isMember, err := enf.HasRole(leaver.KeycloakID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isMember).To(BeFalse())
+		})
+
+		It("lets a waitlisted participant withdraw", func() {
+			join(true)
+
+			_, err := client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isParticipant(leaver.ID)).To(BeFalse())
+		})
+
+		It("only removes the caller", func() {
+			join(false)
+			stayer, err := dbClient.User.Create().
+				SetKeycloakID("leave-test-stayer").
+				SetUsername("leave-test-stayer-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(hackathonID)).
+				SetUserID(stayer.ID).
+				SetIsWaiting(false).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isParticipant(stayer.ID)).To(BeTrue())
+		})
+
+		It("takes the leaver off their team, project and preferences", func() {
+			join(false)
+			fx := setUpTeamedParticipant(conn, dbClient, enf, testAdmin, hackathonID, leaver)
+
+			_, err := client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			fx.expectFullyRemoved(context.Background())
+		})
+
+		It("returns NOT_FOUND to a caller who is not a participant", func() {
+			_, err := client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for an unknown hackathon", func() {
+			_, err := client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: uuid.NewString()})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("refuses to let anyone leave a finished hackathon", func() {
+			join(false)
+			_, err := dbClient.Hackathon.UpdateOneID(uuid.MustParse(hackathonID)).
+				SetStartsAt(time.Now().Add(-48 * time.Hour)).
+				SetEndsAt(time.Now().Add(-24 * time.Hour)).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Leave(leaverCtx, &msgs.LeaveRequest{HackathonId: hackathonID})
+			Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+			Expect(isParticipant(leaver.ID)).To(BeTrue())
+		})
+
+		It("requires authentication", func() {
+			_, err := client.Leave(
+				context.Background(),
+				&msgs.LeaveRequest{HackathonId: hackathonID},
+			)
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 	})
 
@@ -5125,3 +5284,146 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 })
+
+// teamedParticipant is a participant who proposed a project, is on a team
+// working on it and prefers it — everything removeParticipant has to undo.
+type teamedParticipant struct {
+	adminCtx    context.Context
+	dbClient    *ent.Client
+	enf         *middleware.Enforcer
+	hackathonID string
+	user        *ent.User
+	projectID   uuid.UUID
+	teamID      uuid.UUID
+}
+
+// setUpTeamedParticipant builds a teamedParticipant out of `user`, who must
+// already have a participant row in the hackathon. It grants them `Member`, so
+// they can propose.
+func setUpTeamedParticipant(
+	conn *grpc.ClientConn,
+	dbClient *ent.Client,
+	enf *middleware.Enforcer,
+	adminID string,
+	hackathonID string,
+	user *ent.User,
+) *teamedParticipant {
+	bg := context.Background()
+	adminCtx := metadata.NewOutgoingContext(
+		bg,
+		metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(adminID)),
+	)
+	userCtx := metadata.NewOutgoingContext(
+		bg,
+		metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(user.KeycloakID)),
+	)
+	hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+	projectClient := hackathonSvc.NewProjectServiceClient(conn)
+	teamClient := hackathonSvc.NewTeamServiceClient(conn)
+
+	_, err := enf.AddRole(user.KeycloakID, middleware.Member, hackathonID)
+	Expect(err).NotTo(HaveOccurred())
+	_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+		HackathonId: hackathonID,
+		Capabilities: []*msgs.CapabilityState{
+			{Capability: entities.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	proposeResp, err := projectClient.Propose(userCtx, &projectMsgs.ProposeRequest{
+		HackathonId: hackathonID,
+		Title:       "Leaver's Project",
+		Description: "Proposed by the participant who is removed",
+	})
+	Expect(err).NotTo(HaveOccurred())
+	_, err = projectClient.Approve(adminCtx, &projectMsgs.ApproveRequest{
+		ProjectId: proposeResp.GetProjectId(),
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	teamResp, err := teamClient.Create(adminCtx, &teamMsgs.CreateRequest{
+		Name:        "Leaver's Team",
+		Description: "The participant's team",
+		ProjectId:   proposeResp.GetProjectId(),
+	})
+	Expect(err).NotTo(HaveOccurred())
+	_, err = teamClient.AssignUser(adminCtx, &teamMsgs.AssignUserRequest{
+		TeamId: teamResp.GetTeamId(),
+		UserId: user.ID.String(),
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	fx := &teamedParticipant{
+		adminCtx:    adminCtx,
+		dbClient:    dbClient,
+		enf:         enf,
+		hackathonID: hackathonID,
+		user:        user,
+		projectID:   uuid.MustParse(proposeResp.GetProjectId()),
+		teamID:      uuid.MustParse(teamResp.GetTeamId()),
+	}
+	err = dbClient.User.UpdateOneID(user.ID).AddPreferredProjectIDs(fx.projectID).Exec(bg)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Guard the setup, so a passing removal test means something was removed.
+	Expect(fx.onTeam(bg)).To(BeTrue(), "team membership before removal")
+	Expect(fx.hasTeamRole()).To(BeTrue(), "team role before removal")
+	Expect(fx.ownsProject()).To(BeTrue(), "project owner role before removal")
+	Expect(fx.prefersProject(bg)).To(BeTrue(), "preference before removal")
+
+	return fx
+}
+
+func (fx *teamedParticipant) onTeam(ctx context.Context) bool {
+	ok, err := fx.dbClient.Team.Query().
+		Where(entteam.IDEQ(fx.teamID), entteam.HasMembersWith(entuser.IDEQ(fx.user.ID))).
+		Exist(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	return ok
+}
+
+func (fx *teamedParticipant) hasTeamRole() bool {
+	ok, err := fx.enf.HasRole(
+		fx.user.KeycloakID, middleware.Member, fx.hackathonID,
+		middleware.WithTeam(fx.teamID.String()),
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	return ok
+}
+
+func (fx *teamedParticipant) ownsProject() bool {
+	ok, err := fx.enf.HasRole(
+		fx.user.KeycloakID, middleware.Owner, fx.hackathonID,
+		middleware.WithProject(fx.projectID.String()),
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	return ok
+}
+
+func (fx *teamedParticipant) prefersProject(ctx context.Context) bool {
+	ok, err := fx.dbClient.User.QueryPreferredProjects(fx.user).Exist(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	return ok
+}
+
+// expectFullyRemoved checks that removal undid everything the setup granted,
+// and kept the project and team themselves.
+func (fx *teamedParticipant) expectFullyRemoved(ctx context.Context) {
+	Expect(fx.onTeam(ctx)).To(BeFalse(), "team membership")
+	Expect(fx.hasTeamRole()).To(BeFalse(), "team role")
+	Expect(fx.ownsProject()).To(BeFalse(), "project owner role")
+	Expect(fx.prefersProject(ctx)).To(BeFalse(), "preference")
+
+	projectExists, err := fx.dbClient.Project.Query().
+		Where(entproject.IDEQ(fx.projectID)).Exist(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(projectExists).To(BeTrue(), "project is kept")
+	teamExists, err := fx.dbClient.Team.Query().Where(entteam.IDEQ(fx.teamID)).Exist(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(teamExists).To(BeTrue(), "team is kept")
+}
