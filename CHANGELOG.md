@@ -20,10 +20,22 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
-- Backend: A submission can now hold a description and a link to a folder of
-  attachments, next to the link to its repository.
+- Teams can now give a submission a description, with formatting, and a link to
+  a folder of attachments, alongside the link to their repository. A new version
+  starts out filled in from the previous one, so fixing a single link means
+  retyping nothing.
+- The Manage Submissions CSV now has an "Attachments" column with each entry's
+  attachments link.
+- Manage Submissions now shows each version's attachments link and, folded away
+  until opened, its description.
+- A team's page now shows its entry's attachments link and description, next to
+  the repository link.
 
 ### Changed
+
+- The repository link and the attachments link on a submission must now start
+  with `https://`. The box that used to take a link or free-text notes now takes
+  a link only, and notes go in the description.
 
 ### Fixed
 

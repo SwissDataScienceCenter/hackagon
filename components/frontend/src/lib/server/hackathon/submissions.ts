@@ -17,7 +17,16 @@ export interface SubmissionVersion {
   id: string
   version: number
   status: SubmissionStatus
-  result: string | undefined
+  /**
+   * The proto's `result`, under the name the backend means it by — see the
+   * mapping in `submissionVersions`. Older versions may hold free-text notes
+   * rather than a link, from before the backend required https.
+   */
+  repositoryUrl: string | undefined
+  /** A link to a folder of slides, data or a video — anything not in the repo. */
+  attachmentFolderUrl: string | undefined
+  /** Markdown, as the team typed it. */
+  description: string | undefined
   createdAt: Date | undefined
   creator: string | undefined
   /** Set only on a final version — see `submissionVersions`. */
@@ -66,7 +75,12 @@ export function submissionVersions(
         id: s.id,
         version: s.version,
         status: s.status,
-        result: s.result,
+        // TODO(backend: submission-repository-url): `result` is the repository
+        // URL, and the backend plans to rename it `repository_url` after the
+        // hackathon. This is the one line that changes when it does.
+        repositoryUrl: s.result,
+        attachmentFolderUrl: s.attachmentFolderUrl,
+        description: s.description,
         createdAt: s.createdAt,
         creator: memberNames.get(s.creatorId),
         // `modifier`/`modified_at` are not "last edited": a submission's content

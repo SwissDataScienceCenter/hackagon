@@ -7,6 +7,7 @@ import {
   mayFinalizeSubmissions,
 } from "$lib/server/hackathon/capabilities"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
+import { parseSubmissionForm } from "$lib/server/hackathon/submissionForm"
 import { submissionVersions } from "$lib/server/hackathon/submissions"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { fail } from "@sveltejs/kit"
@@ -98,28 +99,27 @@ export const actions: Actions = {
 
     const teamId = form.get("teamId")
     const projectId = form.get("projectId")
-    const result = form.get("result")
     if (typeof teamId !== "string" || teamId === "") {
       return fail(400, { teamId: null, message: "Missing team" })
     }
     if (typeof projectId !== "string" || projectId === "") {
       return fail(400, { teamId, message: "Missing project" })
     }
-    // Version numbers are permanent and monotonic, so an empty submission burns
-    // one for nothing. The backend accepts it (`result` is optional), which is
-    // why this is checked here rather than relied upon.
-    if (typeof result !== "string" || result.trim() === "") {
-      return fail(400, {
-        teamId,
-        message: "Add a link or a note describing your work",
-      })
+
+    const parsed = parseSubmissionForm(form)
+    if (!parsed.ok) {
+      return fail(400, { teamId, message: parsed.message })
     }
+    const { repositoryUrl, attachmentFolderUrl, description } = parsed.values
 
     try {
       await team.createSubmission({
         teamId,
         projectId,
-        result: result.trim(),
+        // TODO(backend: submission-repository-url): see `submissionVersions`.
+        result: repositoryUrl,
+        attachmentFolderUrl,
+        description,
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
