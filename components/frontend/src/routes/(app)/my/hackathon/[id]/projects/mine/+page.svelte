@@ -40,6 +40,7 @@
                     num={project.num}
                     title={project.title}
                     excerpt={project.excerpt}
+                    creator={project.creator}
                     track={project.track}
                     imageUrl={project.imageUrl}
                     badge={projectStatusLabel(project.status)}

@@ -23,8 +23,10 @@
          *  by the loader — never the raw body. Absent when the project has no
          *  description, or has one with nothing quotable in it. */
         excerpt?: string;
-        /** Who proposed it. Omitted when the creator is no longer a member. */
-        creator?: string;
+        /** Who proposed it. Required, so no list forgets it: every card shows
+         *  its author. Undefined only when nobody the hackathon knows has that
+         *  id any more — the card then says "Unknown author". */
+        creator: string | undefined;
         /** Track name. Omitted when the project has no track, or its track was
          *  deleted — the row then simply carries no track. */
         track?: string;
@@ -97,23 +99,20 @@
              facts read as attributes of the row rather than sentences. The
              icons carry no information a sighted reader needs spelling out and
              no screen reader needs repeating — the text beside them says it —
-             so they are aria-hidden. -->
-        {#if creator || track}
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
-                {#if creator}
-                    <span class="inline-flex items-center gap-1.5">
-                        <User class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        {creator}
-                    </span>
-                {/if}
-                {#if track}
-                    <span class="inline-flex items-center gap-1.5">
-                        <Tag class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        {track}
-                    </span>
-                {/if}
-            </div>
-        {/if}
+             so they are aria-hidden. The author is always there; the track only
+             when the project has one. -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
+            <span class="inline-flex items-center gap-1.5">
+                <User class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {creator ?? 'Unknown author'}
+            </span>
+            {#if track}
+                <span class="inline-flex items-center gap-1.5">
+                    <Tag class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    {track}
+                </span>
+            {/if}
+        </div>
     </div>
 
     <div class="flex shrink-0 items-center gap-2">

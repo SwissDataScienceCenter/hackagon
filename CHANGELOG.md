@@ -36,6 +36,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 ### Changed
 
 - A proposer can now edit their project after it has been approved or rejected.
+- Every project in a list, and every project page, now names who proposed it,
+  also when an organiser proposed it without joining the hackathon.
 
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes

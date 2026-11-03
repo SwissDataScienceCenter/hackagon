@@ -1,4 +1,5 @@
 import type { PageServerLoad } from "./$types"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { myProjects } from "$lib/server/hackathon/myProjects"
 import { markdownExcerpt } from "$lib/utils/markdown"
 import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
@@ -14,14 +15,16 @@ export const load: PageServerLoad = async (event) => {
 
   const mine = myProjects(hackathon, event.locals.platformUser?.id)
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
+  const names = namesByUserId(hackathon.members, hackathon.owners)
 
-  // No `creator`: every row is the viewer's own, and their name on each would
-  // say nothing.
+  // `creator` although every row is the viewer's own: a project card reads the
+  // same on every list, and this one is no exception.
   const projects = mine.map((p, i) => ({
     id: p.id,
     num: mine.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,

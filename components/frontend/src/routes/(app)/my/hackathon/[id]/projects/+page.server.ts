@@ -7,6 +7,7 @@ import {
   mayPreferProjects,
   mayProposeProjects,
 } from "$lib/server/hackathon/capabilities"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -116,15 +117,12 @@ export const load: PageServerLoad = async (event) => {
         )
     : []
 
-  // `Project` carries only `creatorId`, so the name comes from the membership
-  // list that arrived in the same response. A creator who has since left the
-  // hackathon resolves to nothing and the card omits the line — better than
+  // `Project` carries only `creatorId`, so the name comes from the people the
+  // same response already named — members and owners, so an organiser who
+  // proposed without joining is named too. A creator who has since left
+  // resolves to nothing, and the card says "Unknown author" rather than
   // printing a raw uuid at someone.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
+  const names = namesByUserId(hackathon.members, hackathon.owners)
 
   // Tracks arrive nested in the same response. A project whose track was
   // deleted resolves to nothing and the card omits it.
@@ -139,7 +137,7 @@ export const load: PageServerLoad = async (event) => {
     num: ordered.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
-    creator: memberNames.get(p.creatorId),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
@@ -152,7 +150,7 @@ export const load: PageServerLoad = async (event) => {
     num: myProposals.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
-    creator: memberNames.get(p.creatorId),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
