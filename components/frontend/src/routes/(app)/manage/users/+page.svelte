@@ -112,7 +112,7 @@
             roleFilter === 'all'
                 ? 'users'
                 : roleFilter === 'none'
-                  ? 'users without a role'
+                  ? 'users without a platform role'
                   : `${globalRoleFilterLabel(roleFilter)} users`;
         return searching ? `No ${who} match “${search.trim()}”.` : `No ${who}.`;
     });
@@ -336,23 +336,27 @@
       building. Built from the same descriptions the picker shows, so the page
       cannot end up explaining a role one way here and another way there.
     -->
-    <ul class="m-0 flex list-none flex-col gap-1 p-0">
-        {#each ASSIGNABLE_GLOBAL_ROLES as role (role)}
-            <li class="flex flex-wrap items-center gap-2">
-                <span class="badge {globalRoleBadgeVariant(role) ?? 'badge-neutral'}">
-                    {globalRoleLabel(role)}
-                </span>
-                <span class="font-sans text-xs text-ink-3">
-                    {globalRoleDescription(role) ?? 'no description'}
-                </span>
-            </li>
-        {/each}
-    </ul>
+    <div class="flex flex-col gap-2">
+        <h2 class="meta m-0">Platform roles</h2>
+        <ul class="m-0 flex list-none flex-col gap-1 p-0">
+            {#each ASSIGNABLE_GLOBAL_ROLES as role (role)}
+                <li class="flex flex-wrap items-center gap-2">
+                    <span class="badge {globalRoleBadgeVariant(role) ?? 'badge-neutral'}">
+                        {globalRoleLabel(role)}
+                    </span>
+                    <span class="font-sans text-xs text-ink-3">
+                        {globalRoleDescription(role) ?? 'no description'}
+                    </span>
+                </li>
+            {/each}
+        </ul>
+    </div>
     <!-- Says why the picker is missing from most rows; without it the absence
          reads as a bug or as a permission the viewer lacks. -->
     <p class="m-0 text-xs text-ink-3">
         A user holds one of these at a time. To change someone's role, revoke the one
-        they have and then grant the other.
+        they have and then grant the other. Roles inside a hackathon — owner or
+        member — are separate and not shown here.
     </p>
 
     {#if form?.message}
@@ -470,7 +474,7 @@
                           never occupy a row at the same time. Split across two
                           columns every row showed one dash.
                         -->
-                        <th class="px-3 py-2 font-semibold">Role</th>
+                        <th class="px-3 py-2 font-semibold">Platform role</th>
                     </tr>
                 </thead>
                 <tbody>

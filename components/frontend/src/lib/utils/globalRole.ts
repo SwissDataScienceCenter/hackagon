@@ -75,7 +75,9 @@ export const GLOBAL_ROLE_FILTERS: GlobalRoleFilter[] = [
 
 export function globalRoleFilterLabel(filter: GlobalRoleFilter): string {
   if (filter === "all") return "All"
-  if (filter === "none") return "No role"
+  // "platform", because nearly everyone holds a role somewhere: owner or member
+  // of a hackathon. Those are per-hackathon and not what this filter reads.
+  if (filter === "none") return "No platform role"
   return globalRoleLabel(filter) ?? "Unknown"
 }
 

@@ -20,8 +20,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
-- Platform admins can filter the user list by role — Admin, Hackathon Organizer
-  or no role — with a count beside each, and combine it with the search.
+- Platform admins can filter the user list by platform role — Admin, Hackathon
+  Organizer or none — with a count beside each, and combine it with the search.
 - Teams can now give a submission a description, with formatting, and a link to
   a folder of attachments, alongside the link to their repository. A new version
   starts out filled in from the previous one, so fixing a single link means
