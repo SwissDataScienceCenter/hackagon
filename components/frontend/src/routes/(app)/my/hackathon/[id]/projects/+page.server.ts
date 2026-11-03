@@ -7,6 +7,7 @@ import {
   mayPreferProjects,
   mayProposeProjects,
 } from "$lib/server/hackathon/capabilities"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -116,15 +117,12 @@ export const load: PageServerLoad = async (event) => {
         )
     : []
 
-  // `Project` carries only `creatorId`, so the name comes from the membership
-  // list that arrived in the same response. A creator who has since left the
-  // hackathon resolves to nothing and the card omits the line — better than
+  // `Project` carries only `creatorId`, so the name comes from the people the
+  // same response already named — members and owners, so an organiser who
+  // proposed without joining is named too. A creator who has since left
+  // resolves to nothing, and the card says "Unknown author" rather than
   // printing a raw uuid at someone.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
+  const names = namesByUserId(hackathon.members, hackathon.owners)
 
   // Tracks arrive nested in the same response. A project whose track was
   // deleted resolves to nothing and the card omits it.
@@ -139,34 +137,23 @@ export const load: PageServerLoad = async (event) => {
     num: ordered.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
-    creator: memberNames.get(p.creatorId),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
     isPreferred: preferredIds.has(p.id),
   }))
 
-  // No `mayEdit` on the rows above, and it is per-row here: editing is offered on
-  // a proposal awaiting review and nowhere else. That used to be true of this
-  // whole group by construction; now that it also holds rejected rows it has to
-  // be said per row, because `projectEditData` refuses a rejected project to its
-  // proposer ("This project has been reviewed — only an organizer can edit it
-  // now"), and a row must not offer a link that answers 403. A rejected proposal
-  // becomes editable again if the organiser reconsiders it, which returns it to
-  // PROPOSED.
-  //
-  // Once a project is approved it is the hackathon's, and the owner edits it from
-  // Manage Projects — the proposer no longer does.
+  // No edit flag on either list: a proposer edits from My projects, not here.
   const proposals = myProposals.map((p, i) => ({
     id: p.id,
     num: myProposals.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
-    creator: memberNames.get(p.creatorId),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
-    mayEdit: p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
   }))
 
   // `hackathonId` so the page can build the link to a project —

@@ -22,6 +22,7 @@ import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
 import UsersRound from "lucide-svelte/icons/users-round"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
+import NotebookPen from "lucide-svelte/icons/notebook-pen"
 import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
@@ -122,6 +123,10 @@ export interface HackathonPageRef {
  * "assignments not published" — two states that want the same nav either way.
  * Zero is the honest default, the same way `manageNav` treats `trackCount`.
  *
+ * `myProjectCount` gates My projects: how many projects the viewer proposed
+ * here, counted by `myProjects`, which already returns zero for anyone not
+ * taking part. Deliberately blind to the phase and the capabilities — a
+ * proposer finds their projects whether or not proposals are still open.
  */
 export function memberNav(
   hackathonId: string,
@@ -130,6 +135,7 @@ export function memberNav(
   resultsVisible = false,
   teamCount = 0,
   phaseCount = 0,
+  myProjectCount = 0,
 ): NavItem[] {
   return [
     {
@@ -155,6 +161,20 @@ export function memberNav(
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
+    // Right under Projects, as the viewer's own slice of it. Only for someone
+    // who proposed something, so most participants never see it. Its route is
+    // nested under projects/, and the longest match lights this entry rather
+    // than Projects; a project's own page and its edit form stay under Projects.
+    ...(myProjectCount > 0
+      ? [
+          {
+            id: "member:my-projects",
+            label: "My projects",
+            icon: NotebookPen,
+            href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
+          },
+        ]
+      : []),
     // Between Projects and Submissions, following the hackathon's own order of
     // events: projects are approved, teams form on them, teams submit.
     //

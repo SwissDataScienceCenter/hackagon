@@ -32,7 +32,8 @@ It might also show:
 
 - Each with its status, for example {guilabel}`Rejected`, and the owner's
   reason.
-- Click {guilabel}`Edit` to change it while it is still waiting for review.
+- To change a project you proposed, approved ones included, go to
+  [My projects](member-my-projects.md).
 
 ## Preferences
 

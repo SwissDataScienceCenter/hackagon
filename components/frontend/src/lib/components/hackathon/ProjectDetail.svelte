@@ -39,7 +39,10 @@
             /** Omitted when the project has no track, or the hackathon has none
                 at all — the Track cell is then not drawn. */
             track?: string;
-            proposer?: string;
+            /** Required, like ProjectCard's `creator`, so the page always names
+                its author. Undefined only when nobody the hackathon knows has
+                that id any more — the page then says "an unknown author". */
+            proposer: string | undefined;
             createdAt?: Date;
             modifiedAt?: Date;
         };
@@ -113,8 +116,8 @@
                 {/if}
             </div>
             <p class="m-0 text-xs leading-snug text-ink-3">
-                {#if project.proposer}Proposed by {project.proposer}{/if}
-                {#if project.proposer && proposedOn}&middot;{/if}
+                Proposed by {project.proposer ?? 'an unknown author'}
+                {#if proposedOn}&middot;{/if}
                 {#if proposedOn}{proposedOn}{/if}
                 {#if editedOn}&middot; edited {editedOn}{/if}
             </p>

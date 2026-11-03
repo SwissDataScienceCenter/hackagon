@@ -95,6 +95,7 @@
         teamCount={data.teamCount}
         trackCount={hackathon.tracks.length}
         phaseCount={hackathon.phases.length}
+        myProjectCount={data.myProjectCount}
         stateNeedsAttention={alerts.length > 0}
         isPrivate={isPrivate(hackathon.visibility)}
     />

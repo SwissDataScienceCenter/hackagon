@@ -4,6 +4,7 @@ import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capabi
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { viewerMembership } from "$lib/server/hackathon/membership"
+import { myProjects } from "$lib/server/hackathon/myProjects"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { currentAndNextPhase } from "$lib/utils/phase"
@@ -168,6 +169,9 @@ export const load: LayoutServerLoad = async (event) => {
     votingEnabled,
     resultsVisible,
     teamCount,
+    // Gates the sidebar's My projects entry. Counted off the projects `Get`
+    // already returned, so it costs no call.
+    myProjectCount: myProjects(result.hackathon, platformUserId).length,
     hackathonState,
   }
 }

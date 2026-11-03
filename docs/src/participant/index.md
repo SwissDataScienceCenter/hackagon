@@ -13,6 +13,7 @@ so some of these pages appear only at certain stages.
 member-overview
 member-participants
 member-projects
+member-my-projects
 member-teams
 member-submissions
 member-voting

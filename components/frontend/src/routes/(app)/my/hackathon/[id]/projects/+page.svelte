@@ -32,6 +32,9 @@
   Every project surface a participant has, on one page: the approved projects
   with the one action a participant has on them — marking a preference — and,
   above them, this viewer's own proposals that have not become projects.
+  No Edit anywhere here: a proposer edits their projects from My projects, the
+  one place that lists all of them, and the owner edits everyone's from Manage
+  Projects.
   Proposals had a page of its own and a sidebar entry; it is a stage of a
   project's life rather than a place, and a hackathon that does not use proposals
   now shows a plain list instead of an entry leading to an empty page.
@@ -96,10 +99,7 @@
                     badge={projectStatusLabel(proposal.status)}
                     badgeVariant={projectStatusBadgeVariant(proposal.status) ??
                         'badge-neutral'}
-                    moreInfoHref={proposal.mayEdit
-                        ? `/my/hackathon/${data.hackathonId}/projects/${proposal.id}/edit`
-                        : `/my/hackathon/${data.hackathonId}/projects/${proposal.id}`}
-                    moreInfoLabel={proposal.mayEdit ? 'Edit' : 'More Info'}
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}"
                 />
             {/each}
         </section>
@@ -122,11 +122,6 @@
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}
-                        <!-- No Edit here. These are approved, and an approved
-                             project belongs to the hackathon: its owner edits it
-                             from Manage Projects, and the proposer's own control
-                             lives on the proposals group above, while the
-                             proposal is still open. -->
                         {#if data.mayPrefer}
                             {#if project.isPreferred}
                                 <form method="POST" action="?/unprefer">

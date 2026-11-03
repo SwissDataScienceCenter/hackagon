@@ -3,6 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { projectReviewFor } from "$lib/server/hackathon/projectReview"
 import { error } from "@sveltejs/kit"
 
@@ -67,15 +68,12 @@ export const load: PageServerLoad = async (event) => {
     )
   }
 
-  // `Project` carries only `creatorId`, so the name comes from the membership
-  // list that arrived in the same response. A proposer who has since left the
-  // hackathon resolves to nothing and the page omits the line, rather than
-  // printing a raw uuid at someone.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
+  // `Project` carries only `creatorId`, so the name comes from the people the
+  // same response already named — members and owners, so an organiser who
+  // proposed without joining is named too. A proposer who has since left
+  // resolves to nothing, and the page says so rather than printing a raw uuid
+  // at someone.
+  const names = namesByUserId(hackathon.members, hackathon.owners)
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
   // Where "back" goes. The projects list unless a team detail page sent the
@@ -119,7 +117,7 @@ export const load: PageServerLoad = async (event) => {
       status: project.status,
       imageUrl: project.image,
       track: project.trackId ? trackNames.get(project.trackId) : undefined,
-      proposer: memberNames.get(project.creatorId),
+      proposer: names.get(project.creatorId),
       createdAt: project.createdAt,
       modifiedAt: project.modifiedAt,
     },

@@ -2,7 +2,6 @@ import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
-import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import type { AuthorizedGrpc } from "$lib/server/grpc/client"
 import type { Hackathon } from "$lib/server/grpc/generated/hackathon/entities/hackathon"
 import type { HackathonMember } from "$lib/server/grpc/generated/hackathon/entities/hackathon_member"
@@ -11,8 +10,8 @@ import type { User } from "$lib/server/grpc/generated/user/entities/user"
 /**
  * Server-only: the load gate and save action behind the project edit route.
  *
- * One route, `projects/[projectId]/edit`, reached from the project's own page
- * and from the proposals group on the Projects page. It used to be two — a
+ * One route, `projects/[projectId]/edit`, reached from My projects by a
+ * proposer and from Manage Projects by an owner. It used to be two — a
  * second copy under `projects/proposals/` existed only to send the editor back
  * to the proposals list — and they collapsed into one when that list did. The
  * gate and the save still live here rather than in the route, since both are
@@ -29,11 +28,11 @@ import type { User } from "$lib/server/grpc/generated/user/entities/user"
  *    `project:write` across the hackathon (`rbac.go:190`, plus the casbin escape
  *    hatch), and an approved project is theirs to correct — Manage Projects is
  *    where they are offered it.
- *  - the **proposer, while the proposal is still awaiting review**. Their claim
- *    is the project-scoped Owner role `Propose` granted them
- *    (`project_service.go:218`), and it exists so they can correct what they put
- *    forward before it is judged. Once approved, the project belongs to the
- *    hackathon rather than to them.
+ *  - the **proposer, at any status**. Their claim is the project-scoped Owner
+ *    role `Propose` granted them, which `ProjectService.Edit` accepts whatever
+ *    the project's status: a proposer keeps describing their project after it is
+ *    approved, and can rework one that was rejected. Editing never changes the
+ *    status.
  *
  * Refused up front rather than after a form is filled in.
  */
@@ -54,30 +53,10 @@ export function projectEditData(
   const isAdmin = (platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
-  // TODO(backend: proposer-edit-after-approval): the status half of this rule is
-  // the frontend's alone. `ProjectService.Edit` and `Delete` accept the
-  // proposer's project-scoped Owner role at *any* status
-  // (`project_service.go:562-575`, `:674-687`), so a proposer who types this URL
-  // still edits their approved project and the backend allows it. Drop the
-  // `isOpenProposal` check here once the handlers enforce it, and the gate goes
-  // back to mirroring them exactly.
-  const isOpenProposal =
-    project.status === ProjectStatus.PROJECT_STATUS_PROPOSED
-
-  if (!isHackathonOwner && !isAdmin) {
-    if (!isCreator) {
-      // Says what the rule is, not who the proposer is: an owner and an admin
-      // pass this too, so "only the proposer may edit" would be false.
-      error(403, "You don't have permission to edit this project")
-    }
-    if (!isOpenProposal) {
-      // A different sentence from the one above on purpose: this viewer *did*
-      // propose it, and what changed is the project's status, not their standing.
-      error(
-        403,
-        "This project has been reviewed — only an organizer can edit it now",
-      )
-    }
+  if (!isHackathonOwner && !isAdmin && !isCreator) {
+    // Says what the rule is, not who the proposer is: an owner and an admin
+    // pass this too, so "only the proposer may edit" would be false.
+    error(403, "You don't have permission to edit this project")
   }
 
   return {

@@ -31,10 +31,9 @@ export const actions: Actions = {
     )
     if (failure) return failure
 
-    // Back to the project itself, whichever surface the editor came from — its
-    // own page, or the proposals group on the Projects page. A saved proposal is
-    // still awaiting review, so it is also still in that group; the project page
-    // is simply the one destination that is right for both.
+    // Back to the project itself, whichever list the editor came from — My
+    // projects for a proposer, Manage Projects for an owner. The project page is
+    // the one destination that is right for both.
     redirect(
       303,
       resolve(

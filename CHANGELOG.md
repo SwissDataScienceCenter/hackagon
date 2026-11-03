@@ -30,8 +30,16 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   until opened, its description.
 - A team's page now shows its entry's attachments link and description, next to
   the repository link.
+- Participants who proposed a project find it under "My projects" in the
+  hackathon's menu, at any status, also after proposals have closed.
 
 ### Changed
+
+- A proposer can now edit their project after it has been approved or rejected.
+- Every project in a list, and every project page, now names who proposed it,
+  also when an organiser proposed it without joining the hackathon.
+- The button that opens a project from a list now reads "View" instead of "More
+  Info".
 
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
