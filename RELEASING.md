@@ -94,8 +94,8 @@ that exists because a `v*` tag built it.
 Nothing merged to `main` can reach prod. It changes only when someone bumps
 `appVersion`, publishes the chart, and installs that chart version.
 
-While a hackathon is running on prod, install nothing there except hotfixes in
-case the event needs them.
+While a hackathon is running on prod, install nothing there except
+[hotfixes](HOTFIX.md) in case the event needs them.
 
 ## Three version numbers
 
@@ -178,8 +178,11 @@ git reset --hard origin/main
 git tag -d v0.9.0
 ```
 
-A fix prod cannot wait for goes onto this release branch, not through `main` —
-see [HOTFIX.md](HOTFIX.md) for the protocol.
+## Making a hotfix
+
+A fix prod cannot wait for goes onto the `release/X.Y` branch prod runs, never
+through `main`. The full protocol — branching, the chart bump, tagging, and
+bringing the fix back to `main` — is in [HOTFIX.md](HOTFIX.md).
 
 ## Making a release deployable
 

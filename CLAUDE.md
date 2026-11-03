@@ -71,6 +71,7 @@ docs/                             # user documentation: Sphinx + Markdown (MyST)
 helm-chart/                       # Helm chart; published as an OCI artifact on a v* tag
 CHANGELOG.md                      # user-visible changes; the entry lands in the PR
 RELEASING.md                      # branch model + how a change reaches a cluster
+HOTFIX.md                         # how a fix reaches prod via release/X.Y
 tools/helm/lint-values.yaml       # throwaway values so the chart can be rendered in CI
 tools/nix/                        # Nix flake + process-compose config (toolchain.nix)
 tools/just/*.just                 # just modules — see Dev commands
