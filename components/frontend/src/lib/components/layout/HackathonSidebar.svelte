@@ -37,6 +37,7 @@
         teamCount = 0,
         trackCount = 0,
         phaseCount = 0,
+        myProjectCount = 0,
         stateNeedsAttention = false,
         isPrivate = false,
     }: {
@@ -82,6 +83,11 @@
          * "Where the hackathon is" card on Settings.
          */
         phaseCount?: number;
+        /**
+         * How many projects the viewer proposed here, zero unless they take
+         * part. Decides whether My projects is offered — see `memberNav`.
+         */
+        myProjectCount?: number;
         /**
          * Whether the hackathon has a description at all. Gates the About entry
          * — see `memberNav`. False, and there is nothing to read, so the entry
@@ -136,7 +142,8 @@
             votingEnabled,
             resultsVisible,
             teamCount,
-            phaseCount
+            phaseCount,
+            myProjectCount
         ),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage

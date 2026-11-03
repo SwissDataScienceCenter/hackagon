@@ -30,6 +30,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   until opened, its description.
 - A team's page now shows its entry's attachments link and description, next to
   the repository link.
+- Participants who proposed a project find it under "My projects" in the
+  hackathon's menu, at any status, also after proposals have closed.
 
 ### Changed
 

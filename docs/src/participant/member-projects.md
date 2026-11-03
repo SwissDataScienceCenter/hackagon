@@ -35,6 +35,8 @@ It might also show:
   reason.
 - Click {guilabel}`Edit` to change it, also after an owner has reviewed it.
   Editing does not change its status.
+- All your projects, approved ones included, are also under
+  [My projects](member-my-projects.md).
 
 ## Preferences
 
