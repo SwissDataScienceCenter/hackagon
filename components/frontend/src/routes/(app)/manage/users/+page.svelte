@@ -5,9 +5,13 @@
     import { SvelteSet } from 'svelte/reactivity';
     import {
         ASSIGNABLE_GLOBAL_ROLES,
+        GLOBAL_ROLE_FILTERS,
         globalRoleBadgeVariant,
         globalRoleDescription,
+        globalRoleFilterLabel,
         globalRoleLabel,
+        matchesGlobalRoleFilter,
+        type GlobalRoleFilter,
     } from '$lib/utils/globalRole';
     import type { ActionData, PageData } from './$types';
 
@@ -16,6 +20,11 @@
     type UserRow = PageData['users'][number];
 
     let search = $state('');
+
+    // Page state rather than a query parameter, like the search beside it: it
+    // survives a grant or revoke because `enhance` re-runs the load without
+    // remounting the page.
+    let roleFilter = $state<GlobalRoleFilter>('all');
 
     // Grant and revoke both take a row's whole control group out of service
     // while either is in flight, so one submit handler serves both.
@@ -57,7 +66,7 @@
 
     // Matches every column the table actually shows, so a row the user can read
     // on screen is never filtered out by a term visible in it.
-    const filtered = $derived(
+    const searched = $derived(
         data.users.filter((u) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
@@ -68,14 +77,45 @@
         })
     );
 
+    const filtered = $derived(searched.filter((u) => matchesGlobalRoleFilter(u.roles, roleFilter)));
+
+    // Counted within the search, so each chip says how many rows picking it
+    // would show — a count over all users would promise rows the search then
+    // hides.
+    const roleCounts = $derived(
+        new Map(
+            GLOBAL_ROLE_FILTERS.map((f) => [
+                f,
+                searched.filter((u) => matchesGlobalRoleFilter(u.roles, f)).length,
+            ])
+        )
+    );
+
+    const searching = $derived(search.trim() !== '');
+    const narrowedBy = $derived(
+        searching && roleFilter !== 'all' ? 'filters' : searching ? 'search' : 'filter'
+    );
+
     // Counts the rows on screen, not the rows loaded: a search that narrows 42
     // users to 3 while the header still reads "42 users" is simply wrong. The
     // total stays alongside it so the filter's effect is visible.
     const countLabel = $derived(
         filtered.length === data.users.length
             ? `${data.users.length} ${data.users.length === 1 ? 'user' : 'users'} registered on the platform`
-            : `${filtered.length} of ${data.users.length} users match your search`
+            : `${filtered.length} of ${data.users.length} users match your ${narrowedBy}`
     );
+
+    // Names whatever is narrowing the list, so an empty table with only a role
+    // picked doesn't claim to have searched for “”.
+    const emptyLabel = $derived.by(() => {
+        const who =
+            roleFilter === 'all'
+                ? 'users'
+                : roleFilter === 'none'
+                  ? 'users without a role'
+                  : `${globalRoleFilterLabel(roleFilter)} users`;
+        return searching ? `No ${who} match “${search.trim()}”.` : `No ${who}.`;
+    });
 
     // Keycloak may leave display_name empty, hence the username fallback; '?'
     // covers both being blank, so the avatar is never an empty circle that
@@ -324,10 +364,29 @@
         </p>
     {/if}
 
+    <!-- Chips, not buttons: this picks which rows are showing, and a solid
+         accent would read as an action. Rendered even when the slice is
+         empty, so the way back out stays in view. -->
+    {#if data.users.length > 0}
+        <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by role">
+            {#each GLOBAL_ROLE_FILTERS as filter (filter)}
+                <button
+                    type="button"
+                    onclick={() => (roleFilter = filter)}
+                    aria-pressed={roleFilter === filter}
+                    class="chip {roleFilter === filter ? 'chip-active' : ''}"
+                >
+                    {globalRoleFilterLabel(filter)}
+                    <span class="tnum">{roleCounts.get(filter) ?? 0}</span>
+                </button>
+            {/each}
+        </div>
+    {/if}
+
     {#if data.users.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">No users found.</p>
     {:else if filtered.length === 0}
-        <p class="m-0 py-6 text-center text-sm text-ink-3">No users match “{search}”.</p>
+        <p class="m-0 py-6 text-center text-sm text-ink-3">{emptyLabel}</p>
     {:else}
         <!--
           Two presentations of one list. The table below buries Roles and Grant
