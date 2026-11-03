@@ -32,8 +32,7 @@ import type { User } from "$lib/server/grpc/generated/user/entities/user"
  *    role `Propose` granted them, which `ProjectService.Edit` accepts whatever
  *    the project's status: a proposer keeps describing their project after it is
  *    approved, and can rework one that was rejected. Editing never changes the
- *    status. What review does take from them is deleting it, which
- *    `ProjectService.Delete` leaves to an organiser once a project is decided.
+ *    status.
  *
  * Refused up front rather than after a form is filled in.
  */
