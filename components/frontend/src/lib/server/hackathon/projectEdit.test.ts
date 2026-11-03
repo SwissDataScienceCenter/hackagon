@@ -55,38 +55,30 @@ describe("projectEditData", () => {
     expect(data.project.id).toBe("p1")
   })
 
-  // The rule the review asked for: editing belongs to an open proposal, and an
-  // approved project belongs to the hackathon rather than to whoever proposed it.
-  it("refuses the proposer once the project is approved", () => {
-    const e = refusal(() =>
-      projectEditData(
-        hackathon({ status: APPROVED }),
-        "p1",
-        member(MEMBER),
-        user(ALICE),
-      ),
+  // Review does not take the project from its proposer: they keep editing it
+  // once approved, and the projects page offers them Edit on its row.
+  it("lets the proposer edit once the project is approved", () => {
+    const data = projectEditData(
+      hackathon({ status: APPROVED }),
+      "p1",
+      member(MEMBER),
+      user(ALICE),
     )
 
-    expect(e.status).toBe(403)
-    // Names the status rather than their standing — they did propose it.
-    expect(e.body.message).toMatch(/reviewed/)
+    expect(data.project.id).toBe("p1")
   })
 
   // Relied on by the projects page: a rejected proposal stays in its author's
-  // proposals group, so that row must offer "More Info" rather than an Edit link
-  // that answers 403. Reconsidering it returns it to PROPOSED and editable.
-  it("refuses the proposer once the project is rejected", () => {
-    const e = refusal(() =>
-      projectEditData(
-        hackathon({ status: REJECTED }),
-        "p1",
-        member(MEMBER),
-        user(ALICE),
-      ),
+  // proposals group, and that row offers Edit next to "More Info".
+  it("lets the proposer edit once the project is rejected", () => {
+    const data = projectEditData(
+      hackathon({ status: REJECTED }),
+      "p1",
+      member(MEMBER),
+      user(ALICE),
     )
 
-    expect(e.status).toBe(403)
-    expect(e.body.message).toMatch(/reviewed/)
+    expect(data.project.id).toBe("p1")
   })
 
   it("still lets the organiser edit a rejected project", () => {

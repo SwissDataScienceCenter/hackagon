@@ -144,19 +144,15 @@ export const load: PageServerLoad = async (event) => {
     imageUrl: p.image,
     status: p.status,
     isPreferred: preferredIds.has(p.id),
+    // A proposer edits their project at any status (see `projectEditData`), so
+    // an approved one of theirs offers Edit here. Everyone else's offers none:
+    // the owner edits those from Manage Projects.
+    isMine: isMine(p),
   }))
 
-  // No `mayEdit` on the rows above, and it is per-row here: editing is offered on
-  // a proposal awaiting review and nowhere else. That used to be true of this
-  // whole group by construction; now that it also holds rejected rows it has to
-  // be said per row, because `projectEditData` refuses a rejected project to its
-  // proposer ("This project has been reviewed — only an organizer can edit it
-  // now"), and a row must not offer a link that answers 403. A rejected proposal
-  // becomes editable again if the organiser reconsiders it, which returns it to
-  // PROPOSED.
-  //
-  // Once a project is approved it is the hackathon's, and the owner edits it from
-  // Manage Projects — the proposer no longer does.
+  // No per-row edit flag here: every row in this group is the viewer's own, and
+  // a proposer may edit their project whatever its status — a rejected one
+  // included, which stays rejected until the organiser reconsiders it.
   const proposals = myProposals.map((p, i) => ({
     id: p.id,
     num: myProposals.length - i,
@@ -166,7 +162,6 @@ export const load: PageServerLoad = async (event) => {
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
-    mayEdit: p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
   }))
 
   // `hackathonId` so the page can build the link to a project —

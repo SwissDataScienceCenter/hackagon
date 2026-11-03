@@ -30,8 +30,9 @@
 
 <!--
   Every project surface a participant has, on one page: the approved projects
-  with the one action a participant has on them — marking a preference — and,
-  above them, this viewer's own proposals that have not become projects.
+  with the actions a participant has on them — marking a preference, and editing
+  the ones they proposed — and, above them, this viewer's own proposals that
+  have not become projects.
   Proposals had a page of its own and a sidebar entry; it is a stage of a
   project's life rather than a place, and a hackathon that does not use proposals
   now shows a plain list instead of an entry leading to an empty page.
@@ -96,11 +97,22 @@
                     badge={projectStatusLabel(proposal.status)}
                     badgeVariant={projectStatusBadgeVariant(proposal.status) ??
                         'badge-neutral'}
-                    moreInfoHref={proposal.mayEdit
-                        ? `/my/hackathon/${data.hackathonId}/projects/${proposal.id}/edit`
-                        : `/my/hackathon/${data.hackathonId}/projects/${proposal.id}`}
-                    moreInfoLabel={proposal.mayEdit ? 'Edit' : 'More Info'}
-                />
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}"
+                >
+                    {#snippet actions()}
+                        <!-- Beside More Info rather than instead of it: a
+                             rejected row's page is where the organiser's reason
+                             is read, so its author needs both. -->
+                        <a
+                            href={resolve(
+                                `/my/hackathon/${data.hackathonId}/projects/${proposal.id}/edit`
+                            )}
+                            class="btn btn-sm btn-ghost no-underline"
+                        >
+                            Edit
+                        </a>
+                    {/snippet}
+                </ProjectCard>
             {/each}
         </section>
     {/if}
@@ -122,11 +134,19 @@
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}
-                        <!-- No Edit here. These are approved, and an approved
-                             project belongs to the hackathon: its owner edits it
-                             from Manage Projects, and the proposer's own control
-                             lives on the proposals group above, while the
-                             proposal is still open. -->
+                        <!-- Edit on the viewer's own projects only: a proposer
+                             keeps editing theirs once approved, and the owner
+                             edits everyone else's from Manage Projects. -->
+                        {#if project.isMine}
+                            <a
+                                href={resolve(
+                                    `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
+                                )}
+                                class="btn btn-sm btn-ghost no-underline"
+                            >
+                                Edit
+                            </a>
+                        {/if}
                         {#if data.mayPrefer}
                             {#if project.isPreferred}
                                 <form method="POST" action="?/unprefer">

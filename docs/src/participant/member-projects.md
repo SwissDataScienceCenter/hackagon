@@ -20,6 +20,7 @@ It might also show:
 
 - Eight projects per page. Each opens its details: description, track and who
   proposed it.
+- Click {guilabel}`Edit` to change a project you proposed.
 
 ## Propose a project
 
@@ -32,7 +33,8 @@ It might also show:
 
 - Each with its status, for example {guilabel}`Rejected`, and the owner's
   reason.
-- Click {guilabel}`Edit` to change it while it is still waiting for review.
+- Click {guilabel}`Edit` to change it, also after an owner has reviewed it.
+  Editing does not change its status.
 
 ## Preferences
 

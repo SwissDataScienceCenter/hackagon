@@ -33,6 +33,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A proposer can now edit their project after it has been approved or rejected.
+
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
   a link only, and notes go in the description.
