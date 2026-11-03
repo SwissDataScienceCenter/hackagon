@@ -16,7 +16,7 @@
   Projects: a pending or rejected row carries its status, an approved one
   carries none ($lib/utils/projectStatus explains why).
 
-  Edit beside More Info on every row: a proposer edits their project whatever
+  Edit beside View on every row: a proposer edits their project whatever
   its status, and a rejected row's page is where the organiser's reason is read.
   No pagination, for the same reason the proposals group on Projects has none —
   one person's own projects are few.

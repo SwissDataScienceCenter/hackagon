@@ -12,7 +12,7 @@
         track,
         imageUrl,
         moreInfoHref = '#',
-        moreInfoLabel = 'More Info',
+        moreInfoLabel = 'View',
         badge,
         badgeVariant = 'badge-neutral',
         actions,
@@ -32,7 +32,8 @@
         track?: string;
         imageUrl?: string;
         moreInfoHref?: string;
-        /** CTA text. The card is a row first and a "More Info" link second. */
+        /** CTA text. The card is a row first and a "View" link second. The
+         *  prop keeps its older name; only the text it defaults to changed. */
         moreInfoLabel?: string;
         /** Generic chip text — kept a plain string so the card is not tied to
          *  any one vocabulary. Both project lists pass a status; others may not. */
