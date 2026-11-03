@@ -10,8 +10,8 @@ import type { User } from "$lib/server/grpc/generated/user/entities/user"
 /**
  * Server-only: the load gate and save action behind the project edit route.
  *
- * One route, `projects/[projectId]/edit`, reached from the project's own page
- * and from the proposals group on the Projects page. It used to be two — a
+ * One route, `projects/[projectId]/edit`, reached from My projects by a
+ * proposer and from Manage Projects by an owner. It used to be two — a
  * second copy under `projects/proposals/` existed only to send the editor back
  * to the proposals list — and they collapsed into one when that list did. The
  * gate and the save still live here rather than in the route, since both are

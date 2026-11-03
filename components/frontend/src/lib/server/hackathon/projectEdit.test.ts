@@ -68,8 +68,8 @@ describe("projectEditData", () => {
     expect(data.project.id).toBe("p1")
   })
 
-  // Relied on by the projects page: a rejected proposal stays in its author's
-  // proposals group, and that row offers Edit next to "More Info".
+  // Relied on by My projects, which offers Edit on every row the viewer
+  // proposed, a rejected one included.
   it("lets the proposer edit once the project is rejected", () => {
     const data = projectEditData(
       hackathon({ status: REJECTED }),

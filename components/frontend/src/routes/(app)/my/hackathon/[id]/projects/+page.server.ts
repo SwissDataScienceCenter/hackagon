@@ -144,15 +144,9 @@ export const load: PageServerLoad = async (event) => {
     imageUrl: p.image,
     status: p.status,
     isPreferred: preferredIds.has(p.id),
-    // A proposer edits their project at any status (see `projectEditData`), so
-    // an approved one of theirs offers Edit here. Everyone else's offers none:
-    // the owner edits those from Manage Projects.
-    isMine: isMine(p),
   }))
 
-  // No per-row edit flag here: every row in this group is the viewer's own, and
-  // a proposer may edit their project whatever its status — a rejected one
-  // included, which stays rejected until the organiser reconsiders it.
+  // No edit flag on either list: a proposer edits from My projects, not here.
   const proposals = myProposals.map((p, i) => ({
     id: p.id,
     num: myProposals.length - i,
