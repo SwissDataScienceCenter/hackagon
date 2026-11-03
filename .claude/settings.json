@@ -1,9 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(just nix::develop default bash -c 'just check::lint -c frontend 2>&1 | grep -E \"error TS|✖|  error|Runner successful|failed\" | tail -10 && just check::test -c frontend 2>&1 | grep -E \"Test Files|Tests |FAIL|×|AssertionError\" | tail -10 && just check::build -c frontend 2>&1 | grep -E \"error|Error|Runner successful|failed\" | tail -4')",
-      "Bash(just nix::develop default bash -c 'just check::test -c frontend 2>&1 | grep -E \"Test Files|Tests |FAIL|×\" | tail -6')",
-      "Bash(just nix::develop default bash -c 'just check::lint -c frontend 2>&1 | grep -E \"error TS|✖|Runner successful|failed\" | tail -4')"
+      "Bash(just check::lint -c *)",
+      "Bash(just check::test -c *)",
+      "Bash(just check::build -c *)",
+      "Bash(just nix::develop default just check::lint -c *)",
+      "Bash(just nix::develop default just check::test -c *)",
+      "Bash(just nix::develop default just check::build -c *)",
+      "Bash(nix run ./tools/nix#treefmt -- *)",
+      "Bash(just helm::lint)",
+      "Bash(just helm::template *)",
+      "Bash(helm lint *)",
+      "Bash(helm template *)",
+      "Bash(pnpm exec svelte-check *)",
+      "Bash(pnpm run check)"
     ]
   }
 }
