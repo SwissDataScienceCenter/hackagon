@@ -3,11 +3,9 @@ import type { VoteCategory } from "$lib/server/grpc/generated/vote/entities/vote
 import type { VoteResult } from "$lib/server/grpc/generated/vote/entities/vote_result"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
 import type { VoteServiceClient } from "$lib/server/grpc/generated/vote/vote_service"
-import { listVisibleTeams } from "./teams"
-import { submissionEntry } from "./submissions"
+import { teamEntries } from "./submissions"
 import { VotingMethod } from "$lib/server/grpc/generated/vote/entities/voting_method"
 import { VoterType } from "$lib/server/grpc/generated/vote/entities/voter_type"
-import { ClientError, Status } from "nice-grpc-common"
 
 /**
  * Server-only: reads generated types, so it must never be imported by a
@@ -99,8 +97,9 @@ export interface BallotSubmission {
  * Shared by the booth, the organizer's results screen and the public results
  * page so the three cannot disagree about what was entered.
  *
- * Returns only the teams whose submissions the viewer may actually read, which
- * for a participant is just their own — see the per-team catch below.
+ * Read through `teamEntries`, the same as the Submissions page, so the ballot
+ * holds exactly the entries that page lists. That returns only the teams whose
+ * submissions the viewer may actually read.
  *
  * Empty when team assignments are not published: `TeamService.List` needs
  * `team:read`, and a member holds it only under `CAPABILITY_VIEW_TEAMS`. So
@@ -115,74 +114,29 @@ export async function ballotSubmissions(
   projectTitles: Map<string, string>,
   viewerId?: string,
 ): Promise<BallotSubmission[]> {
-  const teams = (await listVisibleTeams(team, hackathonId)) ?? []
+  const entries = (await teamEntries(team, hackathonId, new Map())) ?? []
 
-  const entries = await Promise.all(
-    teams.map(async (t) => {
-      // TODO(backend: submission-cross-team-read) — replace this with the
-      // hackathon-wide, finals-only read once it exists, and drop the catch.
-      //
-      // `Get`, not `ListSubmissions`. `ListSubmissions` takes `submission:read`
-      // scoped to the team (`team_service.go:560`) and the only unscoped grant
-      // goes to `Owner`; no capability widens it — CAPABILITY_VOTE grants a
-      // member `vote:create` and `vote_category:read`, CAPABILITY_VIEW_RESULTS
-      // grants `vote_result:read`, and neither adds `submission:read`
-      // (`hackathon_service.go:653,713`). So it refused a participant for every
-      // team but their own, which left the ballot empty: the single entry they
-      // could resolve was their own team's, and that is the one entry
-      // `SubmitVote` refuses (`vote_service.go:588`).
-      //
-      // `Get` eager-loads a team's submissions and gates on hackathon-scoped
-      // `team:read` (`team_service.go:114` — it asked for `hackathon:read`
-      // until the view-teams capability landed), so it is the one read that
-      // hands a participant another team's entry, and only while assignments
-      // are published. That is the same grant `List` above needs, so a viewer
-      // who got a list can resolve every row in it. Nothing
-      // extra reaches the browser: `submissionEntry` keeps the final entry and
-      // this function returns only that, so the drafts `Get` over-shares are
-      // dropped server-side — the same containment the team detail page relies
-      // on.
-      //
-      // The catch stays as a guard rather than a workaround: if the fix lands as
-      // "`Get` now enforces `submission:read`" without a member-wide policy,
-      // every call here starts refusing, and an unguarded await would take the
-      // page down with a 500 instead of losing one row. Skipping a team degrades
-      // — `resultView` renders an unresolvable placement as "Unknown
-      // submission", and a ballot missing one entry is still a ballot.
-      let submissions
-      try {
-        const { team: full } = await team.get({ teamId: t.id })
-        submissions = full?.submissions ?? []
-      } catch (e) {
-        if (
-          e instanceof ClientError &&
-          (e.code === Status.PERMISSION_DENIED || e.code === Status.NOT_FOUND)
-        ) {
-          return null
-        }
-        throw e
-      }
-
-      const entry = submissionEntry(submissions, new Map())
-      if (!entry) return null
-
-      return {
-        id: entry.id,
-        teamId: t.id,
-        teamName: t.name,
-        projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        repositoryUrl: entry.repositoryUrl,
-        // SubmitVote refuses a vote on a submission by a team you are on
-        // (`vote_service.go:588`), so the booth needs this per submission to
-        // leave those off the ballot rather than let someone pick one and take
-        // a PermissionDenied. Always false when there is no viewer.
-        isOwnTeam:
-          viewerId !== undefined && t.members.some((m) => m.id === viewerId),
-      }
-    }),
+  return entries.flatMap(({ team: t, entry }) =>
+    entry
+      ? [
+          {
+            id: entry.id,
+            teamId: t.id,
+            teamName: t.name,
+            projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
+            repositoryUrl: entry.repositoryUrl,
+            // SubmitVote refuses a vote on a submission by a team you are on
+            // (`vote_service.go:588`), so the booth needs this per submission
+            // to leave those off the ballot rather than let someone pick one
+            // and take a PermissionDenied. Always false when there is no
+            // viewer.
+            isOwnTeam:
+              viewerId !== undefined &&
+              t.members.some((m) => m.id === viewerId),
+          },
+        ]
+      : [],
   )
-
-  return entries.filter((e) => e !== null)
 }
 
 /** One published placement, joined to what it is a placement *of*. */

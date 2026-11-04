@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { ClientError, Status } from "nice-grpc-common"
 import type { Submission } from "$lib/server/grpc/generated/hackathon/entities/submission"
 import type { Team } from "$lib/server/grpc/generated/hackathon/entities/team"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
@@ -9,6 +10,7 @@ import {
   submissionsByTeam,
   submissionStanding,
   submissionVersions,
+  teamEntries,
 } from "./submissions"
 
 // SubmissionStatus numeric values: DRAFT=1, FINAL=2.
@@ -391,5 +393,53 @@ describe("submissionsByTeam", () => {
     expect(byTeam.get("team-a")?.map((s) => s.version)).toEqual([1, 2])
     expect(byTeam.get("team-b")?.map((s) => s.version)).toEqual([1])
     expect(byTeam.has("team-c")).toBe(false)
+  })
+})
+
+describe("teamEntries", () => {
+  /** Two teams: one with a final entry, one with only a draft. */
+  const client = (listDenied = false) =>
+    ({
+      list: async () => {
+        if (listDenied) {
+          throw new ClientError(
+            "/hackathon.TeamService/List",
+            Status.PERMISSION_DENIED,
+            "no team:read",
+          )
+        }
+
+        return {
+          teams: [
+            { id: "team-a", name: "A", members: [] },
+            { id: "team-b", name: "B", members: [] },
+          ],
+        }
+      },
+      get: async ({ teamId }: { teamId: string }) => ({
+        team: {
+          id: teamId,
+          submissions:
+            teamId === "team-a"
+              ? [sub({ version: 1, status: FINAL, teamId, creatorId: BOB })]
+              : [sub({ version: 1, status: DRAFT, teamId })],
+        },
+      }),
+    }) as unknown as TeamServiceClient
+
+  it("is undefined while team assignments are not published", async () => {
+    expect(
+      await teamEntries(client(true), "hackathon-1", names),
+    ).toBeUndefined()
+  })
+
+  it("lists every team, with a null entry for one holding only drafts", async () => {
+    const got = await teamEntries(client(), "hackathon-1", names)
+
+    expect(got?.map((r) => [r.team.id, r.entry?.id ?? null])).toEqual([
+      ["team-a", "s1"],
+      ["team-b", null],
+    ])
+    expect(got?.[0]?.entry?.updatedBy).toBe("Bob Henderson")
   })
 })
