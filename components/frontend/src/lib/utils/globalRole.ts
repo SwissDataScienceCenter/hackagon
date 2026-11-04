@@ -16,16 +16,15 @@ const BADGE_VARIANT: Partial<Record<number, string>> = {
 // hackathon, while `hackathon_organizer` carries exactly one row,
 // hackathon:create. See components/backend/internal/middleware/rbac.go.
 //
-// Terse on purpose. The same string labels an <option> in the role picker and
-// carries the legend on the users page, so it has to survive one line of a
-// native select popup.
+// Terse on purpose: it fills one line of the "About platform roles" box on the
+// users list and on each user's page, and both read it from here.
 const DESCRIPTION: Partial<Record<number, string>> = {
   1: "Full access to every hackathon, and to this page",
   2: "Can create hackathons, nothing more",
 }
 
-// Every assignable role, in display order — drives both the badge list and
-// the "grant a role the user doesn't hold yet" picker.
+// Every assignable role, in display order — drives the badges, the role filter
+// and the choices on a user's page.
 export const ASSIGNABLE_GLOBAL_ROLES = [1, 2]
 
 export function globalRoleLabel(r: number): string | undefined {
@@ -84,10 +83,9 @@ export function globalRoleFilterLabel(filter: GlobalRoleFilter): string {
 /**
  * Whether a user holding `roles` belongs in the slice.
  *
- * "none" means an empty role list — the same test the users page uses to decide
- * a row gets the grant picker, so the slice is exactly the rows showing one. A
- * user holding only a role this build cannot name is therefore not in it: their
- * row shows an "Unknown" badge, not a picker, and they appear under "all" only.
+ * "none" means an empty role list — exactly the rows whose role column shows a
+ * dash. A user holding only a role this build cannot name is therefore not in
+ * it: their row shows an "Unknown" badge, and they appear under "all" only.
  */
 export function matchesGlobalRoleFilter(
   roles: number[],
@@ -96,4 +94,107 @@ export function matchesGlobalRoleFilter(
   if (filter === "all") return true
   if (filter === "none") return roles.length === 0
   return roles.includes(filter)
+}
+
+/** Named because granting it asks for more than any other change does. */
+export const ADMIN_ROLE = 1
+
+/**
+ * The choice of holding none of the assignable roles. GlobalRole has no such
+ * value; 0 is UNSPECIFIED, which is never granted, so it is free to mean this.
+ */
+export const NO_PLATFORM_ROLE = 0
+
+/**
+ * What the user detail page offers, least power first, so the list reads as a
+ * ladder and Admin — the one that hands over every hackathon — sits at the end.
+ */
+export const PLATFORM_ROLE_CHOICES = [NO_PLATFORM_ROLE, 2, ADMIN_ROLE]
+
+export function platformRoleChoiceLabel(choice: number): string {
+  if (choice === NO_PLATFORM_ROLE) return "None"
+  return globalRoleLabel(choice) ?? "Unknown"
+}
+
+export function platformRoleChoiceDescription(
+  choice: number,
+): string | undefined {
+  if (choice === NO_PLATFORM_ROLE)
+    return "Takes part in hackathons; can be made an owner of one"
+  return globalRoleDescription(choice)
+}
+
+/**
+ * The choice a user's current roles amount to, or `undefined` when they hold
+ * both assignable roles — representable through the API, never granted by this
+ * UI, and not something one radio can show.
+ *
+ * Roles this build cannot name are ignored: they are not among the choices, so
+ * they can neither be shown as the current one nor changed from here.
+ */
+export function currentPlatformRole(roles: number[]): number | undefined {
+  const held = ASSIGNABLE_GLOBAL_ROLES.filter((r) => roles.includes(r))
+  if (held.length === 0) return NO_PLATFORM_ROLE
+  if (held.length === 1) return held[0]
+  return undefined
+}
+
+/**
+ * The calls that leave a user holding exactly `target` among the assignable
+ * roles. The backend has no "set role", only AddRole and RemoveRole, so a switch
+ * is two calls and cannot be atomic.
+ *
+ * The caller must run `revoke` before `grant`. If the grant then fails, the user
+ * is left holding less than before rather than both roles at once — the failure
+ * that fails closed. Roles this build cannot name are left alone, for the same
+ * reason `currentPlatformRole` ignores them.
+ */
+// What losing or gaining each role does, read off the same casbin policy as
+// DESCRIPTION. Losing a platform role never touches hackathon ownership: owner
+// rows are per hackathon and RemoveRole leaves them alone.
+const LOSES: Partial<Record<number, string>> = {
+  1: "Loses access to every hackathon they don't own or take part in, and to user management.",
+  2: "Can no longer create hackathons. Hackathons they already own stay theirs.",
+}
+const GAINS: Partial<Record<number, string>> = {
+  1: "Gets full access to every hackathon on the platform and to user management, including making others Admin.",
+  2: "Can create hackathons, and becomes owner of each one they create.",
+}
+
+/**
+ * The consequences of moving a user holding `current` to `target`, one
+ * sentence per role lost or gained, in the order the calls run. Built from
+ * `planPlatformRoleChange` so the warning cannot describe a different change
+ * from the one the action makes.
+ */
+export function platformRoleChangeConsequences(
+  current: number[],
+  target: number,
+): string[] {
+  const { revoke, grant } = planPlatformRoleChange(current, target)
+  // Admin covers everything a lesser role permits — its matcher short-circuits
+  // every check — so a loss on the way to Admin costs nothing, and saying
+  // "can no longer create hackathons" there would be false.
+  const lines =
+    grant === ADMIN_ROLE
+      ? []
+      : revoke.map((r) => LOSES[r] ?? `Loses ${platformRoleChoiceLabel(r)}.`)
+  if (grant !== undefined)
+    lines.push(GAINS[grant] ?? `Gets ${platformRoleChoiceLabel(grant)}.`)
+  return lines
+}
+
+export function planPlatformRoleChange(
+  current: number[],
+  target: number,
+): { revoke: number[]; grant: number | undefined } {
+  return {
+    revoke: ASSIGNABLE_GLOBAL_ROLES.filter(
+      (r) => r !== target && current.includes(r),
+    ),
+    grant:
+      target !== NO_PLATFORM_ROLE && !current.includes(target)
+        ? target
+        : undefined,
+  }
 }

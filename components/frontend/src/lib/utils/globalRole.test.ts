@@ -2,12 +2,19 @@ import { describe, expect, it } from "vitest"
 import {
   ASSIGNABLE_GLOBAL_ROLES,
   GLOBAL_ROLE_FILTERS,
+  NO_PLATFORM_ROLE,
+  PLATFORM_ROLE_CHOICES,
+  currentPlatformRole,
   displayableGlobalRoles,
   globalRoleBadgeVariant,
   globalRoleDescription,
   globalRoleFilterLabel,
   globalRoleLabel,
   matchesGlobalRoleFilter,
+  planPlatformRoleChange,
+  platformRoleChangeConsequences,
+  platformRoleChoiceDescription,
+  platformRoleChoiceLabel,
 } from "./globalRole"
 
 // GlobalRole numeric values.
@@ -67,10 +74,9 @@ describe("displayableGlobalRoles", () => {
 })
 
 describe("globalRoleDescription", () => {
-  // The users page offers every assignable role in a picker whose option text is
-  // "<label> — <description>", and builds its legend from the same map. A role
-  // without a description would show up as a dangling dash, so adding one to
-  // ASSIGNABLE_GLOBAL_ROLES has to mean adding its description too.
+  // Both users pages explain every assignable role in their info box from this
+  // map. A role without a description would show up with nothing beside it, so
+  // adding one to ASSIGNABLE_GLOBAL_ROLES has to mean adding its description too.
   it("describes every assignable role", () => {
     for (const role of ASSIGNABLE_GLOBAL_ROLES) {
       expect(
@@ -138,9 +144,144 @@ describe("matchesGlobalRoleFilter", () => {
     expect(matchesGlobalRoleFilter([ADMIN], "none")).toBe(false)
   })
 
-  // Their row shows an "Unknown" badge rather than the grant picker, so they
-  // are not what "No role" promises.
+  // Their row shows an "Unknown" badge rather than a dash, so they are not what
+  // "No platform role" promises.
   it("keeps a user holding only an unnamed role out of no role", () => {
     expect(matchesGlobalRoleFilter([99], "none")).toBe(false)
+  })
+})
+
+describe("PLATFORM_ROLE_CHOICES", () => {
+  it("offers none and every assignable role", () => {
+    expect([...PLATFORM_ROLE_CHOICES].sort()).toEqual(
+      [NO_PLATFORM_ROLE, ...ASSIGNABLE_GLOBAL_ROLES].sort(),
+    )
+  })
+
+  // Least power first, so Admin is the last thing on the ladder.
+  it("ends on Admin", () => {
+    expect(PLATFORM_ROLE_CHOICES.at(-1)).toBe(ADMIN)
+  })
+
+  // Every choice renders as a label with its description beside it.
+  it("labels and describes every choice", () => {
+    for (const choice of PLATFORM_ROLE_CHOICES) {
+      expect(platformRoleChoiceLabel(choice)).not.toBe("Unknown")
+      expect(platformRoleChoiceDescription(choice)).toBeTruthy()
+    }
+  })
+})
+
+describe("currentPlatformRole", () => {
+  it("is none for an empty role list", () => {
+    expect(currentPlatformRole([])).toBe(NO_PLATFORM_ROLE)
+  })
+
+  it("is the one assignable role held", () => {
+    expect(currentPlatformRole([ADMIN])).toBe(ADMIN)
+    expect(currentPlatformRole([HACKATHON_ORGANIZER])).toBe(HACKATHON_ORGANIZER)
+  })
+
+  // Both is representable through the API but is no single choice.
+  it("is undefined for a user holding both", () => {
+    expect(currentPlatformRole([ADMIN, HACKATHON_ORGANIZER])).toBeUndefined()
+  })
+
+  it("ignores a role this build cannot name", () => {
+    expect(currentPlatformRole([99])).toBe(NO_PLATFORM_ROLE)
+    expect(currentPlatformRole([99, ADMIN])).toBe(ADMIN)
+  })
+})
+
+describe("planPlatformRoleChange", () => {
+  it("grants from none", () => {
+    expect(planPlatformRoleChange([], ADMIN)).toEqual({
+      revoke: [],
+      grant: ADMIN,
+    })
+  })
+
+  it("revokes to none", () => {
+    expect(planPlatformRoleChange([ADMIN], NO_PLATFORM_ROLE)).toEqual({
+      revoke: [ADMIN],
+      grant: undefined,
+    })
+  })
+
+  it("switches by revoking the old role and granting the new", () => {
+    expect(planPlatformRoleChange([HACKATHON_ORGANIZER], ADMIN)).toEqual({
+      revoke: [HACKATHON_ORGANIZER],
+      grant: ADMIN,
+    })
+  })
+
+  it("does nothing when the target is already the only role", () => {
+    expect(planPlatformRoleChange([ADMIN], ADMIN)).toEqual({
+      revoke: [],
+      grant: undefined,
+    })
+  })
+
+  // Settling a user granted both out of band: keep the target, drop the other.
+  it("drops the other role from a user holding both", () => {
+    expect(
+      planPlatformRoleChange([ADMIN, HACKATHON_ORGANIZER], HACKATHON_ORGANIZER),
+    ).toEqual({ revoke: [ADMIN], grant: undefined })
+  })
+
+  it("leaves a role this build cannot name alone", () => {
+    expect(planPlatformRoleChange([99, ADMIN], NO_PLATFORM_ROLE)).toEqual({
+      revoke: [ADMIN],
+      grant: undefined,
+    })
+  })
+})
+
+describe("platformRoleChangeConsequences", () => {
+  it("says nothing for no change", () => {
+    expect(platformRoleChangeConsequences([ADMIN], ADMIN)).toEqual([])
+  })
+
+  it("names one gain for a grant from none", () => {
+    const lines = platformRoleChangeConsequences([], HACKATHON_ORGANIZER)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatch(/create hackathons/)
+  })
+
+  // Revoking a platform role leaves hackathon ownership alone, and an admin
+  // demoting an organizer should be told so rather than fear for their events.
+  it("says owned hackathons stay when Organizer is removed", () => {
+    expect(
+      platformRoleChangeConsequences([HACKATHON_ORGANIZER], NO_PLATFORM_ROLE),
+    ).toEqual([expect.stringMatching(/already own stay theirs/)])
+  })
+
+  // In the order the calls run: the loss first, then the gain.
+  it("names the loss and then the gain for a switch down from Admin", () => {
+    const lines = platformRoleChangeConsequences([ADMIN], HACKATHON_ORGANIZER)
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toMatch(/Loses access/)
+    expect(lines[1]).toMatch(/create hackathons/)
+  })
+
+  // Admin can do everything Organizer could, so "can no longer create
+  // hackathons" would be false on the way up.
+  it("names only the gain for a switch up to Admin", () => {
+    const lines = platformRoleChangeConsequences([HACKATHON_ORGANIZER], ADMIN)
+    expect(lines).toEqual([expect.stringMatching(/full access/)])
+  })
+
+  // The generic "Gets X." / "Loses X." is a fallback for a role added without
+  // its sentences; every role we assign has to have real ones.
+  it("has a real sentence for every assignable role either way", () => {
+    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
+      const label = platformRoleChoiceLabel(role)
+      expect(platformRoleChangeConsequences([], role)[0]).not.toBe(
+        `Gets ${label}.`,
+      )
+      expect(
+        platformRoleChangeConsequences([role], NO_PLATFORM_ROLE)[0],
+      ).not.toBe(`Loses ${label}.`)
+    }
   })
 })
