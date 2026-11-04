@@ -82,6 +82,10 @@
     function fullName(user: UserRow): string {
         return user.displayName || user.username;
     }
+
+    function ownsLabel(n: number): string {
+        return `${n} ${n === 1 ? 'hackathon' : 'hackathons'}`;
+    }
 </script>
 
 <!--
@@ -161,7 +165,9 @@
             </dl>
             <p class="m-0 mt-2">
                 Open a user to change their platform role or see their hackathons. Roles
-                inside a hackathon — owner or member — are separate.
+                inside a hackathon — owner or member — are separate. “Owns” counts the
+                hackathons a user owns; taking part is not counted here yet, only on their
+                page.
             </p>
         </InfoToggle>
     {/if}
@@ -172,7 +178,7 @@
         <p class="m-0 py-6 text-center text-sm text-ink-3">{emptyLabel}</p>
     {:else}
         <!--
-          Two presentations of one list: cards under `md`, where a six-column
+          Two presentations of one list: cards under `md`, where a seven-column
           table would scroll sideways, and a table above it. Each card and each
           name is a link to the user's own page.
         -->
@@ -202,8 +208,13 @@
                             </span>
                         </div>
                     </div>
-                    <div class="mt-3 flex border-t border-line pt-3 text-xs">
+                    <div class="mt-3 flex items-center gap-3 border-t border-line pt-3 text-xs">
                         {@render roleBadges(user)}
+                        {#if user.ownedCount > 0}
+                            <span class="ml-auto text-ink-3">
+                                Owns <span class="tnum">{ownsLabel(user.ownedCount)}</span>
+                            </span>
+                        {/if}
                     </div>
                 </a>
             {/each}
@@ -219,11 +230,12 @@
             <table class="w-full min-w-[720px] table-fixed border-collapse text-left text-xs">
                 <colgroup>
                     <col class="w-[6%]" />
-                    <col class="w-[22%]" />
-                    <col class="w-[16%]" />
-                    <col class="w-[24%]" />
-                    <col class="w-[12%]" />
                     <col class="w-[20%]" />
+                    <col class="w-[14%]" />
+                    <col class="w-[20%]" />
+                    <col class="w-[10%]" />
+                    <col class="w-[11%]" />
+                    <col class="w-[19%]" />
                 </colgroup>
                 <thead>
                     <tr class="border-b border-line bg-raised text-ink-3">
@@ -234,6 +246,10 @@
                         <th class="px-3 py-2 font-semibold">Username</th>
                         <th class="px-3 py-2 font-semibold">Email</th>
                         <th class="px-3 py-2 font-semibold">Joined</th>
+                        <!-- "Owns", not "Hackathons": only ownership is counted, and
+                             a blank under a broader heading would read as
+                             "takes part in nothing". -->
+                        <th class="px-3 py-2 font-semibold">Owns</th>
                         <th class="px-3 py-2 font-semibold">Platform role</th>
                     </tr>
                 </thead>
@@ -258,6 +274,9 @@
                                 {user.email || '—'}
                             </td>
                             <td class="px-3 py-2 text-ink-3 tnum">{localIsoDate(user.createdAt)}</td>
+                            <td class="px-3 py-2 tnum {user.ownedCount > 0 ? 'text-ink-2' : 'text-ink-3'}">
+                                {user.ownedCount > 0 ? ownsLabel(user.ownedCount) : '—'}
+                            </td>
                             <td class="px-3 py-2">
                                 {@render roleBadges(user)}
                             </td>
