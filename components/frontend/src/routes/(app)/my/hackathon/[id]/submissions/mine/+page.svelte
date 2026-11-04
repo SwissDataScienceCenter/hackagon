@@ -1,17 +1,13 @@
 <script lang="ts">
-    import { enhance } from '$app/forms';
     import type { ActionData, PageData } from './$types';
-    import { isHttpsUrl } from '$lib/utils/url';
-    import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
+    import SubmissionForm from '$lib/components/hackathon/SubmissionForm.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     // Derived from the load's return shape rather than restated, so the two
     // can't drift.
     type Entry = PageData['groups'][number]['entry'];
-
-    let pending: boolean = $state(false);
 
     function formatDate(d: Date | undefined): string {
         if (!d) return '';
@@ -22,15 +18,6 @@
             hour: 'numeric',
             minute: '2-digit',
         });
-    }
-
-    /**
-     * A link from the saved entry, to edit from — or nothing, when it is notes
-     * from before the backend required https. Prefilling those would have the
-     * form refuse its own starting value.
-     */
-    function prefillLink(value: string | undefined): string {
-        return value && isHttpsUrl(value) ? value : '';
     }
 </script>
 
@@ -46,7 +33,7 @@
 {/snippet}
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
-<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex min-w-0 flex-col gap-1">
         <h2 class="m-0 text-title text-ink">Our submission</h2>
         <span class="text-xs text-ink-3">
@@ -91,85 +78,20 @@
                     <span class="text-xs text-ink-3">{group.projectTitle}</span>
                 </div>
 
-                {#if form?.message && form?.teamId === group.teamId}
-                    <p
-                        class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2
-                               text-xs text-danger-ink"
-                        role="alert"
-                    >
-                        {form.message}
-                    </p>
-                {:else if form?.success && form?.teamId === group.teamId}
-                    <p
-                        class="m-0 rounded-card border border-success/40 bg-success/10 px-3 py-2
-                               text-xs text-success-ink"
-                        role="status"
-                    >
-                        {form.unchanged ? 'Nothing changed, so nothing was saved.' : 'Saved.'}
-                    </p>
-                {/if}
-
                 {#if data.maySubmit}
-                    <form
-                        method="POST"
-                        action="?/saveSubmission"
-                        class="flex flex-col gap-3 border-t border-line pt-3"
-                        use:enhance={() => {
-                            pending = true;
-                            return async ({ update }) => {
-                                // Not reset: the fields start from the saved
-                                // entry, and after a save that is what was just
-                                // typed — clearing them would lose it, or, when
-                                // the save failed, the work itself.
-                                await update({ reset: false });
-                                pending = false;
-                            };
-                        }}
-                    >
-                        <input type="hidden" name="teamId" value={group.teamId} />
-                        <input type="hidden" name="projectId" value={group.projectId} />
-                        <!-- None is required on its own; the action refuses only a
-                             save with all three empty. -->
-                        <label class="field-label">
-                            Repository link
-                            <input
-                                type="url"
-                                name="repositoryUrl"
-                                maxlength={2048}
-                                value={prefillLink(group.entry?.repositoryUrl)}
-                                class="field h-8 px-2 text-xs"
-                            />
-                        </label>
-                        <label class="field-label">
-                            Attachments folder link
-                            <input
-                                type="url"
-                                name="attachmentFolderUrl"
-                                maxlength={2048}
-                                value={prefillLink(group.entry?.attachmentFolderUrl)}
-                                class="field h-8 px-2 text-xs"
-                            />
-                        </label>
-                        <div class="field-label">
-                            <label for="submission-description-{group.teamId}">
-                                Description
-                            </label>
-                            <MarkdownEditor
-                                id="submission-description-{group.teamId}"
-                                name="description"
-                                rows={6}
-                                maxlength={10000}
-                                value={group.entry?.description ?? ''}
-                            />
-                        </div>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <!-- The one solid accent: saving is what this page is for. -->
-                            <button type="submit" class="btn btn-sm btn-solid" disabled={pending}>
-                                Save
-                            </button>
-                            {@render lastSaved(group.entry)}
-                        </div>
-                    </form>
+                    <!-- The action's answer goes only to the team it was about. -->
+                    {@const mine = form?.teamId === group.teamId}
+                    <SubmissionForm
+                        teamId={group.teamId}
+                        projectId={group.projectId}
+                        saved={group.entry}
+                        outcome={mine && form?.success
+                            ? form.unchanged
+                                ? 'unchanged'
+                                : 'saved'
+                            : undefined}
+                        message={mine ? form?.message : undefined}
+                    />
                 {:else}
                     <!-- Closed: the entry as it stands, read only. -->
                     <div class="flex flex-col gap-2 border-t border-line pt-3">
