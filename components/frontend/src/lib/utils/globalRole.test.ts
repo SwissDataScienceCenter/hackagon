@@ -7,13 +7,11 @@ import {
   currentPlatformRole,
   displayableGlobalRoles,
   globalRoleBadgeVariant,
-  globalRoleDescription,
   globalRoleFilterLabel,
   globalRoleLabel,
   matchesGlobalRoleFilter,
   planPlatformRoleChange,
   platformRoleChangeConsequences,
-  platformRoleChoiceDescription,
   platformRoleChoiceLabel,
 } from "./globalRole"
 
@@ -70,24 +68,6 @@ describe("displayableGlobalRoles", () => {
         `role ${role} has no badge variant`,
       ).toBeTruthy()
     }
-  })
-})
-
-describe("globalRoleDescription", () => {
-  // Both users pages explain every assignable role in their info box from this
-  // map. A role without a description would show up with nothing beside it, so
-  // adding one to ASSIGNABLE_GLOBAL_ROLES has to mean adding its description too.
-  it("describes every assignable role", () => {
-    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
-      expect(
-        globalRoleDescription(role),
-        `role ${role} has no description`,
-      ).toBeTruthy()
-    }
-  })
-
-  it("has nothing to say about a role this build cannot name", () => {
-    expect(globalRoleDescription(99)).toBeUndefined()
   })
 })
 
@@ -163,11 +143,9 @@ describe("PLATFORM_ROLE_CHOICES", () => {
     expect(PLATFORM_ROLE_CHOICES.at(-1)).toBe(ADMIN)
   })
 
-  // Every choice renders as a label with its description beside it.
-  it("labels and describes every choice", () => {
+  it("labels every choice", () => {
     for (const choice of PLATFORM_ROLE_CHOICES) {
       expect(platformRoleChoiceLabel(choice)).not.toBe("Unknown")
-      expect(platformRoleChoiceDescription(choice)).toBeTruthy()
     }
   })
 })

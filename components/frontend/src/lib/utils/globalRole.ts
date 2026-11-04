@@ -10,19 +10,6 @@ const BADGE_VARIANT: Partial<Record<number, string>> = {
   2: "badge-neutral",
 }
 
-// What each role actually carries, read off the casbin policy rather than
-// inferred from the name: `admin` has no policy rows at all, because the matcher
-// ends in `|| g2(r.sub, "admin")` and short-circuits every check in every
-// hackathon, while `hackathon_organizer` carries exactly one row,
-// hackathon:create. See components/backend/internal/middleware/rbac.go.
-//
-// Terse on purpose: it fills one line of the "About platform roles" box on the
-// users list and on each user's page, and both read it from here.
-const DESCRIPTION: Partial<Record<number, string>> = {
-  1: "Full access to every hackathon, and to this page",
-  2: "Can create hackathons, nothing more",
-}
-
 // Every assignable role, in display order — drives the badges, the role filter
 // and the choices on a user's page.
 export const ASSIGNABLE_GLOBAL_ROLES = [1, 2]
@@ -33,10 +20,6 @@ export function globalRoleLabel(r: number): string | undefined {
 
 export function globalRoleBadgeVariant(r: number): string | undefined {
   return BADGE_VARIANT[r]
-}
-
-export function globalRoleDescription(r: number): string | undefined {
-  return DESCRIPTION[r]
 }
 
 /**
@@ -116,14 +99,6 @@ export function platformRoleChoiceLabel(choice: number): string {
   return globalRoleLabel(choice) ?? "Unknown"
 }
 
-export function platformRoleChoiceDescription(
-  choice: number,
-): string | undefined {
-  if (choice === NO_PLATFORM_ROLE)
-    return "Takes part in hackathons; can be made an owner of one"
-  return globalRoleDescription(choice)
-}
-
 /**
  * The choice a user's current roles amount to, or `undefined` when they hold
  * both assignable roles — representable through the API, never granted by this
@@ -139,19 +114,15 @@ export function currentPlatformRole(roles: number[]): number | undefined {
   return undefined
 }
 
-/**
- * The calls that leave a user holding exactly `target` among the assignable
- * roles. The backend has no "set role", only AddRole and RemoveRole, so a switch
- * is two calls and cannot be atomic.
- *
- * The caller must run `revoke` before `grant`. If the grant then fails, the user
- * is left holding less than before rather than both roles at once — the failure
- * that fails closed. Roles this build cannot name are left alone, for the same
- * reason `currentPlatformRole` ignores them.
- */
-// What losing or gaining each role does, read off the same casbin policy as
-// DESCRIPTION. Losing a platform role never touches hackathon ownership: owner
-// rows are per hackathon and RemoveRole leaves them alone.
+// What losing or gaining each role does, read off the casbin policy rather than
+// inferred from the name: `admin` has no policy rows at all, because the matcher
+// ends in `|| g2(r.sub, "admin")` and short-circuits every check in every
+// hackathon, while `hackathon_organizer` carries exactly one row,
+// hackathon:create. See components/backend/internal/middleware/rbac.go.
+//
+// Kept in code, unlike the info-box texts in $lib/content/help, because they
+// are assembled per change. Losing a platform role never touches hackathon
+// ownership: owner rows are per hackathon and RemoveRole leaves them alone.
 const LOSES: Partial<Record<number, string>> = {
   1: "Loses access to every hackathon they don't own or take part in, and to user management.",
   2: "Can no longer create hackathons. Hackathons they already own stay theirs.",
@@ -184,6 +155,16 @@ export function platformRoleChangeConsequences(
   return lines
 }
 
+/**
+ * The calls that leave a user holding exactly `target` among the assignable
+ * roles. The backend has no "set role", only AddRole and RemoveRole, so a switch
+ * is two calls and cannot be atomic.
+ *
+ * The caller must run `revoke` before `grant`. If the grant then fails, the user
+ * is left holding less than before rather than both roles at once — the failure
+ * that fails closed. Roles this build cannot name are left alone, for the same
+ * reason `currentPlatformRole` ignores them.
+ */
 export function planPlatformRoleChange(
   current: number[],
   target: number,

@@ -4,10 +4,8 @@
     import InfoToggle from '$lib/components/layout/InfoToggle.svelte';
     import UserAvatar from '$lib/components/user/UserAvatar.svelte';
     import {
-        ASSIGNABLE_GLOBAL_ROLES,
         GLOBAL_ROLE_FILTERS,
         globalRoleBadgeVariant,
-        globalRoleDescription,
         globalRoleFilterLabel,
         globalRoleLabel,
         matchesGlobalRoleFilter,
@@ -149,10 +147,10 @@
     <!-- Chips, not buttons: this picks which rows are showing, and a solid
          accent would read as an action. Rendered even when the slice is
          empty, so the way back out stays in view. What the roles mean is one
-         click away rather than always on screen; it comes from the same
-         descriptions the user page uses, so the two cannot disagree. -->
+         click away rather than always on screen, in
+         $lib/content/help/users-list.md. -->
     {#if data.users.length > 0}
-        <InfoToggle label="About platform roles">
+        <InfoToggle label="About these filters" topic="users-list">
             {#snippet heading()}
                 <div class="flex flex-wrap gap-1" role="group" aria-label="Filter users">
                     {#each USER_FILTERS as f (f)}
@@ -168,18 +166,6 @@
                     {/each}
                 </div>
             {/snippet}
-            <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1.5">
-                {#each ASSIGNABLE_GLOBAL_ROLES as role (role)}
-                    <dt class="font-mono font-semibold text-ink">{globalRoleLabel(role)}</dt>
-                    <dd class="m-0">{globalRoleDescription(role) ?? 'no description'}</dd>
-                {/each}
-            </dl>
-            <p class="m-0 mt-2">
-                Open a user to change their platform role or see their hackathons. Roles
-                inside a hackathon — owner or member — are separate. “Owns” counts the
-                hackathons a user owns; taking part is not counted here yet, only on their
-                page.
-            </p>
         </InfoToggle>
     {/if}
 

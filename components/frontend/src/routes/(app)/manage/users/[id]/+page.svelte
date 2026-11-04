@@ -15,7 +15,6 @@
         globalRoleBadgeVariant,
         globalRoleLabel,
         platformRoleChangeConsequences,
-        platformRoleChoiceDescription,
         platformRoleChoiceLabel,
     } from '$lib/utils/globalRole';
     import { isPrivate, statusBadgeVariant, statusLabel } from '$lib/utils/hackathonStatus';
@@ -112,22 +111,10 @@
     </div>
 
     <section class="flex max-w-2xl flex-col gap-3">
-        <InfoToggle label="About platform roles">
+        <InfoToggle label="About platform roles" topic="user-platform-role">
             {#snippet heading()}
                 <h2 class="m-0 text-section">Platform role</h2>
             {/snippet}
-            <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1.5">
-                {#each PLATFORM_ROLE_CHOICES as choice (choice)}
-                    <dt class="font-mono font-semibold text-ink">
-                        {platformRoleChoiceLabel(choice)}
-                    </dt>
-                    <dd class="m-0">{platformRoleChoiceDescription(choice)}</dd>
-                {/each}
-            </dl>
-            <p class="m-0 mt-2">
-                A user holds one at a time. Switching revokes the current role and then grants the
-                new one.
-            </p>
         </InfoToggle>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -253,15 +240,12 @@
     </section>
 
     <section class="flex flex-col gap-3">
-        <InfoToggle label="About hackathon roles">
+        <InfoToggle label="About hackathon roles" topic="user-hackathon-roles">
             {#snippet heading()}
                 <h2 class="m-0 text-section">
                     Hackathons <span class="tnum text-ink-3">{data.hackathons.length}</span>
                 </h2>
             {/snippet}
-            Owner, Member or Waitlisted in each hackathon. It is changed inside that hackathon,
-            by its owners (named under each one) or by a platform admin. Click a role to manage
-            it there. It is separate from the platform role above.
         </InfoToggle>
         {#if data.hackathons.length === 0}
             <p class="m-0 text-sm text-ink-3">No hackathons yet.</p>
