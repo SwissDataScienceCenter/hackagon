@@ -43,7 +43,7 @@ export function capabilityHref(
     case SET_TEAM_PREFERENCES:
       return resolve(`/my/hackathon/${hackathonId}/projects`)
     case CREATE_PROJECT_SUBMISSIONS:
-      return resolve(`/my/hackathon/${hackathonId}/submissions`)
+      return resolve(`/my/hackathon/${hackathonId}/submissions/mine`)
     case VOTE:
       return resolve(`/my/hackathon/${hackathonId}/voting`)
     case VIEW_RESULTS:

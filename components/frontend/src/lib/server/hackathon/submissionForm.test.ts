@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseSubmissionForm } from "./submissionForm"
+import { parseSubmissionForm, sameSubmission } from "./submissionForm"
 
 function form(fields: Record<string, string>): FormData {
   const f = new FormData()
@@ -99,5 +99,71 @@ describe("parseSubmissionForm", () => {
       ok: false,
       message: "The description must be at most 10000 characters",
     })
+  })
+})
+
+describe("sameSubmission", () => {
+  const entry = {
+    repositoryUrl: "https://github.com/byte-me/floods",
+    attachmentFolderUrl: undefined,
+    description: "Flood maps.",
+  }
+
+  it("is false with no entry to compare against", () => {
+    expect(
+      sameSubmission(null, {
+        repositoryUrl: undefined,
+        attachmentFolderUrl: undefined,
+        description: "Flood maps.",
+      }),
+    ).toBe(false)
+  })
+
+  it("is true when every field matches, blank and absent alike", () => {
+    expect(
+      sameSubmission(
+        { ...entry, attachmentFolderUrl: "" },
+        {
+          repositoryUrl: "https://github.com/byte-me/floods",
+          attachmentFolderUrl: undefined,
+          description: "Flood maps.",
+        },
+      ),
+    ).toBe(true)
+  })
+
+  it("ignores stray whitespace on the saved side", () => {
+    expect(
+      sameSubmission(
+        { ...entry, description: "Flood maps.\n" },
+        {
+          repositoryUrl: "https://github.com/byte-me/floods",
+          attachmentFolderUrl: undefined,
+          description: "Flood maps.",
+        },
+      ),
+    ).toBe(true)
+  })
+
+  it.each([
+    [
+      "the repository link",
+      { repositoryUrl: "https://github.com/byte-me/maps" },
+    ],
+    [
+      "a new attachments link",
+      { attachmentFolderUrl: "https://drive.example.org/x" },
+    ],
+    ["the description", { description: "Flood maps, now with rivers." }],
+    ["a cleared field", { repositoryUrl: undefined }],
+  ])("is false when %s changed", (_name, change) => {
+    expect(
+      sameSubmission(entry, {
+        repositoryUrl: "https://github.com/byte-me/floods",
+        attachmentFolderUrl: undefined,
+        description: "Flood maps.",
+        ...change,
+      }),
+    ).toBe(false)
   })
 })

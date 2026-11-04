@@ -80,6 +80,33 @@ describe("memberNav", () => {
     })
   })
 
+  // Only for someone on a team, and right under Submissions, whose subtree its
+  // route sits in — the same arrangement as My projects.
+  describe("myTeamCount", () => {
+    it("offers no Our submission entry to a viewer on no team", () => {
+      expect(idsOf(memberNav("hack-1"))).not.toContain("member:my-submission")
+    })
+
+    it("offers Our submission right under Submissions once the viewer is on a team", () => {
+      const items = memberNav("hack-1", [], true, false, 1, 0, 0, 1)
+
+      expect(idsOf(items).indexOf("member:my-submission")).toBe(
+        idsOf(items).indexOf("member:submissions") + 1,
+      )
+    })
+
+    it("lights Our submission on its page, and Submissions on the list", () => {
+      const items = memberNav("hack-1", [], false, false, 1, 0, 0, 1)
+
+      expect(activeNavId("/my/hackathon/hack-1/submissions/mine", items)).toBe(
+        "member:my-submission",
+      )
+      expect(activeNavId("/my/hackathon/hack-1/submissions", items)).toBe(
+        "member:submissions",
+      )
+    })
+  })
+
   // Phases are optional, so the entry is too — and unlike Teams, the organiser's
   // half is gated on the same count, because Settings is what leads to the first
   // phase.

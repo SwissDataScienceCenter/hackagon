@@ -2,17 +2,20 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import {
-  mayCreateSubmissions,
-  mayFinalizeSubmissions,
-} from "$lib/server/hackathon/capabilities"
+import { mayCreateSubmissions } from "$lib/server/hackathon/capabilities"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
-import { parseSubmissionForm } from "$lib/server/hackathon/submissionForm"
-import { submissionVersions } from "$lib/server/hackathon/submissions"
+import {
+  parseSubmissionForm,
+  sameSubmission,
+} from "$lib/server/hackathon/submissionForm"
+import { submissionEntry } from "$lib/server/hackathon/submissions"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
+// The viewer's own team's entry, edited in place — the page behind the
+// sidebar's Our submission entry. Every team's entry, read only, is the
+// Submissions page one level up.
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
@@ -36,17 +39,17 @@ export const load: PageServerLoad = async (event) => {
 
   // Every team the viewer is on, not just the first — nothing stops a
   // participant from being assigned to more than one team in one hackathon, and
-  // each carries its own submissions.
+  // each carries its own submission.
   const myTeams = (visibleTeams ?? []).filter((t) =>
     t.members.some((m) => m.id === platformUserId),
   )
 
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 
-  // Creator/modifier come back as bare user ids — resolved against every
-  // confirmed hackathon member, not just the team's current roster, since the
-  // person who created a submission may since have left the team. Same
-  // fallback as the overview page: a creator who has left resolves to nothing.
+  // Who saved comes back as a bare user id — resolved against every confirmed
+  // hackathon member, not just the team's current roster, since the person who
+  // saved may since have left the team. Same fallback as the overview page: a
+  // member who has left resolves to nothing.
   const memberNames = new Map(
     hackathon.members
       .filter((m) => m.user !== undefined)
@@ -65,7 +68,7 @@ export const load: PageServerLoad = async (event) => {
         teamName: t.name,
         projectId: t.projectId,
         projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        ...submissionVersions(submissions, memberNames),
+        entry: submissionEntry(submissions, memberNames),
       }
     }),
   )
@@ -81,19 +84,29 @@ export const load: PageServerLoad = async (event) => {
     // should carry a team read, or `ListSubmissions` should take a team id the
     // caller already knows.
     teamsPublished: visibleTeams !== undefined,
-    // Both are viewer-wide, not per-team: neither RPC's permission depends on
-    // which of the viewer's teams it is.
+    // Viewer-wide, not per-team: the RPC's permission does not depend on which
+    // of the viewer's teams it is.
     maySubmit: mayCreateSubmissions(
       myMembership ?? undefined,
       submissionsEnabled,
       isAdmin,
     ),
-    mayFinalize: mayFinalizeSubmissions(myMembership ?? undefined, isAdmin),
   }
 }
 
 export const actions: Actions = {
-  createSubmission: async (event) => {
+  // One save is two RPCs: `CreateSubmission` always writes a new draft
+  // version, and `FinalizeSubmission` makes it the team's entry. Doing both
+  // every time is what lets the page treat the submission as one thing edited
+  // in place — see `submissionEntry`.
+  //
+  // TODO(backend: submission-edit-in-place): with an update RPC this becomes a
+  // single call. Until then, a save while voting is open moves the entry onto a
+  // new version id, while the votes already cast stay on the old one: the same
+  // voter can vote for the team again, and results can show "Unknown
+  // submission". Not locked here on purpose — where the backend allows an edit,
+  // so does the frontend.
+  saveSubmission: async (event) => {
     const { team } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
@@ -112,15 +125,25 @@ export const actions: Actions = {
     }
     const { repositoryUrl, attachmentFolderUrl, description } = parsed.values
 
+    let id
     try {
-      await team.createSubmission({
+      // Compared against the entry as it is now, read fresh rather than sent
+      // with the form: a teammate may have saved since this page loaded.
+      const { submissions } = await team.listSubmissions({ teamId })
+      if (
+        sameSubmission(submissionEntry(submissions, new Map()), parsed.values)
+      ) {
+        return { success: true, teamId, unchanged: true }
+      }
+
+      ;({ id } = await team.createSubmission({
         teamId,
         projectId,
-        // TODO(backend: submission-repository-url): see `submissionVersions`.
+        // TODO(backend: submission-repository-url): see `submissionEntry`.
         result: repositoryUrl,
         attachmentFolderUrl,
         description,
-      })
+      }))
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
         return fail(400, { teamId, message: e.details })
@@ -137,37 +160,21 @@ export const actions: Actions = {
       throw e
     }
 
-    return { success: true }
-  },
-
-  finalizeSubmission: async (event) => {
-    const { team } = requireGrpc(event.locals.grpc)
-    const form = await event.request.formData()
-
-    // Carried only so a failure can be reported on the right team's card.
-    const teamId = form.get("teamId")
-    const scope = typeof teamId === "string" && teamId !== "" ? teamId : null
-
-    const submissionId = form.get("submissionId")
-    if (typeof submissionId !== "string" || submissionId === "") {
-      return fail(400, { teamId: scope, message: "Missing submission" })
-    }
-
+    // The content is stored by now, as a draft the team's entry ignores. The
+    // next save repairs it: the draft differs from the entry, so that save is
+    // not skipped as unchanged.
     try {
-      await team.finalizeSubmission({ submissionId })
+      await team.finalizeSubmission({ submissionId: id })
     } catch (e) {
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          teamId: scope,
-          message: "You don't have permission to finalize this submission",
+      if (e instanceof ClientError) {
+        return fail(500, {
+          teamId,
+          message: "Saved, but not yet your team's entry — save again",
         })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { teamId: scope, message: "Submission not found" })
       }
       throw e
     }
 
-    return { success: true }
+    return { success: true, teamId, unchanged: false }
   },
 }

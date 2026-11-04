@@ -188,7 +188,10 @@ export function mayReviewProjects(
 }
 
 /**
- * Whether to offer "new submission" for a team.
+ * Whether to offer saving a team's submission. A save also finalizes what it
+ * created, but `FinalizeSubmission`'s team-scoped `submission:write` is a
+ * default `Member` policy (`rbac.go:214`), so creating is the only half a
+ * capability can withhold.
  *
  * Unlike `mayPreferProjects`, this mirrors the backend exactly: seeded
  * hackathons *do* carry a `HackathonState` with `CREATE_PROJECT_SUBMISSIONS`
@@ -211,33 +214,6 @@ export function mayCreateSubmissions(
   if (isAdmin) return true
 
   return capabilityEnabled && membership !== undefined && !membership.isWaiting
-}
-
-/**
- * Whether to offer "finalize this draft".
- *
- * Deliberately *not* gated on `CREATE_PROJECT_SUBMISSIONS`, unlike
- * `mayCreateSubmissions`: `FinalizeSubmission` enforces team-scoped
- * `submission:write` (`team_service.go:632-640`), which is a **default** policy
- * granted to `Member` (`rbac.go:214`) and never touched by `SetCapabilities`.
- * Verified live in the seeded "Internal Product Sprint", where the capability is
- * off: `CreateSubmission` is refused while `FinalizeSubmission` succeeds.
- *
- * So closing submissions stops new versions but still lets a team finalize a
- * draft they already hold — gating this on the capability would withhold an
- * action the backend grants, stranding that team with an unfinalized entry.
- *
- * The team-membership half needs no check here: callers only offer this for
- * teams the viewer is on, which is what grants the `member` role in the team's
- * casbin domain in the first place.
- */
-export function mayFinalizeSubmissions(
-  membership: HackathonMember | undefined,
-  isAdmin = false,
-): boolean {
-  if (isAdmin) return true
-
-  return membership !== undefined && !membership.isWaiting
 }
 
 /**

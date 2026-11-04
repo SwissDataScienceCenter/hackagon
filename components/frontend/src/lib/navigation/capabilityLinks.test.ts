@@ -15,7 +15,7 @@ describe("capabilityHref", () => {
   it.each([
     [PROPOSE_PROJECTS, "/my/hackathon/h1/projects/propose"],
     [SET_TEAM_PREFERENCES, "/my/hackathon/h1/projects"],
-    [CREATE_PROJECT_SUBMISSIONS, "/my/hackathon/h1/submissions"],
+    [CREATE_PROJECT_SUBMISSIONS, "/my/hackathon/h1/submissions/mine"],
     [VOTE, "/my/hackathon/h1/voting"],
     [VIEW_RESULTS, "/my/hackathon/h1/results"],
     [VIEW_TEAMS, "/my/hackathon/h1/teams"],
