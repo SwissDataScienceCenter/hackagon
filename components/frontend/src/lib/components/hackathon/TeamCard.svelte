@@ -1,27 +1,10 @@
 <script lang="ts">
-    import {
-        submissionStatusLabel,
-        submissionStatusBadgeVariant,
-    } from '$lib/utils/submissionStatus';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
     import type { Snippet } from 'svelte';
 
     type TeamMember = {
         name: string;
         imageUrl?: string;
-    };
-
-    // Structural, not the generated `Submission`: that type lives behind
-    // $lib/server and must never be imported into a component. The load hands
-    // over a plain object, already narrowed to the one version that counts.
-    type FinalEntry = {
-        version: number;
-        repositoryUrl?: string;
-        attachmentFolderUrl?: string;
-        description?: string;
-        finalizedAt?: Date;
-        finalizedBy?: string;
     };
 
     let {
@@ -30,8 +13,6 @@
         projectDescription,
         imageUrl,
         members,
-        isOwn = false,
-        entry = null,
         actions,
     }: {
         // Optional because it is a position in a list, not a property of the
@@ -46,8 +27,6 @@
         projectDescription?: string;
         imageUrl?: string;
         members: TeamMember[];
-        isOwn?: boolean;
-        entry?: FinalEntry | null;
         /**
          * The card's controls, in a column to the right — the same shape
          * `ParticipantCard` uses, and left to the caller for the same reason:
@@ -59,11 +38,6 @@
         actions?: Snippet;
     } = $props();
 
-    // SubmissionStatus.SUBMISSION_STATUS_FINAL — the numeric value, since the
-    // generated enum is server-only. `entry` is a final by construction (see
-    // the load), so the status is fixed rather than passed in.
-    const FINAL = 2;
-
     function memberInitials(name: string): string {
         return name
             .split(' ')
@@ -72,15 +46,6 @@
             .join('')
             .toUpperCase()
             .slice(0, 2);
-    }
-
-    function formatDate(d: Date | undefined): string {
-        if (!d) return '';
-        return d.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
     }
 </script>
 
@@ -163,45 +128,6 @@
                     </div>
                 {/each}
             </div>
-
-            {#if entry}
-                <!--
-                  Only a finalized entry ever appears here — the load drops
-                  drafts before they leave the server. A team without one shows
-                  nothing rather than "no entry yet", which would otherwise read
-                  as a failure on every card of a hackathon that has not reached
-                  submissions.
-                -->
-                <div class="flex flex-col gap-1 border-t border-line pt-3">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-xs font-semibold text-ink">
-                            {isOwn ? "Your team's entry" : 'Entry'}
-                        </span>
-                        <span
-                            class="badge {submissionStatusBadgeVariant(FINAL) ??
-                                'badge-neutral'}"
-                        >
-                            {submissionStatusLabel(FINAL) ?? 'Final'}
-                        </span>
-                        <span class="text-xs text-ink-3">version {entry.version}</span>
-                    </div>
-
-                    <!-- Description in full: this card shows one team, on a page
-                         a voter opens to read that team's entry. -->
-                    <SubmissionContent
-                        repositoryUrl={entry.repositoryUrl}
-                        attachmentFolderUrl={entry.attachmentFolderUrl}
-                        description={entry.description}
-                    />
-
-                    {#if entry.finalizedAt}
-                        <span class="text-xs text-ink-3">
-                            Finalized {formatDate(entry.finalizedAt)}{#if entry.finalizedBy}
-                                by {entry.finalizedBy}{/if}
-                        </span>
-                    {/if}
-                </div>
-            {/if}
         </div>
 
         {#if actions}

@@ -80,7 +80,6 @@
                         title={team.name}
                         imageUrl={team.imageUrl}
                         members={team.members}
-                        isOwn={team.isOwn}
                     >
                         {#snippet actions()}
                             <!--

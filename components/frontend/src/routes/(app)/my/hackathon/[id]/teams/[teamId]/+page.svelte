@@ -71,16 +71,6 @@
         projectDescription={data.projectDescription}
         imageUrl={data.imageUrl}
         members={data.members}
-        isOwn={data.isOwn}
-        entry={data.entry}
     />
 
-    {#if !data.entry}
-        <!-- Said outright rather than left blank: a team with no finalized entry
-             is not on any ballot, and a voter who followed a link here from one
-             would otherwise be looking at a card with a piece missing. -->
-        <p class="m-0 text-xs text-ink-3">
-            This team has not finalized an entry, so there is nothing to vote on yet.
-        </p>
-    {/if}
 </div>

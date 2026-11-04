@@ -1,31 +1,24 @@
 import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
-import { submissionVersions } from "$lib/server/hackathon/submissions"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 /**
- * One team, its project and the entry it filed — the page a voter goes to before
- * casting a vote. Reached from the ballot, which lists a project title and a team
- * name and is not enough to judge on, and from the teams list, which shows the
- * roster but never the entry.
+ * One team and its project — who is on it and what they are building. Reached
+ * from the teams list, a participant's profile, a project's page and the
+ * Submissions page.
  *
- * TODO(backend: submission-cross-team-read): this reads `TeamService.Get`, which
- * eager-loads *every* submission a team has and gates only on hackathon-scoped
- * `hackathon:read` (`team_service.go:91-121`) — it never checks
- * `submission:read`. Only `latestFinal` survives this load, so no draft of
- * another team's reaches the browser. Once a hackathon-wide, finals-only read
- * path exists, switch to it and drop the filtering here.
+ * The team's entry is not shown here: it lives on the Submissions page, which
+ * is where the ballot and the results link to read it.
  *
- * Finals-only for everyone, including a member of the team being shown: their own
- * drafts and version history already have a page (`/submissions`), and keeping
- * one rule here means there is no viewer-dependent filter to get wrong.
+ * `TeamService.Get` eager-loads every submission a team has, drafts included
+ * (see `TODO(backend: submission-cross-team-read)` in `teamEntries`). None of
+ * it is read here, so none of it reaches the browser.
  */
 export const load: PageServerLoad = async (event) => {
   const { hackathon, votingEnabled } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
-  const platformUserId = event.locals.platformUser?.id
 
   let found
   try {
@@ -52,17 +45,6 @@ export const load: PageServerLoad = async (event) => {
   // would 404 legitimate teams, since that list is filtered to what the viewer
   // may see and a team can sit on a project that is not in it.
   const project = hackathon.projects.find((p) => p.id === found.projectId)
-
-  // Finalizer names, resolved against every confirmed hackathon member rather
-  // than the team's current roster — the person who finalized may since have left
-  // the team. Same map and fallback as the submissions page.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
-
-  const { latestFinal } = submissionVersions(found.submissions, memberNames)
 
   // Where the back link goes, since there are several ways in. Read from an
   // explicit `?from` rather than the Referer header: a bookmark, a reload or a
@@ -108,16 +90,5 @@ export const load: PageServerLoad = async (event) => {
         ? project.id
         : undefined,
     members: found.members.map((m) => ({ name: m.displayName || m.username })),
-    isOwn: found.members.some((m) => m.id === platformUserId),
-    entry: latestFinal
-      ? {
-          version: latestFinal.version,
-          repositoryUrl: latestFinal.repositoryUrl,
-          attachmentFolderUrl: latestFinal.attachmentFolderUrl,
-          description: latestFinal.description,
-          finalizedAt: latestFinal.finalizedAt,
-          finalizedBy: latestFinal.finalizedBy,
-        }
-      : null,
   }
 }

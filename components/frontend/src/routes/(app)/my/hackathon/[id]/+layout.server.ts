@@ -93,9 +93,17 @@ export const load: LayoutServerLoad = async (event) => {
   // the subtree. A genuine failure still degrades to no entry rather than no
   // hackathon, and still says so: the alternative offers a link whose page would
   // fail the same way.
+  //
+  // The viewer's own teams come off the same list, for the Our submission
+  // entry, so that entry costs no call of its own.
   let teamCount = 0
+  let myTeamCount = 0
   try {
-    teamCount = (await listVisibleTeams(team, event.params.id))?.length ?? 0
+    const teams = (await listVisibleTeams(team, event.params.id)) ?? []
+    teamCount = teams.length
+    myTeamCount = teams.filter((t) =>
+      t.members.some((m) => m.id === platformUserId),
+    ).length
   } catch (err) {
     event.locals.logger.warn(
       { err },
@@ -172,6 +180,7 @@ export const load: LayoutServerLoad = async (event) => {
     // Gates the sidebar's My projects entry. Counted off the projects `Get`
     // already returned, so it costs no call.
     myProjectCount: myProjects(result.hackathon, platformUserId).length,
+    myTeamCount,
     hackathonState,
   }
 }

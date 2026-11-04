@@ -28,6 +28,7 @@ import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
+import FilePen from "lucide-svelte/icons/file-pen"
 import Ticket from "lucide-svelte/icons/ticket"
 import Inbox from "lucide-svelte/icons/inbox"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
@@ -127,6 +128,10 @@ export interface HackathonPageRef {
  * here, counted by `myProjects`, which already returns zero for anyone not
  * taking part. Deliberately blind to the phase and the capabilities — a
  * proposer finds their projects whether or not proposals are still open.
+ *
+ * `myTeamCount` gates Our submission the same way: how many of the visible
+ * teams the viewer is on. Zero while assignments are unpublished too, which is
+ * right — the page has nothing to submit against until they are.
  */
 export function memberNav(
   hackathonId: string,
@@ -136,6 +141,7 @@ export function memberNav(
   teamCount = 0,
   phaseCount = 0,
   myProjectCount = 0,
+  myTeamCount = 0,
 ): NavItem[] {
   return [
     {
@@ -209,6 +215,19 @@ export function memberNav(
       icon: Send,
       href: resolve(`/my/hackathon/${hackathonId}/submissions`),
     },
+    // Right under Submissions, as the viewer's team's slice of it — the same
+    // arrangement as My projects under Projects, and lit by the longest match
+    // the same way.
+    ...(myTeamCount > 0
+      ? [
+          {
+            id: "member:my-submission",
+            label: "Our submission",
+            icon: FilePen,
+            href: resolve(`/my/hackathon/${hackathonId}/submissions/mine`),
+          },
+        ]
+      : []),
     // Between Submissions and Timeline: the entries follow the hackathon's own
     // order of events. Organisers reach voting setup through `manageNav`
     // whatever this says, so hiding it blocks nobody from preparing categories.

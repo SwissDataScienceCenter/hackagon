@@ -2,31 +2,29 @@
 
 :::{admonition} Participant's Submissions
 
-Where your team hands in its work. It shows, for each of your teams:
+What every team has handed in, once the owners publish the teams. It shows:
 
-- [Hand in work](#hand-in-work): save a draft
-- [Finalize](#finalize): make a version your team's entry
-- [Earlier versions](#earlier-versions): everything handed in so far
+- [Your team](#your-team): your team's submission, first
+- [Other teams](#other-teams): every other team that has handed something in
 
 :::
 
 ![The Submissions page of a hackathon, as a participant sees it](../static/screenshots/member-submissions.png)
 
-## Hand in work
+## Your team
 
-- You can hand in work once you are on a [team](member-teams.md), and only while
-  submitting is open. The [Overview](member-overview.md) shows whether it is.
-- Enter a link or notes, then click {guilabel}`Save draft`. Every draft is a new
-  version.
+- Your team's submission is at the top, as everyone else sees it.
+- Until your team saves something, it says {guilabel}`Not submitted yet`.
+- Click {guilabel}`Edit` to change it on
+  [Our submission](member-our-submission.md). The button shows only while
+  submitting is open.
 
-## Finalize
+## Other teams
 
-- Click {guilabel}`Finalize this version` to make a draft your team's entry.
-- Anyone on the team can do it, and it cannot be undone.
-- You can finalize a newer draft later. The latest final version is your team's
-  entry.
-- The entry is what others [vote](member-voting.md) on.
-
-## Earlier versions
-
-- All versions your team handed in, folded away. Click them to unfold.
+- Every other team that has handed something in, grouped by project.
+- The heading counts how many teams have submitted.
+- Each submission shows its links, its description, and when it was last
+  updated.
+- Click {guilabel}`Collapse details` to fold every description away. Click
+  {guilabel}`Open details` to show them again.
+- Click {guilabel}`View team` to open the [team](member-teams.md).

@@ -61,13 +61,13 @@
                 <span class="shrink-0 text-sm text-ink-2">{score(row.score)}</span>
             {/if}
 
-            <!-- The same "View entry" the ballot has, to the team's page, which is
-                 where the submission itself is shown. Absent when the entry could
-                 not be resolved — that row reads "Unknown submission" and there is
-                 no team to send anyone to. -->
+            <!-- The same "View entry" the ballot has, to the team's card on the
+                 Submissions page, which is where the submission itself is shown.
+                 Absent when the entry could not be resolved — that row reads
+                 "Unknown submission" and there is no team to send anyone to. -->
             {#if row.teamId}
                 <a
-                    href={resolve(`/my/hackathon/${hackathonId}/teams/${row.teamId}`)}
+                    href="{resolve(`/my/hackathon/${hackathonId}/submissions`)}#team-{row.teamId}"
                     class="shrink-0 whitespace-nowrap text-xs font-semibold text-accent-ink
                            no-underline hover:underline"
                 >

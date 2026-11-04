@@ -14,9 +14,8 @@ On this platform:
   them, and the owners approve or reject them.
 - Participants work in **teams**. The owners form the teams from the
   participants' registration answers and project preferences.
-- Teams hand in **submissions**. Every team member can submit, submissions are
-  versioned, and one can be marked as final. Other teams can see final
-  submissions.
+- Teams hand in **submissions**. Each team has one, which any of its members can
+  change. Other teams can read it.
 - **Voting** decides the outcome. The owners set it up in categories. In each
   category participants either pick one project or spread a budget of points
   across the projects.

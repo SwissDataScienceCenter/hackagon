@@ -1,18 +1,21 @@
-import type { Actions, PageServerLoad } from "./$types"
+import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import {
-  mayCreateSubmissions,
-  mayFinalizeSubmissions,
-} from "$lib/server/hackathon/capabilities"
+import { mayCreateSubmissions } from "$lib/server/hackathon/capabilities"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
-import { parseSubmissionForm } from "$lib/server/hackathon/submissionForm"
-import { submissionVersions } from "$lib/server/hackathon/submissions"
-import { listVisibleTeams } from "$lib/server/hackathon/teams"
-import { fail } from "@sveltejs/kit"
-import { ClientError, Status } from "nice-grpc-common"
+import { teamEntries } from "$lib/server/hackathon/submissions"
 
+// Every team's entry, read only — the page behind the sidebar's Submissions
+// entry. The viewer's own team edits theirs one level down, on Our submission.
+//
+// Readable by whoever may see team assignments, the same rule as a team's own
+// page: the entries come through `teamEntries`, as the ballot's do, so this
+// page and the ballot list the same thing. Another team without an entry is
+// left out, as on the ballot; the count in the heading says how many there
+// are. The viewer's own team is always shown, first, entry or not — it is the
+// one card they came to check.
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
@@ -22,152 +25,56 @@ export const load: PageServerLoad = async (event) => {
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
 
-  const submissionsEnabled = enabledCapabilities(hackathon.state).includes(
-    Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+  const rows = await teamEntries(
+    team,
+    hackathon.id,
+    namesByUserId(hackathon.members, hackathon.owners),
   )
-
-  // Undefined when team assignments are not published, which takes this page
-  // with it: submissions hang off a team, and `TeamService.List` needs
-  // `team:read`. A participant cannot reach their *own* team's work without it —
-  // see `TODO(backend: submissions-need-view-teams)` below. Refusing loudly
-  // would be a 500 on a core participant page, so the page renders and says
-  // what is missing.
-  const visibleTeams = await listVisibleTeams(team, event.params.id)
-
-  // Every team the viewer is on, not just the first — nothing stops a
-  // participant from being assigned to more than one team in one hackathon, and
-  // each carries its own submissions.
-  const myTeams = (visibleTeams ?? []).filter((t) =>
-    t.members.some((m) => m.id === platformUserId),
-  )
-
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 
-  // Creator/modifier come back as bare user ids — resolved against every
-  // confirmed hackathon member, not just the team's current roster, since the
-  // person who created a submission may since have left the team. Same
-  // fallback as the overview page: a creator who has left resolves to nothing.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
-
-  const groups = await Promise.all(
-    myTeams.map(async (t) => {
-      // ListSubmissions rather than the submissions nested in `team.list`: the
-      // nested ones carry no ordering guarantee, and "which version counts"
-      // depends entirely on order.
-      const { submissions } = await team.listSubmissions({ teamId: t.id })
-
-      return {
-        teamId: t.id,
-        teamName: t.name,
-        projectId: t.projectId,
-        projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        ...submissionVersions(submissions, memberNames),
-      }
-    }),
-  )
+  // Field by field rather than the whole entry: only what the card shows
+  // leaves the server.
+  const cards = (rows ?? []).map(({ team: t, entry }) => ({
+    teamId: t.id,
+    teamName: t.name,
+    projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
+    isOwn: t.members.some((m) => m.id === platformUserId),
+    entry: entry
+      ? {
+          repositoryUrl: entry.repositoryUrl,
+          attachmentFolderUrl: entry.attachmentFolderUrl,
+          description: entry.description,
+          updatedAt: entry.updatedAt,
+          updatedBy: entry.updatedBy,
+        }
+      : null,
+  }))
 
   return {
-    groups,
-    // TODO(backend: submissions-need-view-teams): false hides the whole page
-    // behind an explanation. `CAPABILITY_CREATE_PROJECT_SUBMISSIONS` grants
-    // `submission:create` and nothing else (`hackathon_service.go:1019`), so an
-    // organiser who opens submissions without publishing team assignments leaves
-    // every participant unable to see or file any — the capability that is
-    // supposed to open this page cannot open it alone. Either that capability
-    // should carry a team read, or `ListSubmissions` should take a team id the
-    // caller already knows.
-    teamsPublished: visibleTeams !== undefined,
-    // Both are viewer-wide, not per-team: neither RPC's permission depends on
-    // which of the viewer's teams it is.
+    hackathonId: hackathon.id,
+    teamsPublished: rows !== undefined,
+    teamCount: cards.length,
+    submittedCount: cards.filter((c) => c.entry).length,
+    // Whether the own team's card offers Edit — the same answer Our submission
+    // gives on whether it shows a form. Closed, that page still shows the
+    // entry, through the sidebar, so the card leaves the button out rather
+    // than offer an edit that is refused.
     maySubmit: mayCreateSubmissions(
       myMembership ?? undefined,
-      submissionsEnabled,
+      enabledCapabilities(hackathon.state).includes(
+        Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+      ),
       isAdmin,
     ),
-    mayFinalize: mayFinalizeSubmissions(myMembership ?? undefined, isAdmin),
+    ours: cards.filter((c) => c.isOwn),
+    // By project, as the teams list groups them, so a project's teams sit
+    // together. Not by date: a card would jump to the top on every save.
+    others: cards
+      .filter((c) => !c.isOwn && c.entry)
+      .sort(
+        (a, b) =>
+          a.projectTitle.localeCompare(b.projectTitle) ||
+          a.teamName.localeCompare(b.teamName),
+      ),
   }
-}
-
-export const actions: Actions = {
-  createSubmission: async (event) => {
-    const { team } = requireGrpc(event.locals.grpc)
-    const form = await event.request.formData()
-
-    const teamId = form.get("teamId")
-    const projectId = form.get("projectId")
-    if (typeof teamId !== "string" || teamId === "") {
-      return fail(400, { teamId: null, message: "Missing team" })
-    }
-    if (typeof projectId !== "string" || projectId === "") {
-      return fail(400, { teamId, message: "Missing project" })
-    }
-
-    const parsed = parseSubmissionForm(form)
-    if (!parsed.ok) {
-      return fail(400, { teamId, message: parsed.message })
-    }
-    const { repositoryUrl, attachmentFolderUrl, description } = parsed.values
-
-    try {
-      await team.createSubmission({
-        teamId,
-        projectId,
-        // TODO(backend: submission-repository-url): see `submissionVersions`.
-        result: repositoryUrl,
-        attachmentFolderUrl,
-        description,
-      })
-    } catch (e) {
-      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { teamId, message: e.details })
-      }
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          teamId,
-          message: "You don't have permission to submit for this team",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { teamId, message: "Team or project not found" })
-      }
-      throw e
-    }
-
-    return { success: true }
-  },
-
-  finalizeSubmission: async (event) => {
-    const { team } = requireGrpc(event.locals.grpc)
-    const form = await event.request.formData()
-
-    // Carried only so a failure can be reported on the right team's card.
-    const teamId = form.get("teamId")
-    const scope = typeof teamId === "string" && teamId !== "" ? teamId : null
-
-    const submissionId = form.get("submissionId")
-    if (typeof submissionId !== "string" || submissionId === "") {
-      return fail(400, { teamId: scope, message: "Missing submission" })
-    }
-
-    try {
-      await team.finalizeSubmission({ submissionId })
-    } catch (e) {
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          teamId: scope,
-          message: "You don't have permission to finalize this submission",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { teamId: scope, message: "Submission not found" })
-      }
-      throw e
-    }
-
-    return { success: true }
-  },
 }

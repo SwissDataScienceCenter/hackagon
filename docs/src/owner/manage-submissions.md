@@ -25,7 +25,7 @@ Every team and where it stands with its work. It shows:
 - Click {guilabel}`Download CSV` to get all teams.
 - Per team: members, the entry, its version and who submitted it. Earlier
   versions are folded away.
-- Read-only: teams hand in and finalize themselves on
-  [Submissions](../participant/member-submissions.md).
+- Read-only: teams hand in their work themselves on
+  [Our submission](../participant/member-our-submission.md).
 - No teams yet: click {guilabel}`Set up teams` to go to
   [Manage Teams](manage-teams.md).

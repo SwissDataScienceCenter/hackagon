@@ -16,6 +16,7 @@ member-projects
 member-my-projects
 member-teams
 member-submissions
+member-our-submission
 member-voting
 member-results
 member-timeline

@@ -1,4 +1,5 @@
 import { isHttpsUrl } from "$lib/utils/url"
+import type { SubmissionEntry } from "./submissions"
 
 /**
  * Server-only: imported only by the submissions route's `+page.server.ts`, but
@@ -75,6 +76,28 @@ export function parseSubmissionForm(form: FormData): SubmissionFormResult {
     ok: true,
     values: { repositoryUrl, attachmentFolderUrl, description },
   }
+}
+
+/**
+ * Whether saving these values would change nothing about the team's entry.
+ *
+ * A save that changes nothing is skipped rather than sent: it would add a
+ * version identical to the last. Blank and absent count as the same, and the
+ * entry's side is trimmed like the form's, so older content saved with stray
+ * whitespace does not read as a change.
+ */
+export function sameSubmission(
+  entry: Pick<
+    SubmissionEntry,
+    "repositoryUrl" | "attachmentFolderUrl" | "description"
+  > | null,
+  values: SubmissionFormValues,
+): boolean {
+  if (!entry) return false
+
+  return (
+    ["repositoryUrl", "attachmentFolderUrl", "description"] as const
+  ).every((k) => (entry[k] ?? "").trim() === (values[k] ?? ""))
 }
 
 /** A field's trimmed value, or undefined when it is missing or blank. */

@@ -1,13 +1,16 @@
 import { describe, it, expect } from "vitest"
+import { ClientError, Status } from "nice-grpc-common"
 import type { Submission } from "$lib/server/grpc/generated/hackathon/entities/submission"
 import type { Team } from "$lib/server/grpc/generated/hackathon/entities/team"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
 import type { User } from "$lib/server/grpc/generated/user/entities/user"
 import {
+  submissionEntry,
   submissionOverview,
   submissionsByTeam,
   submissionStanding,
   submissionVersions,
+  teamEntries,
 } from "./submissions"
 
 // SubmissionStatus numeric values: DRAFT=1, FINAL=2.
@@ -183,6 +186,98 @@ describe("submissionVersions", () => {
   })
 })
 
+describe("submissionEntry", () => {
+  it("is null for a team with no submissions", () => {
+    expect(submissionEntry([], names)).toBeNull()
+  })
+
+  it("is null while every version is a draft", () => {
+    expect(
+      submissionEntry([sub({ version: 1 }), sub({ version: 2 })], names),
+    ).toBeNull()
+  })
+
+  it("takes the newest final version, whatever the given order", () => {
+    const e = submissionEntry(
+      [
+        sub({ version: 3, status: FINAL }),
+        sub({ version: 1, status: FINAL }),
+        sub({ version: 2, status: FINAL }),
+      ],
+      names,
+    )
+
+    expect(e?.id).toBe("s3")
+  })
+
+  it("ignores a draft left on top of the final version", () => {
+    const e = submissionEntry(
+      [sub({ version: 1, status: FINAL }), sub({ version: 2, status: DRAFT })],
+      names,
+    )
+
+    expect(e?.id).toBe("s1")
+    expect(e?.repositoryUrl).toBe("result-v1")
+  })
+
+  it("carries the content through, the proto's result as the repository URL", () => {
+    const e = submissionEntry(
+      [
+        sub({
+          version: 1,
+          status: FINAL,
+          attachmentFolderUrl: "https://drive.example.org/floods",
+          description: "Flood maps for **every** canton.",
+        }),
+      ],
+      names,
+    )
+
+    expect(e).toMatchObject({
+      repositoryUrl: "result-v1",
+      attachmentFolderUrl: "https://drive.example.org/floods",
+      description: "Flood maps for **every** canton.",
+    })
+  })
+
+  it("carries an absent result through as undefined", () => {
+    const e = submissionEntry(
+      [sub({ version: 1, status: FINAL, result: undefined })],
+      names,
+    )
+
+    expect(e?.repositoryUrl).toBeUndefined()
+  })
+
+  it("reports who wrote the content and when, not who finalized it", () => {
+    const e = submissionEntry(
+      [
+        sub({
+          version: 1,
+          status: FINAL,
+          creatorId: ALICE,
+          createdAt: new Date("2026-08-01T10:00:00Z"),
+          modifierId: BOB,
+          modifiedAt: new Date("2026-08-02T12:00:00Z"),
+        }),
+      ],
+      names,
+    )
+
+    expect(e?.updatedBy).toBe("Alice Wonderland")
+    expect(e?.updatedAt).toEqual(new Date("2026-08-01T10:00:00Z"))
+  })
+
+  it("leaves who saved it unresolved when they are no longer a member", () => {
+    const e = submissionEntry(
+      [sub({ version: 1, status: FINAL, creatorId: "user-departed" })],
+      names,
+    )
+
+    expect(e?.updatedBy).toBeUndefined()
+  })
+})
+
 describe("submissionStanding", () => {
   it("is missing with nothing filed", () => {
     expect(submissionStanding(submissionVersions([], names))).toBe("missing")
@@ -298,5 +393,53 @@ describe("submissionsByTeam", () => {
     expect(byTeam.get("team-a")?.map((s) => s.version)).toEqual([1, 2])
     expect(byTeam.get("team-b")?.map((s) => s.version)).toEqual([1])
     expect(byTeam.has("team-c")).toBe(false)
+  })
+})
+
+describe("teamEntries", () => {
+  /** Two teams: one with a final entry, one with only a draft. */
+  const client = (listDenied = false) =>
+    ({
+      list: async () => {
+        if (listDenied) {
+          throw new ClientError(
+            "/hackathon.TeamService/List",
+            Status.PERMISSION_DENIED,
+            "no team:read",
+          )
+        }
+
+        return {
+          teams: [
+            { id: "team-a", name: "A", members: [] },
+            { id: "team-b", name: "B", members: [] },
+          ],
+        }
+      },
+      get: async ({ teamId }: { teamId: string }) => ({
+        team: {
+          id: teamId,
+          submissions:
+            teamId === "team-a"
+              ? [sub({ version: 1, status: FINAL, teamId, creatorId: BOB })]
+              : [sub({ version: 1, status: DRAFT, teamId })],
+        },
+      }),
+    }) as unknown as TeamServiceClient
+
+  it("is undefined while team assignments are not published", async () => {
+    expect(
+      await teamEntries(client(true), "hackathon-1", names),
+    ).toBeUndefined()
+  })
+
+  it("lists every team, with a null entry for one holding only drafts", async () => {
+    const got = await teamEntries(client(), "hackathon-1", names)
+
+    expect(got?.map((r) => [r.team.id, r.entry?.id ?? null])).toEqual([
+      ["team-a", "s1"],
+      ["team-b", null],
+    ])
+    expect(got?.[0]?.entry?.updatedBy).toBe("Bob Henderson")
   })
 })

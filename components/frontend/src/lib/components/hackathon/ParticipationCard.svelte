@@ -146,7 +146,7 @@
             <!-- The one solid accent on this page. Of everything the overview
                  offers, this is the single thing with a deadline attached. -->
             <a
-                href={resolve(`/my/hackathon/${hackathonId}/submissions`)}
+                href={resolve(`/my/hackathon/${hackathonId}/submissions/mine`)}
                 class="btn btn-sm btn-solid w-full no-underline sm:w-auto sm:self-start"
             >
                 Submit your work

@@ -38,6 +38,7 @@
         trackCount = 0,
         phaseCount = 0,
         myProjectCount = 0,
+        myTeamCount = 0,
         stateNeedsAttention = false,
         isPrivate = false,
     }: {
@@ -88,6 +89,11 @@
          * part. Decides whether My projects is offered — see `memberNav`.
          */
         myProjectCount?: number;
+        /**
+         * How many of the visible teams the viewer is on. Decides whether Our
+         * submission is offered — see `memberNav`.
+         */
+        myTeamCount?: number;
         /**
          * Whether the hackathon has a description at all. Gates the About entry
          * — see `memberNav`. False, and there is nothing to read, so the entry
@@ -143,7 +149,8 @@
             resultsVisible,
             teamCount,
             phaseCount,
-            myProjectCount
+            myProjectCount,
+            myTeamCount
         ),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
