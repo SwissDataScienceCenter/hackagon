@@ -24,7 +24,7 @@
     project={data.project}
     backHref={`/my/hackathon/${data.hackathonId}/projects/manage`}
     backQuery={data.queueQuery}
-    backLabel="Back to Manage Projects"
+    backLabel="Manage Projects"
 >
     {#if data.review}
         <ProjectReview review={data.review} />

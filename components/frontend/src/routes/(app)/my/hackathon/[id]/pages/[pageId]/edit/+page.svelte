@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import PageForm from '$lib/components/hackathon/PageForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    // Unresolved: `PageForm` calls `resolve()` at its own anchor, and the back
-    // link below resolves a literal inline — extracting a resolved string would
-    // widen it past the route-literal type `resolve()` expects.
+    // Unresolved: `PageForm` and `PageHeader` call `resolve()` at their own
+    // anchors.
     const backHref = $derived(`/my/hackathon/${data.hackathonId}/pages`);
 
     // Two-step rather than `confirm()`: a native dialog is unstyleable, invisible
@@ -17,18 +16,9 @@
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/pages`)}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
-        >
-            &larr; Back to pages
-        </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Page</h1>
-        <p class="m-0 text-xs text-surface-500">
-            Changes are visible to participants immediately.
-        </p>
-    </div>
+    <PageHeader title="Edit Page" back={{ href: backHref, label: 'Manage Pages' }}>
+        {#snippet meta()}Changes are visible to participants immediately.{/snippet}
+    </PageHeader>
 
     <PageForm page={data.page} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />
 

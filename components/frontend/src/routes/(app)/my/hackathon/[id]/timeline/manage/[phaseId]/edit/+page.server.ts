@@ -48,7 +48,7 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     hackathonId: hackathon.id,
-    // Arrived here straight from Add Phase, which redirects with `?added` because
+    // Arrived here straight from New Phase, which redirects with `?added` because
     // `Create` cannot store dates and this is where they get set. Carried in the
     // URL rather than in state, so a phase legitimately left undated is not told
     // it was just created when it is reached from the list.

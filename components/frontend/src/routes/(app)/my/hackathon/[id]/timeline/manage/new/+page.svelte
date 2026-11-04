@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import PhaseForm from '$lib/components/hackathon/PhaseForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    // Unresolved: `PhaseForm` calls `resolve()` at its own anchor, and the back
-    // link below resolves a literal inline — extracting a resolved string would
-    // widen it past the route-literal type `resolve()` expects.
+    // Unresolved: `PhaseForm` and `PageHeader` call `resolve()` at their own
+    // anchors.
     const backHref = $derived(`/my/hackathon/${data.hackathonId}/timeline/manage`);
 
     const blank = {
@@ -19,20 +18,15 @@
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to Manage Timeline
-        </a>
-        <h1 class="m-0 text-title text-ink">Add Phase</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Participants see the phase as soon as it is saved, and the next step is
-            scheduling it — this form hands straight over to it. Undated phases sort to
-            the top of the timeline until they are scheduled.
-        </p>
-    </div>
+    <PageHeader title="New Phase" back={{ href: backHref, label: 'Manage Timeline' }}>
+        {#snippet meta()}
+            <p class="m-0">
+                Participants see the phase as soon as it is saved, and the next step is
+                scheduling it — this form hands straight over to it. Undated phases sort to
+                the top of the timeline until they are scheduled.
+            </p>
+        {/snippet}
+    </PageHeader>
 
     <PhaseForm
         phase={blank}

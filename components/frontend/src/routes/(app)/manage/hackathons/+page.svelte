@@ -4,6 +4,7 @@
     import Lock from 'lucide-svelte/icons/lock';
     import { resolve } from '$app/paths';
     import { SvelteSet } from 'svelte/reactivity';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
     import { isPrivate, visibilityLabel } from '$lib/utils/hackathonStatus';
     import { relativeWhen, whenGroup, type WhenGroup } from '$lib/utils/hackathonWhen';
@@ -139,33 +140,26 @@
 {/snippet}
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <a
-                href={resolve('/(app)/dashboard')}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to dashboard
-            </a>
-            <h1 class="m-0 text-title text-ink">Hackathons</h1>
-            <p class="m-0 text-xs text-ink-3">{countLabel}</p>
-        </div>
-        <div class="relative w-full sm:w-72">
-            <Search
-                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
-                       text-ink-3"
-                aria-hidden="true"
-            />
-            <label class="sr-only" for="hackathon-search">Search hackathons</label>
-            <input
-                id="hackathon-search"
-                type="search"
-                bind:value={search}
-                placeholder="Name or owner…"
-                class="field pl-9 pr-3"
-            />
-        </div>
-    </div>
+    <PageHeader title="Hackathons" back={{ href: '/dashboard', label: 'Dashboard' }}>
+        {#snippet meta()}{countLabel}{/snippet}
+        {#snippet actions()}
+            <div class="relative w-full sm:w-72">
+                <Search
+                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
+                           text-ink-3"
+                    aria-hidden="true"
+                />
+                <label class="sr-only" for="hackathon-search">Search hackathons</label>
+                <input
+                    id="hackathon-search"
+                    type="search"
+                    bind:value={search}
+                    placeholder="Name or owner…"
+                    class="field pl-9 pr-3"
+                />
+            </div>
+        {/snippet}
+    </PageHeader>
 
     <p class="m-0 font-sans text-xs text-ink-3">
         Every hackathon on the platform, including the private ones. Your Admin role

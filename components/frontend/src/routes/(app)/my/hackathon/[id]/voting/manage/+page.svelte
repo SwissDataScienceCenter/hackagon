@@ -2,8 +2,8 @@
     import { Lock, Pencil, Plus, Trash2 } from 'lucide-svelte';
     import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ResultsList from '$lib/components/hackathon/ResultsList.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -22,26 +22,27 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline). -->
 <div class="flex flex-col gap-8 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-0.5">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Voting</h2>
-            <span class="text-xs text-ink-3">
-                {data.voterTotal === 0 ? 'Nobody has voted yet' : `${people(data.voterTotal)} voted`}
-            </span>
-        </div>
-        <!-- Not once results are final: a category added then could never get
-             any. -->
-        {#if !data.resultsFinal}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/voting/manage/new`)}
-                class="btn btn-sm btn-solid no-underline"
-            >
-                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
-                New category
-            </a>
-        {/if}
-    </div>
+    <PageHeader
+        title="Manage Voting"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            {data.voterTotal === 0 ? 'Nobody has voted yet' : `${people(data.voterTotal)} voted`}
+        {/snippet}
+        {#snippet actions()}
+            <!-- Not once results are final: a category added then could never get
+                 any. -->
+            {#if !data.resultsFinal}
+                <a
+                    href={resolve(`/my/hackathon/${data.hackathonId}/voting/manage/new`)}
+                    class="btn btn-sm btn-solid no-underline"
+                >
+                    <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                    New category
+                </a>
+            {/if}
+        {/snippet}
+    </PageHeader>
 
     {#if topMessage}
         <p class="m-0 text-xs text-danger-ink" role="alert">{topMessage}</p>

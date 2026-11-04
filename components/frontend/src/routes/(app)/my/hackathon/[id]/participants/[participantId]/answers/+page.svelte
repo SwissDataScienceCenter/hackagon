@@ -1,9 +1,16 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import RegistrationForm from '$lib/components/hackathon/RegistrationForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    // The profile's own title, named as that page names it. The load 404s for
+    // anyone but the viewer, so the layout's membership is this participant.
+    const profileLabel = $derived(
+        data.myMembership?.user?.displayName || data.myMembership?.user?.username || 'Your Profile'
+    );
 </script>
 
 <!--
@@ -12,18 +19,15 @@
 -->
 <div class="flex w-full flex-col px-4 py-8 sm:px-10 md:px-20">
     <div class="flex w-full max-w-3xl flex-col gap-6">
-        <div class="flex flex-col gap-1">
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/participants/${data.participantId}`)}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to your profile
-            </a>
-            <h2 class="m-0 text-title text-ink">Your registration answers</h2>
-            <p class="m-0 text-xs text-ink-3">
-                Your answers for {data.name}. You can change them at any time.
-            </p>
-        </div>
+        <PageHeader
+            title="Your Registration Answers"
+            back={{
+                href: `/my/hackathon/${data.hackathonId}/participants/${data.participantId}`,
+                label: profileLabel,
+            }}
+        >
+            {#snippet meta()}Your answers for {data.name}. You can change them at any time.{/snippet}
+        </PageHeader>
 
         {#if form?.message}
             <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>

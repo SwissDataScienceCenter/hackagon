@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import TrackForm from '$lib/components/hackathon/TrackForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    // Unresolved: `TrackForm` calls `resolve()` at its own anchor, and the back
-    // link below resolves a literal inline — extracting a resolved string would
-    // widen it past the route-literal type `resolve()` expects.
+    // Unresolved: `TrackForm` and `PageHeader` call `resolve()` at their own
+    // anchors.
     const backHref = $derived(`/my/hackathon/${data.hackathonId}/tracks`);
 
     // Two-step rather than `confirm()`: a native dialog is unstyleable, invisible
@@ -16,18 +15,9 @@
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/tracks`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to tracks
-        </a>
-        <h1 class="m-0 text-title text-ink">Edit Track</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Changes are visible to participants immediately.
-        </p>
-    </div>
+    <PageHeader title="Edit Track" back={{ href: backHref, label: 'Manage Tracks' }}>
+        {#snippet meta()}Changes are visible to participants immediately.{/snippet}
+    </PageHeader>
 
     <TrackForm track={data.track} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />
 

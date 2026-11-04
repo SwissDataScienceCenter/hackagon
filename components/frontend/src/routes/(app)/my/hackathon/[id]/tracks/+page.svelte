@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Pencil, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -9,22 +9,23 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-0.5">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Tracks</h2>
-            <span class="text-xs text-ink-3">
-                {data.tracks.length === 1 ? '1 track' : `${data.tracks.length} tracks`}
-            </span>
-        </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/tracks/new`)}
-            class="btn btn-sm btn-solid no-underline"
-        >
-            <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
-            New track
-        </a>
-    </div>
+    <PageHeader
+        title="Manage Tracks"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            {data.tracks.length === 1 ? '1 track' : `${data.tracks.length} tracks`}
+        {/snippet}
+        {#snippet actions()}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/tracks/new`)}
+                class="btn btn-sm btn-solid no-underline"
+            >
+                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                New track
+            </a>
+        {/snippet}
+    </PageHeader>
 
     <p class="m-0 text-xs text-ink-3">
         Tracks are optional. When a hackathon has none, participants propose and browse

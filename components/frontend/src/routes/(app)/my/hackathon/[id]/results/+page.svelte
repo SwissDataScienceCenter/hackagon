@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ResultsList from '$lib/components/hackathon/ResultsList.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -8,16 +9,17 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-0.5">
-        <h2 class="m-0 text-title text-ink">Results</h2>
-        {#if data.canView && data.categories.length > 0}
-            <span class="text-xs text-ink-3">
-                {data.categories.length === 1
-                    ? '1 category'
-                    : `${data.categories.length} categories`}
-            </span>
-        {/if}
-    </div>
+    <PageHeader title="Results">
+        {#snippet meta()}
+            {#if data.canView && data.categories.length > 0}
+                <span>
+                    {data.categories.length === 1
+                        ? '1 category'
+                        : `${data.categories.length} categories`}
+                </span>
+            {/if}
+        {/snippet}
+    </PageHeader>
 
     {#if !data.canView}
         <p class="m-0 py-6 text-center text-sm text-ink-3">

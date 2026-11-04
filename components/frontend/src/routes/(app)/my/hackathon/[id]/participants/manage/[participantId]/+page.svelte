@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import type { ActionData, PageData } from './$types';
 
@@ -23,14 +24,12 @@
         }
     });
 
-    // The tab suffix only, not the whole href: svelte/no-navigation-without-resolve
-    // reads the href expression itself and cannot tell that a variable already
-    // holds a resolved path, so `resolve()` has to sit inline below. Same shape
-    // as ParticipantsManageTabs and ProjectStatusTabs.
-    const backTab = $derived(data.from === 'waitlist' ? '/waitlist' : '');
-    const backLabel = $derived(
-        data.from === 'waitlist' ? 'Back to Waitlist' : 'Back to Manage Participants'
+    // Back to the tab the organizer came from. Unresolved: PageHeader calls
+    // `resolve()` at its own anchor.
+    const backHref = $derived(
+        `/my/hackathon/${data.hackathonId}/participants/manage${data.from === 'waitlist' ? '/waitlist' : ''}`
     );
+    const backLabel = $derived(data.from === 'waitlist' ? 'Waitlist' : 'Manage Participants');
 
     const initials = $derived(
         data.participant.name
@@ -79,52 +78,41 @@
 -->
 <div class="flex w-full flex-col px-4 py-8 sm:px-10 md:px-20">
   <div class="flex w-full max-w-3xl flex-col gap-6">
-    <a
-        href="{resolve(
-            `/my/hackathon/${data.hackathonId}/participants/manage`
-        )}{backTab}"
-        class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-    >
-        &larr; {backLabel}
-    </a>
-
-    <div class="card card-raised box-border w-full px-5 py-4">
-        <div class="flex w-full items-start gap-4">
+    <PageHeader title={data.participant.name} back={{ href: backHref, label: backLabel }}>
+        {#snippet leading()}
             <div
                 class="flex size-16 shrink-0 items-center justify-center rounded-full
                        border-2 border-line bg-overlay text-xs font-bold text-ink"
             >
                 {initials}
             </div>
-
-            <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                <h2 class="m-0 text-title leading-snug text-ink">{data.participant.name}</h2>
-                <p class="m-0 text-xs leading-snug text-ink-3">@{data.participant.username}</p>
-                <!-- Shown here and nowhere else a peer can reach: an organizer
-                     already downloads every address on the roster's CSV, and
-                     needing one to answer a question about somebody's
-                     application should not mean opening a spreadsheet. -->
-                <p class="m-0 text-xs leading-snug text-ink-3">
-                    {#if data.participant.email !== ''}
-                        {data.participant.email}
-                    {:else}
-                        No email address — they are left out of the roster CSV.
-                    {/if}
-                </p>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="badge {membershipBadgeVariant(data.participant.isWaiting)}">
-                        {data.participant.roleLabel}
+        {/snippet}
+        {#snippet meta()}
+            <p class="m-0 leading-snug">@{data.participant.username}</p>
+            <!-- Shown here and nowhere else a peer can reach: an organizer
+                 already downloads every address on the roster's CSV, and
+                 needing one to answer a question about somebody's
+                 application should not mean opening a spreadsheet. -->
+            <p class="m-0 leading-snug">
+                {#if data.participant.email !== ''}
+                    {data.participant.email}
+                {:else}
+                    No email address — they are left out of the roster CSV.
+                {/if}
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="badge {membershipBadgeVariant(data.participant.isWaiting)}">
+                    {data.participant.roleLabel}
+                </span>
+                {#if dated}
+                    <span>
+                        {data.participant.isWaiting ? 'Applied' : 'Joined'}
+                        {dated}
                     </span>
-                    {#if dated}
-                        <span class="text-xs text-ink-3">
-                            {data.participant.isWaiting ? 'Applied' : 'Joined'}
-                            {dated}
-                        </span>
-                    {/if}
-                </div>
+                {/if}
             </div>
-        </div>
-    </div>
+        {/snippet}
+    </PageHeader>
 
     <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
         <h3 class="m-0 text-section text-ink">Registration answers</h3>

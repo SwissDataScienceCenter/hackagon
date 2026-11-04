@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import { tick } from 'svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import CircleHelp from 'lucide-svelte/icons/circle-help';
     import KeyRound from 'lucide-svelte/icons/key-round';
     import Link from 'lucide-svelte/icons/link';
@@ -73,28 +74,20 @@
 </svelte:head>
 
 <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-1">
-            <a
-                href={resolve('/(app)/dashboard')}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+    <PageHeader title="Account" back={{ href: '/dashboard', label: 'Dashboard' }}>
+        {#snippet actions()}
+            <button
+                type="button"
+                class="btn btn-sm btn-quiet"
+                aria-expanded={helpOpen}
+                aria-controls="account-help"
+                onclick={() => (helpOpen = !helpOpen)}
             >
-                &larr; Back to dashboard
-            </a>
-            <h1 class="m-0 text-title text-ink">Account</h1>
-        </div>
-
-        <button
-            type="button"
-            class="btn btn-sm btn-quiet"
-            aria-expanded={helpOpen}
-            aria-controls="account-help"
-            onclick={() => (helpOpen = !helpOpen)}
-        >
-            <CircleHelp class="size-3" />
-            How changing your email and password works
-        </button>
-    </div>
+                <CircleHelp class="size-3" />
+                How changing your email and password works
+            </button>
+        {/snippet}
+    </PageHeader>
 
     {#if helpOpen}
         <section id="account-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">

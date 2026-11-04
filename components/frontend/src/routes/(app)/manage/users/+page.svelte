@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import InfoButton from '$lib/components/layout/InfoButton.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import UserAvatar from '$lib/components/user/UserAvatar.svelte';
     import {
         GLOBAL_ROLE_FILTERS,
@@ -138,19 +138,9 @@
 {/snippet}
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <a
-            href={resolve('/(app)/dashboard')}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to dashboard
-        </a>
-        <div class="flex items-center gap-2">
-            <h1 class="m-0 text-title text-ink">Users</h1>
-            <InfoButton topic="users-list" title="Users and roles" />
-        </div>
-        <p class="m-0 text-xs text-ink-3">{countLabel}</p>
-    </div>
+    <PageHeader title="Users" back={{ href: '/dashboard', label: 'Dashboard' }} topic="users-list">
+        {#snippet meta()}{countLabel}{/snippet}
+    </PageHeader>
 
     <!-- Chips, not buttons: this picks which rows are showing, and a solid
          accent would read as an action. Rendered even when the slice is

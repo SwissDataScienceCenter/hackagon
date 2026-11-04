@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import TeamCard from '$lib/components/hackathon/TeamCard.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -19,52 +20,43 @@
   or a shared URL that carries none. See the load.
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        {#if data.backToTeams}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to teams
-            </a>
-        {:else}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/voting`)}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to voting
-            </a>
-        {/if}
-        <h2 class="m-0 text-title text-ink">{data.projectTitle}</h2>
-        <span class="text-xs text-ink-3">
-            {data.members.length === 1 ? '1 member' : `${data.members.length} members`}
-        </span>
-        {#if data.projectId}
-            <!--
-              The heading is the project's title, but only its description
-              reaches this page — the proposal's own page carries the track,
-              proposer and status besides. Named for what is through there
-              rather than "View project", which reads as the thing you are
-              already looking at.
+    <PageHeader
+        title={data.projectTitle}
+        back={data.backToTeams
+            ? { href: `/my/hackathon/${data.hackathonId}/teams`, label: 'Teams' }
+            : { href: `/my/hackathon/${data.hackathonId}/voting`, label: 'Voting' }}
+    >
+        {#snippet meta()}
+            <span>
+                {data.members.length === 1 ? '1 member' : `${data.members.length} members`}
+            </span>
+            {#if data.projectId}
+                <!--
+                  The heading is the project's title, but only its description
+                  reaches this page — the proposal's own page carries the track,
+                  proposer and status besides. Named for what is through there
+                  rather than "View project", which reads as the thing you are
+                  already looking at.
 
-              `?from=team` carries this team back, so the chain stays reversible
-              instead of returning to a projects list the reader was never on,
-              and `teamFrom` carries one more hop — where *this* page came from —
-              so returning here restores this page's own back link rather than
-              resetting it to the default.
-            -->
-            <a
-                href="{resolve(
-                    `/my/hackathon/${data.hackathonId}/projects/${data.projectId}`
-                )}?from=team&team={data.teamId}{data.backToTeams
-                    ? '&teamFrom=teams'
-                    : ''}"
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                Read the full proposal &rarr;
-            </a>
-        {/if}
-    </div>
+                  `?from=team` carries this team back, so the chain stays reversible
+                  instead of returning to a projects list the reader was never on,
+                  and `teamFrom` carries one more hop — where *this* page came from —
+                  so returning here restores this page's own back link rather than
+                  resetting it to the default.
+                -->
+                <a
+                    href="{resolve(
+                        `/my/hackathon/${data.hackathonId}/projects/${data.projectId}`
+                    )}?from=team&team={data.teamId}{data.backToTeams
+                        ? '&teamFrom=teams'
+                        : ''}"
+                    class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+                >
+                    Read the full proposal &rarr;
+                </a>
+            {/if}
+        {/snippet}
+    </PageHeader>
 
     <TeamCard
         title={data.teamName}

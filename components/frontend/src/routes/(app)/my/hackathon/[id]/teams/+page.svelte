@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import TeamCard from '$lib/components/hackathon/TeamCard.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -36,10 +37,9 @@
   long enough to need filtering yet.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-title text-ink">Teams</h2>
-        <span class="text-xs text-ink-3">{countLabel}</span>
-    </div>
+    <PageHeader title="Teams">
+        {#snippet meta()}{countLabel}{/snippet}
+    </PageHeader>
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.teams.length === 0}

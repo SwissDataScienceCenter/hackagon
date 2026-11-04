@@ -123,7 +123,7 @@ export interface HackathonPageRef {
  * "assignments not published" — two states that want the same nav either way.
  * Zero is the honest default, the same way `manageNav` treats `trackCount`.
  *
- * `myProjectCount` gates My projects: how many projects the viewer proposed
+ * `myProjectCount` gates My Projects: how many projects the viewer proposed
  * here, counted by `myProjects`, which already returns zero for anyone not
  * taking part. Deliberately blind to the phase and the capabilities — a
  * proposer finds their projects whether or not proposals are still open.
@@ -169,7 +169,7 @@ export function memberNav(
       ? [
           {
             id: "member:my-projects",
-            label: "My projects",
+            label: "My Projects",
             icon: NotebookPen,
             href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
           },

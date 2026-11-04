@@ -2,6 +2,7 @@
     import { ArrowRight, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { manageNav } from '$lib/navigation/items';
     import { isPrivate } from '$lib/utils/hackathonStatus';
     import { formatPhaseRange } from '$lib/utils/phase';
@@ -104,15 +105,12 @@
          here. It stopped being one the moment it grew a preview: a pencil beside
          a heading reads as a correction to that heading, and this is a page an
          organiser goes back to. -->
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">Settings</h2>
-            <span class="text-xs text-ink-3">
-                What participants may do, where the hackathon is now, and how its
-                projects are grouped.
-            </span>
-        </div>
-    </div>
+    <PageHeader title="Settings">
+        {#snippet meta()}
+            What participants may do, where the hackathon is now, and how its projects are
+            grouped.
+        {/snippet}
+    </PageHeader>
 
     <!-- The phase marker. Its own box above the switches, because the two are
          genuinely independent: advancing grants nobody anything, and that is the

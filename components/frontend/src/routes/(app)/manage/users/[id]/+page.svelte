@@ -7,6 +7,7 @@
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
     import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import InfoButton from '$lib/components/layout/InfoButton.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import UserAvatar from '$lib/components/user/UserAvatar.svelte';
     import {
         ADMIN_ROLE,
@@ -106,31 +107,24 @@
 <ConfirmDialog bind:this={confirmDialog} />
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-3">
-        <a
-            href={resolve('/(app)/manage/users')}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to users
-        </a>
-        <div class="flex items-center gap-4">
+    <PageHeader title={fullName} back={{ href: '/manage/users', label: 'Users' }}>
+        {#snippet leading()}
             <UserAvatar
                 displayName={data.user.displayName}
                 username={data.user.username}
                 size="size-14 text-sm"
             />
-            <div class="flex min-w-0 flex-col gap-1">
-                <h1 class="m-0 truncate text-title text-ink">{fullName}</h1>
-                <p class="m-0 truncate text-xs text-ink-3">
-                    @{data.user.username}{#if data.user.email}&nbsp;·&nbsp;{data.user.email}{/if}
-                </p>
-                <p class="m-0 text-xs text-ink-3">
-                    Joined <span class="tnum">{localIsoDate(data.user.createdAt)}</span>
-                </p>
-                <ProfileLinks links={data.links} />
-            </div>
-        </div>
-    </div>
+        {/snippet}
+        {#snippet meta()}
+            <p class="m-0 truncate">
+                @{data.user.username}{#if data.user.email}&nbsp;·&nbsp;{data.user.email}{/if}
+            </p>
+            <p class="m-0">
+                Joined <span class="tnum">{localIsoDate(data.user.createdAt)}</span>
+            </p>
+            <ProfileLinks links={data.links} />
+        {/snippet}
+    </PageHeader>
 
     <section class="flex flex-col gap-3">
         <div class="flex items-center gap-2">

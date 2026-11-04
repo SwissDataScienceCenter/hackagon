@@ -42,6 +42,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- Every page now starts the same way: a link back to the page you came from,
+  named after it, then the page title. Titles match their entries in the sidebar
+  — "Participants", "Manage Public Page", "My Projects" — and pages for adding
+  something are all called "New …", such as "New Phase".
 - A user's platform role is now changed on their own page instead of from a
   dropdown in the user list. Switching a Hackathon Organizer to Admin, or back,
   is one step rather than revoke then grant. Changes are saved with a Save bar,

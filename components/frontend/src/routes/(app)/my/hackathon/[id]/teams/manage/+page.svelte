@@ -18,8 +18,8 @@
         Upload,
         X
     } from 'lucide-svelte';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { nameSegments, stepMatch, type NameSegment } from '$lib/utils/personSearch';
     import { initialsOf } from '$lib/utils/teamDistribution';
@@ -838,10 +838,10 @@
 {/snippet}
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
-    <div class="flex flex-col gap-1">
-        <ManageHubBackLink {hackathonId} />
-        <h2 class="m-0 text-title text-ink">Manage Teams</h2>
-    </div>
+    <PageHeader
+        title="Manage Teams"
+        back={{ href: `/my/hackathon/${hackathonId}/manage`, label: 'Settings' }}
+    />
 
     <!-- Save lives here, always, and sticks below the nav bar (its `h-14` row
          plus its 1px bottom border) so it stays in reach however far down

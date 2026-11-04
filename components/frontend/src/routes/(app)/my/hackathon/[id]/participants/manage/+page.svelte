@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Download, Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import ParticipantsManageTabs from '$lib/components/hackathon/ParticipantsManageTabs.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -53,51 +53,54 @@
   marker: a hundred collapsed tables is not a list.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Participants</h2>
-            <span class="text-xs text-ink-3">
+    <PageHeader
+        title="Manage Participants"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            <span>
                 {countLabel}{#if data.withoutEmail > 0}
                     &middot; {data.withoutEmail}
                     {data.withoutEmail === 1 ? 'has' : 'have'} no email address{/if}{#if answersLabel !== ''}
                     &middot; {answersLabel}{/if}
             </span>
-        </div>
-        <div
-            class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
-                   sm:justify-end"
-        >
-            <div class="relative w-full sm:w-72">
-                <Search
-                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
-                           -translate-y-1/2 text-ink-3"
-                    aria-hidden="true"
-                />
-                <input
-                    type="search"
-                    bind:value={search}
-                    placeholder="Search participants by name, role…"
-                    class="field pl-9 pr-3"
-                />
-            </div>
-            <!-- The whole roster, deliberately not the searched subset and not
-                 this tab's half either: this file goes into a mailing tool, and
-                 one whose contents depend on what is typed in the box beside it
-                 would be a trap. Waitlisted people are in it, labelled. The
-                 endpoint names the download after the hackathon. -->
-            <a
-                href={resolve(
-                    `/my/hackathon/${data.hackathonId}/participants/manage/export`
-                )}
-                class="btn btn-sm btn-ghost no-underline"
-                download
+        {/snippet}
+        {#snippet actions()}
+            <div
+                class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
+                       sm:justify-end"
             >
-                <Download class="h-3 w-3 shrink-0" aria-hidden="true" />
-                Download CSV
-            </a>
-        </div>
-    </div>
+                <div class="relative w-full sm:w-72">
+                    <Search
+                        class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
+                               -translate-y-1/2 text-ink-3"
+                        aria-hidden="true"
+                    />
+                    <input
+                        type="search"
+                        bind:value={search}
+                        placeholder="Search participants by name, role…"
+                        class="field pl-9 pr-3"
+                    />
+                </div>
+                <!-- The whole roster, deliberately not the searched subset and not
+                     this tab's half either: this file goes into a mailing tool, and
+                     one whose contents depend on what is typed in the box beside it
+                     would be a trap. Waitlisted people are in it, labelled. The
+                     endpoint names the download after the hackathon. -->
+                <a
+                    href={resolve(
+                        `/my/hackathon/${data.hackathonId}/participants/manage/export`
+                    )}
+                    class="btn btn-sm btn-ghost no-underline"
+                    download
+                >
+                    <Download class="h-3 w-3 shrink-0" aria-hidden="true" />
+                    Download CSV
+                </a>
+            </div>
+        {/snippet}
+    </PageHeader>
 
     <!-- Public: always, because an empty queue there means "no requests yet",
          which is what an organizer opens this page to check. Private: only when

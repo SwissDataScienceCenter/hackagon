@@ -1,6 +1,7 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -58,14 +59,13 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-0.5">
-        <h2 class="m-0 text-title text-ink">Voting</h2>
-        <span class="text-xs text-ink-3">
+    <PageHeader title="Voting">
+        {#snippet meta()}
             {data.categories.length === 1
                 ? '1 category'
                 : `${data.categories.length} categories`}
-        </span>
-    </div>
+        {/snippet}
+    </PageHeader>
 
     <!-- Only a result that names no category lands up here; everything else is
          shown inside its own ballot, next to the button that was pressed. -->

@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import VoteCategoryForm from '$lib/components/hackathon/VoteCategoryForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    // Unresolved: `VoteCategoryForm` calls `resolve()` at its own anchor, and the
-    // back link below resolves a literal inline — extracting a resolved string
-    // would widen it past the route-literal type `resolve()` expects.
+    // Unresolved: `VoteCategoryForm` and `PageHeader` call `resolve()` at their
+    // own anchors.
     const backHref = $derived(`/my/hackathon/${data.hackathonId}/voting/manage`);
 
     const initial = $derived({
@@ -19,15 +18,7 @@
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/voting/manage`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Manage Voting
-        </a>
-        <h1 class="m-0 text-title text-ink">Edit Voting Category</h1>
-    </div>
+    <PageHeader title="Edit Voting Category" back={{ href: backHref, label: 'Manage Voting' }} />
 
     {#if data.resultsFinal && data.voters === 0}
         <p class="m-0 text-sm text-ink-2">

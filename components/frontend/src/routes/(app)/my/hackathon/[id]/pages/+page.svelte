@@ -12,7 +12,7 @@
         Pencil,
         Plus,
     } from 'lucide-svelte';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -115,22 +115,23 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other member pages). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-0.5">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Pages</h2>
-            <span class="text-xs text-ink-3">
-                {data.pages.length === 1 ? '1 page' : `${data.pages.length} pages`}
-            </span>
-        </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/pages/new`)}
-            class="btn btn-sm btn-solid no-underline"
-        >
-            <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
-            New page
-        </a>
-    </div>
+    <PageHeader
+        title="Manage Pages"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            {data.pages.length === 1 ? '1 page' : `${data.pages.length} pages`}
+        {/snippet}
+        {#snippet actions()}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/pages/new`)}
+                class="btn btn-sm btn-solid no-underline"
+            >
+                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                New page
+            </a>
+        {/snippet}
+    </PageHeader>
 
     <!-- A page picks up a phase badge once a phase links to it, but that link is
          set from the phase's own edit form, not here — this just points there. -->

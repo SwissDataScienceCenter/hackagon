@@ -105,11 +105,9 @@ export const load: PageServerLoad = async (event) => {
         : `/my/hackathon/${hackathon.id}/projects`,
     // Separate from the path: `resolve()` takes a route, not a URL.
     backQuery: backToTeam ? teamQuery : "",
-    backLabel: backToTeam
-      ? "Back to the team"
-      : backToTeams
-        ? "Back to teams"
-        : "Back to projects",
+    // The destination's title, except the team page: it is titled with this
+    // very project, and "← <the title above>" would read as a link to itself.
+    backLabel: backToTeam ? "Team" : backToTeams ? "Teams" : "Projects",
     project: {
       id: project.id,
       title: project.title,

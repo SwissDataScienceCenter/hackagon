@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import PublicHackathonView from '$lib/components/hackathon/PublicHackathonView.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -64,21 +64,19 @@
   button would enrol the organiser in their own hackathon.
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <!-- Back where the form is reached from, which is Settings —
-             /overview is the member's page and offers no way in here. -->
-        <a
-            href={resolve(`/my/hackathon/${hackathon.id}/manage`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to Settings
-        </a>
-        <h1 class="m-0 text-title text-ink">Public page</h1>
-        <p class="m-0 text-xs text-ink-3">
-            The name, dates, picture and description everyone sees — visitors on the
-            hackathon's public page, and members on About.
-        </p>
-    </div>
+    <!-- Back where the form is reached from, which is Settings —
+         /overview is the member's page and offers no way in here. -->
+    <PageHeader
+        title="Manage Public Page"
+        back={{ href: `/my/hackathon/${hackathon.id}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            <p class="m-0">
+                The name, dates, picture and description everyone sees — visitors on the
+                hackathon's public page, and members on About.
+            </p>
+        {/snippet}
+    </PageHeader>
 
     <div class="grid gap-8 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:items-start">
         <!-- Server-side validation only: every rule here is one the action repeats,

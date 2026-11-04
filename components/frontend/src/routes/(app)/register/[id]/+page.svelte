@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import RegistrationForm from '$lib/components/hackathon/RegistrationForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -13,24 +14,20 @@
   because the people it is for cannot pass that layout's check yet.
 -->
 <div class="flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-10">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve('/dashboard')}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to dashboard
-        </a>
-        <h1 class="m-0 text-title text-ink">
-            {data.isMember ? 'Your registration' : `Register for ${data.name}`}
-        </h1>
-        <p class="m-0 text-xs text-ink-3">
-            {#if data.isMember}
-                Your answers for {data.name}. You can change them at any time.
-            {:else}
-                {data.name} asks a few questions before you join.
-            {/if}
-        </p>
-    </div>
+    <PageHeader
+        title={data.isMember ? 'Your registration' : `Register for ${data.name}`}
+        back={{ href: '/dashboard', label: 'Dashboard' }}
+    >
+        {#snippet meta()}
+            <p class="m-0">
+                {#if data.isMember}
+                    Your answers for {data.name}. You can change them at any time.
+                {:else}
+                    {data.name} asks a few questions before you join.
+                {/if}
+            </p>
+        {/snippet}
+    </PageHeader>
 
     {#if data.isWaiting}
         <p class="m-0 text-xs text-ink-3">

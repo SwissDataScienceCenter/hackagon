@@ -1,8 +1,8 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ParticipantsManageTabs from '$lib/components/hackathon/ParticipantsManageTabs.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -52,26 +52,29 @@
   instead.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <ManageHubBackLink hackathonId={data.hackathonId} />
-        <h2 class="m-0 text-title text-ink">Waitlist</h2>
-        <span class="text-xs text-ink-3">
-            {countLabel} &middot; nobody here is in the hackathon yet, and only
-            organizers can see them
-        </span>
-        <!-- A private hackathon admits its invitees in `Join`, so a queue here
-             is not the normal path — it is a join whose auto-approval failed, or
-             somebody who applied before that existed. Said plainly, because the
-             fix is the same Review-then-Approve as any other row and an
-             organizer should not have to wonder whether it is safe. -->
-        {#if !data.waitlistsJoiners && data.waiting.length > 0}
-            <span class="text-xs text-ink-3">
-                An invitation to this private hackathon admits its holder on the
-                spot, so nobody should be queued here. Approving these people is
-                what puts them in.
+    <PageHeader
+        title="Waitlist"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            <span>
+                {countLabel} &middot; nobody here is in the hackathon yet, and only
+                organizers can see them
             </span>
-        {/if}
-    </div>
+            <!-- A private hackathon admits its invitees in `Join`, so a queue here
+                 is not the normal path — it is a join whose auto-approval failed, or
+                 somebody who applied before that existed. Said plainly, because the
+                 fix is the same Review-then-Approve as any other row and an
+                 organizer should not have to wonder whether it is safe. -->
+            {#if !data.waitlistsJoiners && data.waiting.length > 0}
+                <span>
+                    An invitation to this private hackathon admits its holder on the
+                    spot, so nobody should be queued here. Approving these people is
+                    what puts them in.
+                </span>
+            {/if}
+        {/snippet}
+    </PageHeader>
 
     <!-- Always, even for a private hackathon with nobody waiting: this page is
          still reachable by link and by bookmark, and one that hid its own tab

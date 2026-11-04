@@ -2,6 +2,7 @@
     import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
@@ -52,24 +53,23 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">Projects</h2>
-            <span class="text-xs text-ink-3">{countLabel}</span>
-        </div>
-        <!-- Absent when the hackathon runs without proposals, for an organiser
-             as much as for a member: this section reads the same for everyone,
-             and an organiser adds a project from Manage Projects instead. -->
-        {#if data.takesProposals}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
-                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
-            >
-                <Plus class="h-3.5 w-3.5 shrink-0" />
-                Propose a Project
-            </a>
-        {/if}
-    </div>
+    <PageHeader title="Projects">
+        {#snippet meta()}{countLabel}{/snippet}
+        {#snippet actions()}
+            <!-- Absent when the hackathon runs without proposals, for an organiser
+                 as much as for a member: this section reads the same for everyone,
+                 and an organiser adds a project from Manage Projects instead. -->
+            {#if data.takesProposals}
+                <a
+                    href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
+                    class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
+                >
+                    <Plus class="h-3.5 w-3.5 shrink-0" />
+                    Propose a Project
+                </a>
+            {/if}
+        {/snippet}
+    </PageHeader>
 
     {#if form?.message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>

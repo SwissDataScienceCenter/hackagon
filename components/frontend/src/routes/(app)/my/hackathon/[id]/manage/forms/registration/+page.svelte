@@ -2,7 +2,7 @@
     import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import FormsManageTabs from '$lib/components/hackathon/FormsManageTabs.svelte';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { questionKindLabel } from '$lib/utils/question';
     import type { ActionData, PageData } from './$types';
 
@@ -24,17 +24,18 @@
   Timeline, Manage Voting and Manage Pages.
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-1">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Registration Form</h2>
-            <p class="m-0 text-xs text-ink-3">
+    <PageHeader
+        title="Registration Form"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet meta()}
+            <p class="m-0">
                 What this event asks people when they sign up. Questions marked required
                 have to be answered before someone can join, and answers are for
                 organizers only unless you choose to show them to participants.
             </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
+        {/snippet}
+        {#snippet actions()}
             <!-- Only once something has been answered: before that it leads to a
                  page of empty questions, which says nothing the list above does
                  not already say. Ghost, not solid — this page's one solid action
@@ -59,8 +60,8 @@
                 <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
                 New question
             </a>
-        </div>
-    </div>
+        {/snippet}
+    </PageHeader>
 
     <FormsManageTabs
         hackathonId={data.hackathonId}

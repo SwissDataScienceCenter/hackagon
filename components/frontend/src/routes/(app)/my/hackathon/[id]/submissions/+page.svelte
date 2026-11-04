@@ -8,6 +8,7 @@
     import { isHttpsUrl } from '$lib/utils/url';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -64,10 +65,9 @@
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
-    <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-title text-ink">Submissions</h2>
-        <span class="text-xs text-ink-3">Your team's submitted work</span>
-    </div>
+    <PageHeader title="Submissions">
+        {#snippet meta()}Your team's submitted work{/snippet}
+    </PageHeader>
 
     <!-- A failure that never reached a team (a malformed form) has no card to
          sit in, so it is reported here rather than swallowed. -->

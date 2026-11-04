@@ -2,6 +2,7 @@
     import { resolve } from '$app/paths';
     import { Search } from 'lucide-svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -34,30 +35,29 @@
   up with.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">All Participants</h2>
-            <span class="text-xs text-ink-3">{countLabel}</span>
-        </div>
-        <div
-            class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
-                   sm:justify-end"
-        >
-            <div class="relative w-full sm:w-72">
-                <Search
-                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
-                           -translate-y-1/2 text-ink-3"
-                    aria-hidden="true"
-                />
-                <input
-                    type="search"
-                    bind:value={search}
-                    placeholder="Search participants by name, role…"
-                    class="field pl-9 pr-3"
-                />
+    <PageHeader title="Participants">
+        {#snippet meta()}{countLabel}{/snippet}
+        {#snippet actions()}
+            <div
+                class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
+                       sm:justify-end"
+            >
+                <div class="relative w-full sm:w-72">
+                    <Search
+                        class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
+                               -translate-y-1/2 text-ink-3"
+                        aria-hidden="true"
+                    />
+                    <input
+                        type="search"
+                        bind:value={search}
+                        placeholder="Search participants by name, role…"
+                        class="field pl-9 pr-3"
+                    />
+                </div>
             </div>
-        </div>
-    </div>
+        {/snippet}
+    </PageHeader>
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.participants.length === 0}

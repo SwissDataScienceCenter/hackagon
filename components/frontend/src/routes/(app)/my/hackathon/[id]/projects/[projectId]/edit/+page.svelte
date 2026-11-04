@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import ProjectEditForm from '$lib/components/hackathon/ProjectEditForm.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
@@ -12,36 +12,23 @@
     );
 
     // The project itself, which is also where saving returns to. Unresolved:
-    // `ProjectEditForm` calls `resolve()` at its own anchor, and the back link
-    // below resolves a literal inline — extracting a resolved string would widen
-    // it past the route-literal type `resolve()` expects.
+    // `ProjectEditForm` and `PageHeader` call `resolve()` at their own anchors.
     const backHref = $derived(
         `/my/hackathon/${data.hackathonId}/projects/${data.project.id}`
     );
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/${data.project.id}`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to {data.project.title}
-        </a>
-        <div class="flex flex-wrap items-center gap-2">
-            <h1 class="m-0 text-title text-ink">Edit Project</h1>
+    <PageHeader title="Edit Project" back={{ href: backHref, label: data.project.title }}>
+        {#snippet meta()}
             {#if statusText}
-                <span
-                    class="badge {statusVariant}"
-                >
-                    {statusText}
-                </span>
+                <span class="badge {statusVariant} w-fit">{statusText}</span>
             {/if}
-        </div>
-        <p class="m-0 text-xs text-ink-3">
-            Changes apply immediately, whether or not the project has been approved.
-        </p>
-    </div>
+            <p class="m-0">
+                Changes apply immediately, whether or not the project has been approved.
+            </p>
+        {/snippet}
+    </PageHeader>
 
     <ProjectEditForm
         project={data.project}

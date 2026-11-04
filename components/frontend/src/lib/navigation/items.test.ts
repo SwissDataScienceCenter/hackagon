@@ -49,11 +49,11 @@ describe("memberNav", () => {
   // Only for someone who proposed here, and right under Projects, whose subtree
   // its route sits in.
   describe("myProjectCount", () => {
-    it("offers no My projects entry to a viewer who proposed nothing", () => {
+    it("offers no My Projects entry to a viewer who proposed nothing", () => {
       expect(idsOf(memberNav("hack-1"))).not.toContain("member:my-projects")
     })
 
-    it("offers My projects right under Projects once the viewer proposed one", () => {
+    it("offers My Projects right under Projects once the viewer proposed one", () => {
       const items = memberNav("hack-1", [], false, false, 1, 1, 1)
 
       expectOrder(items, [
@@ -68,7 +68,7 @@ describe("memberNav", () => {
 
     // The longest match wins, so the nested route lights its own entry, and a
     // project's page and its edit form still light Projects.
-    it("lights My projects on its page, and Projects on a project", () => {
+    it("lights My Projects on its page, and Projects on a project", () => {
       const items = memberNav("hack-1", [], false, false, 0, 0, 1)
 
       expect(activeNavId("/my/hackathon/hack-1/projects/mine", items)).toBe(

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { questionKindLabel } from '$lib/utils/question';
     import type { PageData } from './$types';
 
@@ -29,19 +30,20 @@
   hides the thing you came to read is a page with nothing on it.
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/manage/forms/registration`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Registration Form
-        </a>
-        <h2 class="m-0 text-title text-ink">Registration Answers</h2>
-        <p class="m-0 text-xs text-ink-3">
-            What {people} said when they signed up. Organizers only — this includes the
-            answers to questions you have not shared with participants.
-        </p>
-    </div>
+    <PageHeader
+        title="Registration Answers"
+        back={{
+            href: `/my/hackathon/${data.hackathonId}/manage/forms/registration`,
+            label: 'Registration Form'
+        }}
+    >
+        {#snippet meta()}
+            <p class="m-0">
+                What {people} said when they signed up. Organizers only — this includes the
+                answers to questions you have not shared with participants.
+            </p>
+        {/snippet}
+    </PageHeader>
 
     {#if data.questions.length === 0}
         <section class="card flex flex-col gap-2 px-5 py-4">

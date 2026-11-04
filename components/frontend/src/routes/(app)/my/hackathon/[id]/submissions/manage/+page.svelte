@@ -2,7 +2,7 @@
     import { CircleAlert, Download, Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import SubmissionStandingTabs from '$lib/components/hackathon/SubmissionStandingTabs.svelte';
     import { nameSegments, type NameSegment } from '$lib/utils/personSearch';
     import { submissionStatusLabel } from '$lib/utils/submissionStatus';
@@ -132,10 +132,10 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other manage pages).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <ManageHubBackLink hackathonId={data.hackathonId} />
-        <h2 class="m-0 text-title text-ink">Manage Submissions</h2>
-    </div>
+    <PageHeader
+        title="Manage Submissions"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    />
 
     <!-- Whether teams can file right now. Shown both ways: "nothing yet" means
          something different when submissions are closed, and an organiser

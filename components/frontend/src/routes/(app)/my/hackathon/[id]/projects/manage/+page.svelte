@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Download, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import ProjectStatusTabs from '$lib/components/hackathon/ProjectStatusTabs.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { PageData } from './$types';
 
@@ -61,22 +61,23 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Projects</h2>
-        </div>
-        <!-- Unconditional, unlike the participant page's CTA: this is the
-             organiser's create path, and it does not depend on whether
-             participants may propose. -->
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/manage/new`)}
-            class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
-        >
-            <Plus class="h-3.5 w-3.5 shrink-0" />
-            New Project
-        </a>
-    </div>
+    <PageHeader
+        title="Manage Projects"
+        back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: 'Settings' }}
+    >
+        {#snippet actions()}
+            <!-- Unconditional, unlike the participant page's CTA: this is the
+                 organiser's create path, and it does not depend on whether
+                 participants may propose. -->
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/projects/manage/new`)}
+                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
+            >
+                <Plus class="h-3.5 w-3.5 shrink-0" />
+                New Project
+            </a>
+        {/snippet}
+    </PageHeader>
 
     <!-- The tabs and the export in one row: both are about the list itself,
          which is what keeps them apart from the header's New Project. Wraps on

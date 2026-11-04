@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
     import type { ActionData, PageData } from './$types';
 
@@ -86,52 +87,46 @@
 -->
 <div class="flex w-full flex-col px-4 py-8 sm:px-10 md:px-20">
     <div class="flex w-full max-w-3xl flex-col gap-6">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/participants`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+        <PageHeader
+            title={data.participant.name}
+            back={{ href: `/my/hackathon/${data.hackathonId}/participants`, label: 'Participants' }}
         >
-            &larr; Back to participants
-        </a>
-
-        <div class="card card-raised box-border w-full px-5 py-4">
-            <div class="flex w-full items-start gap-4">
+            {#snippet leading()}
                 <div
                     class="flex size-16 shrink-0 items-center justify-center rounded-full
                            border-2 border-line bg-overlay text-xs font-bold text-ink"
                 >
                     {initials}
                 </div>
-
-                <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <h2 class="m-0 text-title leading-snug text-ink">{data.participant.name}</h2>
-                    <p class="m-0 text-xs leading-snug text-ink-3">@{data.participant.username}</p>
-                    <ProfileLinks links={data.participant.links} />
-                    <!-- On your own profile only, and always: with no links set the
-                         row above renders nothing, which told nobody the feature
-                         existed. The links are kept on the Account page, so that is
-                         where this goes rather than a second form here. -->
-                    {#if data.answerScope === 'mine'}
-                        <a
-                            href={resolve('/account')}
-                            class="w-fit text-xs font-semibold text-accent-ink no-underline
-                                   hover:underline"
-                        >
-                            {hasLinks
-                                ? 'Edit your profile links'
-                                : 'Add your GitHub, LinkedIn or Renku link'}
-                        </a>
+            {/snippet}
+            {#snippet meta()}
+                <p class="m-0 leading-snug">@{data.participant.username}</p>
+                <ProfileLinks links={data.participant.links} />
+                <!-- On your own profile only, and always: with no links set the
+                     row above renders nothing, which told nobody the feature
+                     existed. The links are kept on the Account page, so that is
+                     where this goes rather than a second form here. -->
+                {#if data.answerScope === 'mine'}
+                    <a
+                        href={resolve('/account')}
+                        class="w-fit text-xs font-semibold text-accent-ink no-underline
+                               hover:underline"
+                    >
+                        {hasLinks
+                            ? 'Edit your profile links'
+                            : 'Add your GitHub, LinkedIn or Renku link'}
+                    </a>
+                {/if}
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Always the confirmed variant: a waitlisted member never
+                         resolves to this page at all. -->
+                    <span class="badge badge-success">{data.participant.roleLabel}</span>
+                    {#if joined}
+                        <span>Joined {joined}</span>
                     {/if}
-                    <div class="flex flex-wrap items-center gap-2">
-                        <!-- Always the confirmed variant: a waitlisted member never
-                             resolves to this page at all. -->
-                        <span class="badge badge-success">{data.participant.roleLabel}</span>
-                        {#if joined}
-                            <span class="text-xs text-ink-3">Joined {joined}</span>
-                        {/if}
-                    </div>
                 </div>
-            </div>
-        </div>
+            {/snippet}
+        </PageHeader>
 
         {#if answersSection}
             <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
