@@ -56,3 +56,44 @@ export function globalRoleDescription(r: number): string | undefined {
 export function displayableGlobalRoles(roles: number[]): number[] {
   return ASSIGNABLE_GLOBAL_ROLES.filter((r) => roles.includes(r))
 }
+
+/**
+ * One slice of the admin user table: everyone, the holders of one role, or the
+ * users holding no role at all.
+ *
+ * Single-valued because the roles are mutually exclusive (see the users page),
+ * so a multi-select would only ever add slices together.
+ */
+export type GlobalRoleFilter = "all" | "none" | number
+
+/** Every slice, in the order the filter shows them. */
+export const GLOBAL_ROLE_FILTERS: GlobalRoleFilter[] = [
+  "all",
+  ...ASSIGNABLE_GLOBAL_ROLES,
+  "none",
+]
+
+export function globalRoleFilterLabel(filter: GlobalRoleFilter): string {
+  if (filter === "all") return "All"
+  // "platform", because nearly everyone holds a role somewhere: owner or member
+  // of a hackathon. Those are per-hackathon and not what this filter reads.
+  if (filter === "none") return "No platform role"
+  return globalRoleLabel(filter) ?? "Unknown"
+}
+
+/**
+ * Whether a user holding `roles` belongs in the slice.
+ *
+ * "none" means an empty role list — the same test the users page uses to decide
+ * a row gets the grant picker, so the slice is exactly the rows showing one. A
+ * user holding only a role this build cannot name is therefore not in it: their
+ * row shows an "Unknown" badge, not a picker, and they appear under "all" only.
+ */
+export function matchesGlobalRoleFilter(
+  roles: number[],
+  filter: GlobalRoleFilter,
+): boolean {
+  if (filter === "all") return true
+  if (filter === "none") return roles.length === 0
+  return roles.includes(filter)
+}

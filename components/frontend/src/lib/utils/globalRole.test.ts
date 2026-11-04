@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest"
 import {
   ASSIGNABLE_GLOBAL_ROLES,
+  GLOBAL_ROLE_FILTERS,
   displayableGlobalRoles,
   globalRoleBadgeVariant,
   globalRoleDescription,
+  globalRoleFilterLabel,
   globalRoleLabel,
+  matchesGlobalRoleFilter,
 } from "./globalRole"
 
 // GlobalRole numeric values.
@@ -79,5 +82,65 @@ describe("globalRoleDescription", () => {
 
   it("has nothing to say about a role this build cannot name", () => {
     expect(globalRoleDescription(99)).toBeUndefined()
+  })
+})
+
+describe("GLOBAL_ROLE_FILTERS", () => {
+  // Adding a role to ASSIGNABLE_GLOBAL_ROLES has to give it a filter, or its
+  // holders could only be found under "All".
+  it("offers a slice for every assignable role", () => {
+    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
+      expect(GLOBAL_ROLE_FILTERS).toContain(role)
+    }
+  })
+
+  it("opens on everyone and closes on no role", () => {
+    expect(GLOBAL_ROLE_FILTERS[0]).toBe("all")
+    expect(GLOBAL_ROLE_FILTERS.at(-1)).toBe("none")
+  })
+
+  it("labels every slice", () => {
+    for (const filter of GLOBAL_ROLE_FILTERS) {
+      expect(globalRoleFilterLabel(filter)).not.toBe("Unknown")
+    }
+  })
+})
+
+describe("matchesGlobalRoleFilter", () => {
+  it("lets everyone through all", () => {
+    expect(matchesGlobalRoleFilter([], "all")).toBe(true)
+    expect(matchesGlobalRoleFilter([ADMIN], "all")).toBe(true)
+    expect(matchesGlobalRoleFilter([99], "all")).toBe(true)
+  })
+
+  it("matches the holders of a role", () => {
+    expect(matchesGlobalRoleFilter([ADMIN], ADMIN)).toBe(true)
+    expect(matchesGlobalRoleFilter([HACKATHON_ORGANIZER], ADMIN)).toBe(false)
+    expect(matchesGlobalRoleFilter([], ADMIN)).toBe(false)
+  })
+
+  // The roles are exclusive in the UI but not in the API, so a user granted
+  // both out of band has to turn up under each — the table shows both badges.
+  it("matches a user holding both roles under each", () => {
+    expect(matchesGlobalRoleFilter([ADMIN, HACKATHON_ORGANIZER], ADMIN)).toBe(
+      true,
+    )
+    expect(
+      matchesGlobalRoleFilter(
+        [ADMIN, HACKATHON_ORGANIZER],
+        HACKATHON_ORGANIZER,
+      ),
+    ).toBe(true)
+  })
+
+  it("matches no role only for an empty role list", () => {
+    expect(matchesGlobalRoleFilter([], "none")).toBe(true)
+    expect(matchesGlobalRoleFilter([ADMIN], "none")).toBe(false)
+  })
+
+  // Their row shows an "Unknown" badge rather than the grant picker, so they
+  // are not what "No role" promises.
+  it("keeps a user holding only an unnamed role out of no role", () => {
+    expect(matchesGlobalRoleFilter([99], "none")).toBe(false)
   })
 })
