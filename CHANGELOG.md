@@ -22,6 +22,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 - Platform admins can filter the user list by platform role — Admin, Hackathon
   Organizer or none — with a count beside each, and combine it with the search.
+- The user list shows how many hackathons each user owns, and can be narrowed to
+  users who own one.
+- Platform admins can open any user from the user list to see the hackathons
+  they own, take part in or are waitlisted for, who owns each, and a link to
+  manage their role inside it.
 - Teams can now give a submission a description, with formatting, and a link to
   a folder of attachments, alongside the link to their repository. A new version
   starts out filled in from the previous one, so fixing a single link means
@@ -37,6 +42,12 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A user's platform role is now changed on their own page instead of from a
+  dropdown in the user list. Switching a Hackathon Organizer to Admin, or back,
+  is one step rather than revoke then grant. Changes are saved with a Save bar,
+  as in a hackathon's settings, and making someone Admin asks for confirmation.
+- The user list explains the platform roles behind an info button instead of in
+  text always on screen.
 - A proposer can now edit their project after it has been approved or rejected.
 - Every project in a list, and every project page, now names who proposed it,
   also when an organiser proposed it without joining the hackathon.

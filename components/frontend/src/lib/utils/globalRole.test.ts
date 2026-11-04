@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest"
 import {
   ASSIGNABLE_GLOBAL_ROLES,
   GLOBAL_ROLE_FILTERS,
+  NO_PLATFORM_ROLE,
+  PLATFORM_ROLE_CHOICES,
+  currentPlatformRole,
   displayableGlobalRoles,
   globalRoleBadgeVariant,
-  globalRoleDescription,
   globalRoleFilterLabel,
   globalRoleLabel,
   matchesGlobalRoleFilter,
+  planPlatformRoleChange,
+  platformRoleChoiceLabel,
 } from "./globalRole"
 
 // GlobalRole numeric values.
@@ -66,25 +70,6 @@ describe("displayableGlobalRoles", () => {
   })
 })
 
-describe("globalRoleDescription", () => {
-  // The users page offers every assignable role in a picker whose option text is
-  // "<label> — <description>", and builds its legend from the same map. A role
-  // without a description would show up as a dangling dash, so adding one to
-  // ASSIGNABLE_GLOBAL_ROLES has to mean adding its description too.
-  it("describes every assignable role", () => {
-    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
-      expect(
-        globalRoleDescription(role),
-        `role ${role} has no description`,
-      ).toBeTruthy()
-    }
-  })
-
-  it("has nothing to say about a role this build cannot name", () => {
-    expect(globalRoleDescription(99)).toBeUndefined()
-  })
-})
-
 describe("GLOBAL_ROLE_FILTERS", () => {
   // Adding a role to ASSIGNABLE_GLOBAL_ROLES has to give it a filter, or its
   // holders could only be found under "All".
@@ -138,9 +123,93 @@ describe("matchesGlobalRoleFilter", () => {
     expect(matchesGlobalRoleFilter([ADMIN], "none")).toBe(false)
   })
 
-  // Their row shows an "Unknown" badge rather than the grant picker, so they
-  // are not what "No role" promises.
+  // Their row shows an "Unknown" badge rather than a dash, so they are not what
+  // the "None" platform-role filter promises.
   it("keeps a user holding only an unnamed role out of no role", () => {
     expect(matchesGlobalRoleFilter([99], "none")).toBe(false)
+  })
+})
+
+describe("PLATFORM_ROLE_CHOICES", () => {
+  it("offers none and every assignable role", () => {
+    expect([...PLATFORM_ROLE_CHOICES].sort()).toEqual(
+      [NO_PLATFORM_ROLE, ...ASSIGNABLE_GLOBAL_ROLES].sort(),
+    )
+  })
+
+  // Least power first, so Admin is the last thing on the ladder.
+  it("ends on Admin", () => {
+    expect(PLATFORM_ROLE_CHOICES.at(-1)).toBe(ADMIN)
+  })
+
+  it("labels every choice", () => {
+    for (const choice of PLATFORM_ROLE_CHOICES) {
+      expect(platformRoleChoiceLabel(choice)).not.toBe("Unknown")
+    }
+  })
+})
+
+describe("currentPlatformRole", () => {
+  it("is none for an empty role list", () => {
+    expect(currentPlatformRole([])).toBe(NO_PLATFORM_ROLE)
+  })
+
+  it("is the one assignable role held", () => {
+    expect(currentPlatformRole([ADMIN])).toBe(ADMIN)
+    expect(currentPlatformRole([HACKATHON_ORGANIZER])).toBe(HACKATHON_ORGANIZER)
+  })
+
+  // Both is representable through the API but is no single choice.
+  it("is undefined for a user holding both", () => {
+    expect(currentPlatformRole([ADMIN, HACKATHON_ORGANIZER])).toBeUndefined()
+  })
+
+  it("ignores a role this build cannot name", () => {
+    expect(currentPlatformRole([99])).toBe(NO_PLATFORM_ROLE)
+    expect(currentPlatformRole([99, ADMIN])).toBe(ADMIN)
+  })
+})
+
+describe("planPlatformRoleChange", () => {
+  it("grants from none", () => {
+    expect(planPlatformRoleChange([], ADMIN)).toEqual({
+      revoke: [],
+      grant: ADMIN,
+    })
+  })
+
+  it("revokes to none", () => {
+    expect(planPlatformRoleChange([ADMIN], NO_PLATFORM_ROLE)).toEqual({
+      revoke: [ADMIN],
+      grant: undefined,
+    })
+  })
+
+  it("switches by revoking the old role and granting the new", () => {
+    expect(planPlatformRoleChange([HACKATHON_ORGANIZER], ADMIN)).toEqual({
+      revoke: [HACKATHON_ORGANIZER],
+      grant: ADMIN,
+    })
+  })
+
+  it("does nothing when the target is already the only role", () => {
+    expect(planPlatformRoleChange([ADMIN], ADMIN)).toEqual({
+      revoke: [],
+      grant: undefined,
+    })
+  })
+
+  // Settling a user granted both out of band: keep the target, drop the other.
+  it("drops the other role from a user holding both", () => {
+    expect(
+      planPlatformRoleChange([ADMIN, HACKATHON_ORGANIZER], HACKATHON_ORGANIZER),
+    ).toEqual({ revoke: [ADMIN], grant: undefined })
+  })
+
+  it("leaves a role this build cannot name alone", () => {
+    expect(planPlatformRoleChange([99, ADMIN], NO_PLATFORM_ROLE)).toEqual({
+      revoke: [ADMIN],
+      grant: undefined,
+    })
   })
 })

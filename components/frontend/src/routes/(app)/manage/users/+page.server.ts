@@ -1,22 +1,42 @@
-import type { Actions, PageServerLoad } from "./$types"
+import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
-import { globalRoleLabel } from "$lib/utils/globalRole"
-import { error, fail } from "@sveltejs/kit"
+import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
+// Read-only. Changing a user's platform role happens on their own page,
+// `/manage/users/[id]`, where the choice sits beside what each role carries.
 export const load: PageServerLoad = async (event) => {
-  const { user } = requireGrpc(event.locals.grpc)
+  const { user, hackathon } = requireGrpc(event.locals.grpc)
 
   // The sidebar only offers this page to a global admin, but the URL is
   // guessable and `UserService.List` requires user:read — which only admin
   // holds. Translate that denial rather than letting it surface as a 500.
   try {
-    const result = await user.list({})
+    // One more call for every hackathon with its owners: `List` fills
+    // `owners` in for any hackathon the caller may read, which for an admin is
+    // all of them, private included. Checked against the running server — the
+    // proto comment still says Get only.
+    //
+    // TODO(backend: user-hackathon-summary): participation is not counted.
+    // Each hackathon's participants only come with `Get`, which also loads its
+    // tracks, projects and pages — one heavy call per hackathon, or a `List` per
+    // user, either way growing with the platform. Wants a per-user summary on
+    // `UserService.List`; until then the user's own page shows it.
+    const [users, hackathons] = await Promise.all([
+      user.list({}),
+      hackathon.list({}),
+    ])
+
+    const owned = new Map<string, number>()
+    for (const h of hackathons.hackathons) {
+      for (const o of h.owners) owned.set(o.id, (owned.get(o.id) ?? 0) + 1)
+    }
+
     return {
-      users: result.users,
-      // So the template can hide "revoke your own Admin role" — a courtesy,
-      // not the real gate: `RemoveRole` blocks it server-side regardless.
-      currentUserId: event.locals.platformUser?.id,
+      users: users.users.map((u) => ({
+        ...u,
+        ownedCount: owned.get(u.id) ?? 0,
+      })),
     }
   } catch (e) {
     if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
@@ -24,87 +44,4 @@ export const load: PageServerLoad = async (event) => {
     }
     throw e
   }
-}
-
-// Names the role in the confirmation message. Falls back rather than throwing:
-// the backend accepted the number, so the wording is the only thing at stake if
-// this build has no label for it.
-function roleName(role: number): string {
-  return globalRoleLabel(role) ?? "role"
-}
-
-export const actions: Actions = {
-  addRole: async (event) => {
-    const { user } = requireGrpc(event.locals.grpc)
-    const formData = await event.request.formData()
-    const userId = formData.get("userId")
-    const role = Number(formData.get("role"))
-
-    if (typeof userId !== "string" || !userId) {
-      return fail(400, { success: false, message: "Missing user" })
-    }
-
-    try {
-      await user.addRole({ userId, role })
-    } catch (e) {
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          success: false,
-          message: "You don't have permission to assign roles",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, {
-          success: false,
-          message: "That user no longer exists",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { success: false, message: e.details })
-      }
-      throw e
-    }
-
-    // The row redraws with the new badge either way; the message is what makes
-    // the change legible when the row has scrolled out of view on a phone.
-    return { success: true, message: `Granted ${roleName(role)}` }
-  },
-
-  removeRole: async (event) => {
-    const { user } = requireGrpc(event.locals.grpc)
-    const formData = await event.request.formData()
-    const userId = formData.get("userId")
-    const role = Number(formData.get("role"))
-
-    if (typeof userId !== "string" || !userId) {
-      return fail(400, { success: false, message: "Missing user" })
-    }
-
-    try {
-      await user.removeRole({ userId, role })
-    } catch (e) {
-      // Covers both a caller lacking user:write and the backend's own guard
-      // against an admin removing their own Admin role — the latter should
-      // be unreachable through this page since the button is hidden for
-      // that case, but a direct resubmit still lands here.
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          success: false,
-          message: "You don't have permission to remove roles",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, {
-          success: false,
-          message: "That user no longer exists",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { success: false, message: e.details })
-      }
-      throw e
-    }
-
-    return { success: true, message: `Revoked ${roleName(role)}` }
-  },
 }
