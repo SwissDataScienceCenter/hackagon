@@ -28,15 +28,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   they own, take part in or are waitlisted for, who owns each, and a link to
   manage their role inside it.
 - Teams can now give a submission a description, with formatting, and a link to
-  a folder of attachments, alongside the link to their repository. A new version
-  starts out filled in from the previous one, so fixing a single link means
-  retyping nothing.
+  a folder of attachments, alongside the link to their repository.
 - The Manage Submissions CSV now has an "Attachments" column with each entry's
   attachments link.
 - Manage Submissions now shows each version's attachments link and, folded away
   until opened, its description.
-- A team's page now shows its entry's attachments link and description, next to
-  the repository link.
+- A new Submissions page lists what every team has handed in, with your own
+  team's first. "View entry" on the ballot and on Results opens a team's
+  submission there.
 - Participants who proposed a project find it under "My projects" in the
   hackathon's menu, at any status, also after proposals have closed.
 
@@ -48,6 +47,12 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   as in a hackathon's settings, and making someone Admin asks for confirmation.
 - The user list explains the platform roles behind an info button instead of in
   text always on screen.
+- A team now has one submission, which any member changes and saves in place on
+  the new "Our submission" page. There are no more drafts, versions or a
+  separate finalize step: what the team saved last is its entry. The page shows
+  what is not saved yet, and asks before you leave with unsaved changes.
+- A team's page now shows only the team and its project. Its submission is on
+  the Submissions page.
 - A proposer can now edit their project after it has been approved or rejected.
 - Every project in a list, and every project page, now names who proposed it,
   also when an organiser proposed it without joining the hackathon.

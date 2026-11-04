@@ -6,7 +6,7 @@ Who works on which project. Appears once teams exist and the owners publish
 them. It shows:
 
 - [All teams](#all-teams): grouped by project
-- [A team](#a-team): its members, its project and its final entry
+- [A team](#a-team): its members and its project
 
 :::
 
@@ -16,11 +16,11 @@ them. It shows:
 
 - Teams grouped under their project. The project title links to its
   [project](member-projects.md).
-- Each team shows its members and its final entry, if it has one.
+- Each team shows its members.
 - Click {guilabel}`View` to open [a team](#a-team).
 
 ## A team
 
 - Its members, and its project with the full proposal.
-- Its final entry, or a note that it has none yet.
-- Hand in your own team's work on [Submissions](member-submissions.md).
+- Hand in your own team's work on [Our submission](member-our-submission.md).
+- Read what each team handed in on [Submissions](member-submissions.md).
