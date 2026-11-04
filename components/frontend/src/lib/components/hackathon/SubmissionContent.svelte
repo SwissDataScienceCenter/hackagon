@@ -9,6 +9,7 @@
         attachmentFolderUrl,
         description,
         collapseDescription = false,
+        descriptionOpen = false,
     }: {
         repositoryUrl?: string;
         attachmentFolderUrl?: string;
@@ -19,6 +20,12 @@
          * many teams, where one long description would push the rest down.
          */
         collapseDescription?: boolean;
+        /**
+         * Whether a folded description is open. A page that folds every card
+         * at once hands the same value to all of them; each can still be
+         * toggled on its own until that value changes again.
+         */
+        descriptionOpen?: boolean;
     } = $props();
 </script>
 
@@ -63,7 +70,7 @@
 {/snippet}
 
 {#if description && collapseDescription}
-    <details>
+    <details open={descriptionOpen}>
         <summary class="cursor-pointer text-xs text-ink-3">Description</summary>
         <div class="mt-1">{@render descriptionBody(description)}</div>
     </details>
