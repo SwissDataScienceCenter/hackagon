@@ -4,7 +4,7 @@ import type { VoteResult } from "$lib/server/grpc/generated/vote/entities/vote_r
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
 import type { VoteServiceClient } from "$lib/server/grpc/generated/vote/vote_service"
 import { listVisibleTeams } from "./teams"
-import { submissionVersions } from "./submissions"
+import { submissionEntry } from "./submissions"
 import { VotingMethod } from "$lib/server/grpc/generated/vote/entities/voting_method"
 import { VoterType } from "$lib/server/grpc/generated/vote/entities/voter_type"
 import { ClientError, Status } from "nice-grpc-common"
@@ -91,10 +91,10 @@ export interface BallotSubmission {
  * Every team's *final* submission in one hackathon, which is what is on the
  * ballot and what results are awarded to.
  *
- * `latestFinal` rather than `latest`: `CreateSubmission` always writes a draft,
- * and nothing stops a team from filing one after finalizing, so the highest
- * version is not necessarily the entry. A team with no final submission is
- * absent rather than present-and-empty — it has nothing in the running.
+ * The team's entry as `submissionEntry` reads it — its newest final version,
+ * the same content its own submissions page shows. A team with no final
+ * submission is absent rather than present-and-empty — it has nothing in the
+ * running.
  *
  * Shared by the booth, the organizer's results screen and the public results
  * page so the three cannot disagree about what was entered.
@@ -138,7 +138,7 @@ export async function ballotSubmissions(
       // hands a participant another team's entry, and only while assignments
       // are published. That is the same grant `List` above needs, so a viewer
       // who got a list can resolve every row in it. Nothing
-      // extra reaches the browser: `submissionVersions` keeps `latestFinal` and
+      // extra reaches the browser: `submissionEntry` keeps the final entry and
       // this function returns only that, so the drafts `Get` over-shares are
       // dropped server-side — the same containment the team detail page relies
       // on.
@@ -163,15 +163,15 @@ export async function ballotSubmissions(
         throw e
       }
 
-      const { latestFinal } = submissionVersions(submissions, new Map())
-      if (!latestFinal) return null
+      const entry = submissionEntry(submissions, new Map())
+      if (!entry) return null
 
       return {
-        id: latestFinal.id,
+        id: entry.id,
         teamId: t.id,
         teamName: t.name,
         projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        repositoryUrl: latestFinal.repositoryUrl,
+        repositoryUrl: entry.repositoryUrl,
         // SubmitVote refuses a vote on a submission by a team you are on
         // (`vote_service.go:588`), so the booth needs this per submission to
         // leave those off the ballot rather than let someone pick one and take

@@ -111,6 +111,70 @@ export function submissionVersions(
 }
 
 /**
+ * A team's submission as one thing it edits in place — the way every page shows
+ * it, whatever versions sit underneath.
+ */
+export interface SubmissionEntry {
+  /** The version this content lives on — what votes and placements point at. */
+  id: string
+  /** The proto's `result` — see the mapping in `submissionEntry`. */
+  repositoryUrl: string | undefined
+  /** A link to a folder of slides, data or a video — anything not in the repo. */
+  attachmentFolderUrl: string | undefined
+  /** Markdown, as the team typed it. */
+  description: string | undefined
+  /** When this content was saved. */
+  updatedAt: Date | undefined
+  /** Who saved it; unset when they are no longer a member. */
+  updatedBy: string | undefined
+}
+
+/**
+ * The team's entry: its newest *final* version, or null when it has none.
+ *
+ * The backend keeps every save as a version, a draft until finalized. The
+ * frontend hides that: each save creates a version and finalizes it at once
+ * (the participant page's save action), so the newest final version is always
+ * what the team last saved. Drafts are ignored — a team holding only drafts has
+ * no entry, as on the ballot, and a draft left on top of a final by an earlier
+ * save does not replace it.
+ *
+ * TODO(backend: submission-edit-in-place): one submission per team and project,
+ * updated by an update/upsert RPC, with `version` and `status` dropped and votes
+ * and results moved onto the row that is kept. This then reads that row, and
+ * the save action stops finalizing.
+ *
+ * `updatedAt`/`updatedBy` are the version's creation, not its `modified_at`:
+ * a version's content never changes, and `modifier` only says who finalized it,
+ * which on older data need not be who wrote it.
+ *
+ * @param submissions in any order — sorted here, since `ListSubmissions`'
+ *   ordering is not part of its contract.
+ * @param memberNames user id → display name, for resolving who saved it.
+ */
+export function submissionEntry(
+  submissions: Submission[],
+  memberNames: Map<string, string>,
+): SubmissionEntry | null {
+  const final = [...submissions]
+    .sort((a, b) => a.version - b.version)
+    .findLast((s) => s.status === SubmissionStatus.SUBMISSION_STATUS_FINAL)
+  if (!final) return null
+
+  return {
+    id: final.id,
+    // TODO(backend: submission-repository-url): `result` is the repository
+    // URL, and the backend plans to rename it `repository_url` after the
+    // hackathon. This is the one line that changes when it does.
+    repositoryUrl: final.result,
+    attachmentFolderUrl: final.attachmentFolderUrl,
+    description: final.description,
+    updatedAt: final.createdAt,
+    updatedBy: memberNames.get(final.creatorId),
+  }
+}
+
+/**
  * Where a team stands: nothing filed, only drafts, or a final entry.
  *
  * Read off `latestFinal` rather than `latest`, for the reason `submissionVersions`
