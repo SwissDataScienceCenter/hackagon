@@ -137,7 +137,6 @@
                                 name="repositoryUrl"
                                 maxlength={2048}
                                 value={prefillLink(group.entry?.repositoryUrl)}
-                                placeholder="https://github.com/your-team/your-repo"
                                 class="field h-8 px-2 text-xs"
                             />
                         </label>
@@ -148,7 +147,6 @@
                                 name="attachmentFolderUrl"
                                 maxlength={2048}
                                 value={prefillLink(group.entry?.attachmentFolderUrl)}
-                                placeholder="https://drive.example.org/your-slides-and-data"
                                 class="field h-8 px-2 text-xs"
                             />
                         </label>
@@ -162,11 +160,11 @@
                                 rows={6}
                                 maxlength={10000}
                                 value={group.entry?.description ?? ''}
-                                placeholder="What did you build, and how do the pieces fit together?"
                             />
                         </div>
                         <div class="flex flex-wrap items-center gap-3">
-                            <button type="submit" class="btn btn-sm btn-primary" disabled={pending}>
+                            <!-- The one solid accent: saving is what this page is for. -->
+                            <button type="submit" class="btn btn-sm btn-solid" disabled={pending}>
                                 Save
                             </button>
                             {@render lastSaved(group.entry)}
