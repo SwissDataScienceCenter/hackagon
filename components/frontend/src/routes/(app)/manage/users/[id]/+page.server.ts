@@ -3,7 +3,6 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { ownerMembership } from "$lib/server/hackathon/membership"
 import { profileLinksOf } from "$lib/server/user/profileLinks"
 import {
-  ADMIN_ROLE,
   PLATFORM_ROLE_CHOICES,
   NO_PLATFORM_ROLE,
   planPlatformRoleChange,
@@ -125,8 +124,7 @@ export const actions: Actions = {
   setRole: async (event) => {
     const { user } = requireGrpc(event.locals.grpc)
     const userId = event.params.id
-    const formData = await event.request.formData()
-    const target = Number(formData.get("role"))
+    const target = Number((await event.request.formData()).get("role"))
 
     if (!PLATFORM_ROLE_CHOICES.includes(target)) {
       return fail(400, { success: false, message: "Pick a role" })
@@ -135,30 +133,12 @@ export const actions: Actions = {
     // Read now rather than trusting what the page showed: another admin may
     // have changed this user's roles since it loaded.
     let current: number[]
-    let username: string
     try {
-      const u = (await user.get({ userId })).user
-      current = u?.roles ?? []
-      username = u?.username ?? ""
+      current = (await user.get({ userId })).user?.roles ?? []
     } catch (e) {
       const r = refusal(e)
       if (!r) throw e
       return fail(r.status, { success: false, message: r.message })
-    }
-
-    // Granting Admin hands over every hackathon and this page, so it takes the
-    // username typed back. Checked here as well as in the form, so a resubmit
-    // or a hand-built request cannot skip it. A guard against slips, not an
-    // access check: `AddRole` still decides who may grant.
-    if (
-      target === ADMIN_ROLE &&
-      !current.includes(ADMIN_ROLE) &&
-      String(formData.get("confirm") ?? "").trim() !== username
-    ) {
-      return fail(400, {
-        success: false,
-        message: "Type the username to confirm making them an Admin",
-      })
     }
 
     const { revoke, grant } = planPlatformRoleChange(current, target)

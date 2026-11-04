@@ -11,7 +11,6 @@ import {
   globalRoleLabel,
   matchesGlobalRoleFilter,
   planPlatformRoleChange,
-  platformRoleChangeConsequences,
   platformRoleChoiceLabel,
 } from "./globalRole"
 
@@ -125,7 +124,7 @@ describe("matchesGlobalRoleFilter", () => {
   })
 
   // Their row shows an "Unknown" badge rather than a dash, so they are not what
-  // "No platform role" promises.
+  // the "None" platform-role filter promises.
   it("keeps a user holding only an unnamed role out of no role", () => {
     expect(matchesGlobalRoleFilter([99], "none")).toBe(false)
   })
@@ -212,54 +211,5 @@ describe("planPlatformRoleChange", () => {
       revoke: [ADMIN],
       grant: undefined,
     })
-  })
-})
-
-describe("platformRoleChangeConsequences", () => {
-  it("says nothing for no change", () => {
-    expect(platformRoleChangeConsequences([ADMIN], ADMIN)).toEqual([])
-  })
-
-  it("names one gain for a grant from none", () => {
-    const lines = platformRoleChangeConsequences([], HACKATHON_ORGANIZER)
-    expect(lines).toHaveLength(1)
-    expect(lines[0]).toMatch(/create hackathons/)
-  })
-
-  // Revoking a platform role leaves hackathon ownership alone, and an admin
-  // demoting an organizer should be told so rather than fear for their events.
-  it("says owned hackathons stay when Organizer is removed", () => {
-    expect(
-      platformRoleChangeConsequences([HACKATHON_ORGANIZER], NO_PLATFORM_ROLE),
-    ).toEqual([expect.stringMatching(/already own stay theirs/)])
-  })
-
-  // In the order the calls run: the loss first, then the gain.
-  it("names the loss and then the gain for a switch down from Admin", () => {
-    const lines = platformRoleChangeConsequences([ADMIN], HACKATHON_ORGANIZER)
-    expect(lines).toHaveLength(2)
-    expect(lines[0]).toMatch(/Loses access/)
-    expect(lines[1]).toMatch(/create hackathons/)
-  })
-
-  // Admin can do everything Organizer could, so "can no longer create
-  // hackathons" would be false on the way up.
-  it("names only the gain for a switch up to Admin", () => {
-    const lines = platformRoleChangeConsequences([HACKATHON_ORGANIZER], ADMIN)
-    expect(lines).toEqual([expect.stringMatching(/full access/)])
-  })
-
-  // The generic "Gets X." / "Loses X." is a fallback for a role added without
-  // its sentences; every role we assign has to have real ones.
-  it("has a real sentence for every assignable role either way", () => {
-    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
-      const label = platformRoleChoiceLabel(role)
-      expect(platformRoleChangeConsequences([], role)[0]).not.toBe(
-        `Gets ${label}.`,
-      )
-      expect(
-        platformRoleChangeConsequences([role], NO_PLATFORM_ROLE)[0],
-      ).not.toBe(`Loses ${label}.`)
-    }
   })
 })

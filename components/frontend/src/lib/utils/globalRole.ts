@@ -57,9 +57,10 @@ export const GLOBAL_ROLE_FILTERS: GlobalRoleFilter[] = [
 
 export function globalRoleFilterLabel(filter: GlobalRoleFilter): string {
   if (filter === "all") return "All"
-  // "platform", because nearly everyone holds a role somewhere: owner or member
-  // of a hackathon. Those are per-hackathon and not what this filter reads.
-  if (filter === "none") return "No platform role"
+  // "None" rather than "No role": the chip sits in a row labeled "Platform
+  // role", and nearly everyone holds a role somewhere — owner or member of a
+  // hackathon. Same word the user page uses for the choice.
+  if (filter === "none") return "None"
   return globalRoleLabel(filter) ?? "Unknown"
 }
 
@@ -112,47 +113,6 @@ export function currentPlatformRole(roles: number[]): number | undefined {
   if (held.length === 0) return NO_PLATFORM_ROLE
   if (held.length === 1) return held[0]
   return undefined
-}
-
-// What losing or gaining each role does, read off the casbin policy rather than
-// inferred from the name: `admin` has no policy rows at all, because the matcher
-// ends in `|| g2(r.sub, "admin")` and short-circuits every check in every
-// hackathon, while `hackathon_organizer` carries exactly one row,
-// hackathon:create. See components/backend/internal/middleware/rbac.go.
-//
-// Kept in code, unlike the info-box texts in $lib/content/help, because they
-// are assembled per change. Losing a platform role never touches hackathon
-// ownership: owner rows are per hackathon and RemoveRole leaves them alone.
-const LOSES: Partial<Record<number, string>> = {
-  1: "Loses access to every hackathon they don't own or take part in, and to user management.",
-  2: "Can no longer create hackathons. Hackathons they already own stay theirs.",
-}
-const GAINS: Partial<Record<number, string>> = {
-  1: "Gets full access to every hackathon on the platform and to user management, including making others Admin.",
-  2: "Can create hackathons, and becomes owner of each one they create.",
-}
-
-/**
- * The consequences of moving a user holding `current` to `target`, one
- * sentence per role lost or gained, in the order the calls run. Built from
- * `planPlatformRoleChange` so the warning cannot describe a different change
- * from the one the action makes.
- */
-export function platformRoleChangeConsequences(
-  current: number[],
-  target: number,
-): string[] {
-  const { revoke, grant } = planPlatformRoleChange(current, target)
-  // Admin covers everything a lesser role permits — its matcher short-circuits
-  // every check — so a loss on the way to Admin costs nothing, and saying
-  // "can no longer create hackathons" there would be false.
-  const lines =
-    grant === ADMIN_ROLE
-      ? []
-      : revoke.map((r) => LOSES[r] ?? `Loses ${platformRoleChoiceLabel(r)}.`)
-  if (grant !== undefined)
-    lines.push(GAINS[grant] ?? `Gets ${platformRoleChoiceLabel(grant)}.`)
-  return lines
 }
 
 /**

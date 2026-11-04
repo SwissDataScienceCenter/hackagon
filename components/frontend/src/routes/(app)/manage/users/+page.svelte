@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import InfoToggle from '$lib/components/layout/InfoToggle.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import UserAvatar from '$lib/components/user/UserAvatar.svelte';
     import {
         GLOBAL_ROLE_FILTERS,
@@ -26,6 +26,9 @@
     type UserFilter = GlobalRoleFilter | 'owners';
     const USER_FILTERS: UserFilter[] = [...GLOBAL_ROLE_FILTERS, 'owners'];
 
+    // Named after the roles themselves, so a chip reads like the badge it
+    // finds: "Owner" is the hackathon role, as on a user's page.
+
     // Page state rather than a query parameter, like the search beside it, so
     // both are kept while the page stays open and both reset on a reload.
     let filter = $state<UserFilter>('all');
@@ -35,7 +38,7 @@
     }
 
     function filterLabel(f: UserFilter): string {
-        return f === 'owners' ? 'Owns a hackathon' : globalRoleFilterLabel(f);
+        return f === 'owners' ? 'Owner' : globalRoleFilterLabel(f);
     }
 
     // Matches every column the table actually shows, so a row the user can read
@@ -115,59 +118,67 @@
     {/if}
 {/snippet}
 
-<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <a
-                href={resolve('/(app)/dashboard')}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to dashboard
-            </a>
+{#snippet filterChips(filters: UserFilter[], label: string)}
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span class="meta w-32 shrink-0">{label}</span>
+        <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by {label.toLowerCase()}">
+            {#each filters as f (f)}
+                <button
+                    type="button"
+                    onclick={() => (filter = f)}
+                    aria-pressed={filter === f}
+                    class="chip {filter === f ? 'chip-active' : ''}"
+                >
+                    {filterLabel(f)}
+                    <span class="tnum">{filterCounts.get(f) ?? 0}</span>
+                </button>
+            {/each}
+        </div>
+    </div>
+{/snippet}
+
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <div class="flex min-w-0 flex-col gap-1">
+        <a
+            href={resolve('/(app)/dashboard')}
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+        >
+            &larr; Back to dashboard
+        </a>
+        <div class="flex items-center gap-2">
             <h1 class="m-0 text-title text-ink">Users</h1>
-            <p class="m-0 text-xs text-ink-3">{countLabel}</p>
+            <InfoButton topic="users-list" title="Users and roles" />
         </div>
-        <div class="relative w-full sm:w-72">
-            <Search
-                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
-                       text-ink-3"
-                aria-hidden="true"
-            />
-            <label class="sr-only" for="user-search">Search users</label>
-            <input
-                id="user-search"
-                type="search"
-                bind:value={search}
-                placeholder="Name, username or email…"
-                class="field pl-9 pr-3"
-            />
-        </div>
+        <p class="m-0 text-xs text-ink-3">{countLabel}</p>
     </div>
 
     <!-- Chips, not buttons: this picks which rows are showing, and a solid
          accent would read as an action. Rendered even when the slice is
-         empty, so the way back out stays in view. What the roles mean is one
-         click away rather than always on screen, in
-         $lib/content/help/users-list.md. -->
+         empty, so the way back out stays in view. One row per kind of role,
+         each named after the roles themselves, but still one choice across
+         both rows. -->
     {#if data.users.length > 0}
-        <InfoToggle label="About these filters" topic="users-list">
-            {#snippet heading()}
-                <div class="flex flex-wrap gap-1" role="group" aria-label="Filter users">
-                    {#each USER_FILTERS as f (f)}
-                        <button
-                            type="button"
-                            onclick={() => (filter = f)}
-                            aria-pressed={filter === f}
-                            class="chip {filter === f ? 'chip-active' : ''}"
-                        >
-                            {filterLabel(f)}
-                            <span class="tnum">{filterCounts.get(f) ?? 0}</span>
-                        </button>
-                    {/each}
-                </div>
-            {/snippet}
-        </InfoToggle>
+        <div class="flex flex-col gap-2">
+            {@render filterChips(GLOBAL_ROLE_FILTERS, 'Platform role')}
+            {@render filterChips(['owners'], 'Hackathon role')}
+        </div>
     {/if}
+
+    <div class="relative w-full sm:w-80">
+        <Search
+            class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
+                   text-ink-3"
+            aria-hidden="true"
+        />
+        <label class="sr-only" for="user-search">Search users</label>
+        <input
+            id="user-search"
+            type="search"
+            bind:value={search}
+            placeholder="Name, username or email…"
+            class="field pl-9 pr-3"
+        />
+    </div>
 
     {#if data.users.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">No users found.</p>
@@ -270,8 +281,13 @@
                             <td class="truncate px-3 py-2 text-ink-3" title={user.email || ''}>
                                 {user.email || '—'}
                             </td>
-                            <td class="px-3 py-2 text-ink-3 tnum">{localIsoDate(user.createdAt)}</td>
-                            <td class="px-3 py-2 tnum {user.ownedCount > 0 ? 'text-ink-2' : 'text-ink-3'}">
+                            <td class="whitespace-nowrap px-3 py-2 text-ink-3 tnum">
+                                {localIsoDate(user.createdAt)}
+                            </td>
+                            <td
+                                class="whitespace-nowrap px-3 py-2 tnum
+                                       {user.ownedCount > 0 ? 'text-ink-2' : 'text-ink-3'}"
+                            >
                                 {user.ownedCount > 0 ? ownsLabel(user.ownedCount) : '—'}
                             </td>
                             <td class="px-3 py-2">

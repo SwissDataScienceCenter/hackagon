@@ -1,20 +1,19 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { beforeNavigate, goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import Lock from 'lucide-svelte/icons/lock';
     import MembershipBadge from '$lib/components/hackathon/MembershipBadge.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
-    import InfoToggle from '$lib/components/layout/InfoToggle.svelte';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import UserAvatar from '$lib/components/user/UserAvatar.svelte';
     import {
         ADMIN_ROLE,
-        NO_PLATFORM_ROLE,
         PLATFORM_ROLE_CHOICES,
         currentPlatformRole,
         displayableGlobalRoles,
-        globalRoleBadgeVariant,
         globalRoleLabel,
-        platformRoleChangeConsequences,
         platformRoleChoiceLabel,
     } from '$lib/utils/globalRole';
     import { isPrivate, statusBadgeVariant, statusLabel } from '$lib/utils/hackathonStatus';
@@ -33,44 +32,59 @@
     // which `RemoveRole` refuses. Not offered rather than left to fail.
     const isSelf = $derived(data.user.id === data.currentUserId);
 
-    // Three deliberate steps, because one of the choices hands over every
-    // hackathon on the platform: open the form, pick a role, confirm the change
-    // the button names. Picking alone never submits — on Windows the arrow keys
-    // fire `change` on a closed select for every option they pass.
-    let editing = $state(false);
-    let picked = $state<number | undefined>(undefined);
+    // The same edit-then-save pattern as a hackathon's Settings: the select
+    // shows the role held, picking another only marks the bar below as unsaved,
+    // and nothing changes until Save. Picking alone never submits — on Windows
+    // the arrow keys fire `change` on a closed select for every option passed.
+    //
+    // Derived so it snaps back to the saved role whenever the load reruns —
+    // after Save, or another admin's change — and overridden locally by picking.
+    let draft = $derived(current);
     let pending = $state(false);
+    const dirty = $derived(draft !== undefined && draft !== current);
 
-    // Before any change can be confirmed, the form says what it does. Granting
-    // Admin then takes a fourth step, the username typed back: it is the one
-    // choice that hands over every hackathon and this page, so it should not be
-    // reachable by clicking through. The action checks it again server-side.
-    let confirmText = $state('');
-    const needsConfirm = $derived(picked === ADMIN_ROLE);
-    const confirmed = $derived(!needsConfirm || confirmText.trim() === data.user.username);
-
-    const consequences = $derived(
-        picked === undefined ? [] : platformRoleChangeConsequences(data.user.roles, picked)
+    // A user holding both roles (only possible through the API) has no single
+    // current choice; the bar names both so the change it describes is honest.
+    const currentLabel = $derived(
+        current === undefined
+            ? heldRoles.map((r) => globalRoleLabel(r) ?? 'Unknown').join(' + ')
+            : platformRoleChoiceLabel(current)
     );
-    const touchesAdmin = $derived(
-        picked !== undefined && (picked === ADMIN_ROLE || data.user.roles.includes(ADMIN_ROLE))
+    const summary = $derived(
+        dirty && draft !== undefined ? `${currentLabel} → ${platformRoleChoiceLabel(draft)}` : ''
     );
 
-    // The role held is not offered as a change to itself. A user holding both
-    // (`current` undefined) is offered all three, any of which settles it.
-    const options = $derived(PLATFORM_ROLE_CHOICES.filter((c) => c !== current));
+    // Granting Admin hands over every hackathon and this page, so Save asks
+    // once more, in the app's standard confirm dialog. Every other change saves
+    // straight away, as in Settings.
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
+    const grantsAdmin = $derived(draft === ADMIN_ROLE && !data.user.roles.includes(ADMIN_ROLE));
 
-    const submitLabel = $derived.by(() => {
-        if (picked === undefined) return 'Confirm change';
-        if (picked === NO_PLATFORM_ROLE) return 'Remove platform role';
-        return `Make ${platformRoleChoiceLabel(picked)}`;
+    // Same leave guard as Settings: a link inside the app never fires
+    // `beforeunload`, so the router's navigation is cancelled, the question
+    // asked, and on a "yes" resumed — with `leaving` set so it doesn't ask twice.
+    let leaving = false;
+    beforeNavigate((navigation) => {
+        if (leaving || !dirty || navigation.type === 'leave') return;
+        const target = navigation.to?.url;
+        navigation.cancel();
+        if (!target) return;
+
+        void confirmDialog
+            .ask({
+                title: 'Leave without saving?',
+                message: `The platform role change (${summary}) is lost if you leave.`,
+                confirmLabel: 'Leave without saving',
+                danger: true,
+            })
+            .then((leave) => {
+                if (!leave) return;
+                leaving = true;
+                if (navigation.willUnload) window.location.href = target.href;
+                // eslint-disable-next-line svelte/no-navigation-without-resolve -- the URL SvelteKit was already navigating to, resolved by whatever link started it
+                else void goto(target);
+            });
     });
-
-    function closeEditor() {
-        editing = false;
-        picked = undefined;
-        confirmText = '';
-    }
 
     // Same format as the dashboard's rows, so a hackathon's dates read the same
     // wherever it is listed.
@@ -83,7 +97,15 @@
     }
 </script>
 
-<div class="flex flex-col gap-8 px-4 py-8 sm:px-10 md:px-20">
+<svelte:window
+    onbeforeunload={(e) => {
+        if (dirty && !leaving) e.preventDefault();
+    }}
+/>
+
+<ConfirmDialog bind:this={confirmDialog} />
+
+<div class="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-3">
         <a
             href={resolve('/(app)/manage/users')}
@@ -110,143 +132,115 @@
         </div>
     </div>
 
-    <section class="flex max-w-2xl flex-col gap-3">
-        <InfoToggle label="About platform roles" topic="user-platform-role">
-            {#snippet heading()}
-                <h2 class="m-0 text-section">Platform role</h2>
-            {/snippet}
-        </InfoToggle>
-
-        <div class="flex flex-wrap items-center gap-3">
-            {#if heldRoles.length === 0}
-                <span class="text-sm text-ink-2">None</span>
-            {:else}
-                {#each heldRoles as role (role)}
-                    <span class="badge {globalRoleBadgeVariant(role) ?? 'badge-neutral'}">
-                        {globalRoleLabel(role)}
-                    </span>
-                {/each}
-            {/if}
-            {#if !isSelf && !editing}
-                <button type="button" onclick={() => (editing = true)} class="btn btn-sm btn-outline">
-                    Change…
-                </button>
-            {/if}
+    <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-section">Platform role</h2>
+            <InfoButton topic="user-platform-role" title="Platform roles" />
         </div>
 
-        <!-- State, not explanation: why the control is missing, or why the
-             current role reads oddly. Either would look like a bug unsaid. -->
-        {#if isSelf}
-            <p class="m-0 text-xs text-ink-3">
-                You can't change your own platform role. Another admin has to.
-            </p>
-        {:else if current === undefined}
-            <p class="m-0 text-xs text-warning-ink">
-                Holds both roles. Choosing one removes the other.
-            </p>
-        {/if}
-
-        {#if editing}
-            <form
-                method="POST"
-                action="?/setRole"
-                use:enhance={() => {
-                    pending = true;
-                    return async ({ result, update }) => {
-                        await update();
-                        pending = false;
-                        if (result.type === 'success') closeEditor();
-                    };
-                }}
-                class="card flex flex-col gap-3 p-4"
+        <!-- Enhanced, so saving stays on the page: the load re-runs, the select
+             snaps to what was saved, and the bar says so. -->
+        <form
+            method="POST"
+            action="?/setRole"
+            use:enhance={async ({ cancel }) => {
+                if (grantsAdmin) {
+                    const ok = await confirmDialog.ask({
+                        title: `Make ${fullName} an Admin?`,
+                        message: 'Admins have full access to every hackathon and to user management.',
+                        confirmLabel: 'Make Admin',
+                        danger: true,
+                    });
+                    if (!ok) return cancel();
+                }
+                pending = true;
+                return async ({ update }) => {
+                    await update({ reset: false });
+                    pending = false;
+                };
+            }}
+            class="flex flex-col gap-3"
+        >
+            <label class="sr-only" for="platform-role">Platform role for {fullName}</label>
+            <!-- Warning-tinted while unsaved, the same color as the bar, as the
+                 changed rows are in Settings. -->
+            <select
+                id="platform-role"
+                name="role"
+                disabled={isSelf || pending}
+                onchange={(e) => (draft = Number(e.currentTarget.value))}
+                class="field h-9 px-2 sm:w-72 {dirty ? 'border-warning bg-warning/10' : ''}"
             >
-                <label class="field-label">
-                    New platform role
-                    <select
-                        name="role"
-                        disabled={pending}
-                        onchange={(e) => {
-                            const v = Number(e.currentTarget.value);
-                            picked = Number.isNaN(v) ? undefined : v;
-                            confirmText = '';
-                        }}
-                        class="field h-9 px-2"
-                    >
-                        <option value="" disabled selected>Choose a role…</option>
-                        {#each options as choice (choice)}
-                            <option value={choice}>{platformRoleChoiceLabel(choice)}</option>
-                        {/each}
-                    </select>
-                </label>
-                <!-- What the change does, before it can be confirmed. Danger
-                     whenever Admin is gained or lost, since that moves access to
-                     every hackathon; warning otherwise. -->
-                {#if consequences.length > 0}
-                    <div
-                        class="flex flex-col gap-2 rounded-card border px-3 py-3
-                               {touchesAdmin
-                            ? 'border-danger/40 bg-danger/10'
-                            : 'border-warning/40 bg-warning/10'}"
-                        role="note"
-                    >
-                        <p class="m-0 font-mono text-xs font-semibold text-ink">
-                            What changes for {fullName}
-                        </p>
-                        <ul class="m-0 flex list-disc flex-col gap-1 pl-4 font-sans text-xs text-ink-2">
-                            {#each consequences as line (line)}
-                                <li>{line}</li>
-                            {/each}
-                        </ul>
-                    </div>
+                {#if current === undefined}
+                    <option value="" disabled selected={draft === undefined}>{currentLabel}</option>
                 {/if}
-                {#if needsConfirm}
-                    <label class="field-label">
-                        <span>Type <code class="text-ink">{data.user.username}</code> to confirm</span>
-                        <input
-                            name="confirm"
-                            bind:value={confirmText}
-                            disabled={pending}
-                            autocomplete="off"
-                            spellcheck="false"
-                            class="field h-9 px-2"
-                        />
-                    </label>
+                {#each PLATFORM_ROLE_CHOICES as choice (choice)}
+                    <option value={choice} selected={draft === choice}>
+                        {platformRoleChoiceLabel(choice)}
+                    </option>
+                {/each}
+            </select>
+
+            <!-- State, not explanation: why the control is locked, or why the
+                 current role reads oddly. Either would look like a bug unsaid. -->
+            {#if isSelf}
+                <p class="m-0 text-xs text-ink-3">
+                    You can't change your own platform role. Another admin has to.
+                </p>
+            {:else}
+                {#if current === undefined}
+                    <p class="m-0 text-xs text-warning-ink">
+                        Holds both roles. Choosing one removes the other.
+                    </p>
                 {/if}
-                <div class="flex flex-wrap items-center gap-2">
+                <!-- The Settings save bar: quiet while saved, warning-colored
+                     as soon as the select differs from the role held. -->
+                <div
+                    class="flex flex-wrap items-center gap-3 rounded-card border px-3 py-2 text-xs
+                           {dirty ? 'border-warning bg-warning/10' : 'border-line bg-raised'}"
+                    role="status"
+                >
+                    <span class="flex-1 {dirty ? 'text-warning-ink' : 'text-ink-3'}">
+                        {#if pending}
+                            Saving…
+                        {:else if dirty}
+                            Unsaved change: {summary}
+                        {:else if form?.success}
+                            <span class="text-success-ink">{form.message}</span>
+                        {:else}
+                            No unsaved changes
+                        {/if}
+                    </span>
+                    {#if form && !form.success && !pending}
+                        <span class="text-danger-ink" role="alert">{form.message}</span>
+                    {/if}
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-ghost"
+                        disabled={pending || !dirty}
+                        onclick={() => (draft = current)}
+                    >
+                        Discard
+                    </button>
                     <button
                         type="submit"
-                        disabled={pending || picked === undefined || !confirmed}
-                        class="btn btn-sm {touchesAdmin || picked === NO_PLATFORM_ROLE
-                            ? 'btn-danger'
-                            : 'btn-warning'}"
+                        class="btn btn-sm btn-outline-accent"
+                        disabled={pending || !dirty}
                     >
-                        {submitLabel}
-                    </button>
-                    <button type="button" onclick={closeEditor} class="btn btn-sm btn-quiet">
-                        Cancel
+                        Save
                     </button>
                 </div>
-            </form>
-        {/if}
-
-        {#if form?.message}
-            <p
-                class="m-0 text-xs {form.success ? 'text-success-ink' : 'text-danger-ink'}"
-                role={form.success ? 'status' : 'alert'}
-            >
-                {form.message}
-            </p>
-        {/if}
+            {/if}
+        </form>
     </section>
 
     <section class="flex flex-col gap-3">
-        <InfoToggle label="About hackathon roles" topic="user-hackathon-roles">
-            {#snippet heading()}
-                <h2 class="m-0 text-section">
-                    Hackathons <span class="tnum text-ink-3">{data.hackathons.length}</span>
-                </h2>
-            {/snippet}
-        </InfoToggle>
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-section">
+                Hackathons <span class="tnum text-ink-3">{data.hackathons.length}</span>
+            </h2>
+            <InfoButton topic="user-hackathon-roles" title="Hackathon roles" />
+        </div>
         {#if data.hackathons.length === 0}
             <p class="m-0 text-sm text-ink-3">No hackathons yet.</p>
         {:else}
@@ -258,11 +252,11 @@
                 <table class="w-full table-fixed border-collapse text-left text-xs">
                     <colgroup>
                         <col />
-                        <col class="w-32" />
+                        <col class="w-28" />
                         <col class="w-28" />
                         <!-- Zero on a phone, where its cells are hidden, so the
                              name gets the width back. -->
-                        <col class="w-0 sm:w-56" />
+                        <col class="w-0 sm:w-48" />
                     </colgroup>
                     <thead>
                         <tr class="border-b border-line bg-raised text-ink-3">

@@ -44,8 +44,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 - A user's platform role is now changed on their own page instead of from a
   dropdown in the user list. Switching a Hackathon Organizer to Admin, or back,
-  is one step rather than revoke then grant, and making someone Admin asks for
-  their username to be typed back first.
+  is one step rather than revoke then grant. Changes are saved with a Save bar,
+  as in a hackathon's settings, and making someone Admin asks for confirmation.
 - The user list explains the platform roles behind an info button instead of in
   text always on screen.
 - A proposer can now edit their project after it has been approved or rejected.

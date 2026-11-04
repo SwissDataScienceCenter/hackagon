@@ -1,5 +1,5 @@
 // The texts behind the ⓘ buttons, one Markdown file per box in this folder,
-// named by topic: `users-list.md` is `<InfoToggle topic="users-list">`.
+// named by topic: `users-list.md` is `<InfoButton topic="users-list" … />`.
 //
 // Kept out of the components so wording can be changed without touching
 // markup, and read in one place. Only fixed text belongs here — anything that
