@@ -12,9 +12,9 @@ const SOURCES = import.meta.glob<string>("/src/**/*.svelte", {
 
 const used = new Set(
   Object.values(SOURCES).flatMap((src) =>
-    [...src.matchAll(/<InfoButton[^>]*\btopic="([^"]+)"/g)].flatMap((m) =>
-      m[1] ? [m[1]] : [],
-    ),
+    [
+      ...src.matchAll(/<(?:InfoButton|PageHeader)[^>]*\btopic="([^"]+)"/g),
+    ].flatMap((m) => (m[1] ? [m[1]] : [])),
   ),
 )
 
