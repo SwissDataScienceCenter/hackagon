@@ -66,6 +66,48 @@ is `hackathon/HackathonRow.svelte`. Conventions:
 - Size/variant via a `size?: 'default' | 'compact'` prop that switches Tailwind
   classes.
 
+## Page headers, titles and help
+
+Every signed-in page starts with `layout/PageHeader.svelte` — never a
+hand-written back link and heading. It renders the page's only `<h1>` (the
+layouts have none), so the back link, title and ⓘ sit in the same place on every
+page:
+
+```svelte
+<PageHeader
+  title="Manage Tracks"
+  back={{ href: `/my/hackathon/${data.hackathonId}/manage`, label: "Settings" }}
+  topic="tracks-manage"
+>
+  {#snippet meta()}3 tracks{/snippet}
+  {#snippet actions()}<a class="btn btn-sm btn-solid" …>New track</a>{/snippet}
+</PageHeader>
+```
+
+`back.href` is unresolved — the component calls `resolve()`. `leading` puts an
+avatar before the title (real: `(app)/manage/users/[id]/+page.svelte`). Pages
+whose heading is content rather than a page title (overview, a custom page,
+project detail) are the exception.
+
+Naming:
+
+- **Titles are Title Case** and equal the page's sidebar label in
+  `$lib/navigation/items.ts` — unless the page is a more specific part of what
+  that entry covers ("Registration Form" under "Manage Forms").
+- **Create pages are "New X", edit pages "Edit X".** A detail page is titled
+  with the entity's name.
+- **A back link is labelled with the title of the page it leads to**, no "Back
+  to": `← Settings`, `← Manage Tracks`, `← Dashboard`.
+
+**Help** is behind the ⓘ, not on the page. A page's help is `topic` on its
+`PageHeader`; a section's is an `InfoButton` right after that section's `<h2>`.
+Either way the text is `$lib/content/help/<topic>.md` and the dialog is titled
+after the heading it sits next to. Name a page's topic after its route
+(`tracks-manage`, `users-list`). `help.test.ts` fails on a topic with no file
+and on a file no page uses. Only fixed explanation belongs in help — what
+depends on state (empty states, why something is locked, errors, counts) stays
+on the page, and short hints under a form field stay with the field.
+
 ## Display helpers — and the hard server boundary
 
 **Never import from `$lib/server/` (including `generated/` types) in a `.svelte`
