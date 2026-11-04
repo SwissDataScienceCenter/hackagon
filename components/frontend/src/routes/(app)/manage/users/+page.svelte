@@ -22,9 +22,23 @@
 
     let search = $state('');
 
+    // One filter at a time: a platform-role slice, or the hackathon owners. Owning
+    // is independent of the platform role, but the chips stay a single choice so
+    // the list always answers one question. The search still applies on top.
+    type UserFilter = GlobalRoleFilter | 'owners';
+    const USER_FILTERS: UserFilter[] = [...GLOBAL_ROLE_FILTERS, 'owners'];
+
     // Page state rather than a query parameter, like the search beside it, so
     // both are kept while the page stays open and both reset on a reload.
-    let roleFilter = $state<GlobalRoleFilter>('all');
+    let filter = $state<UserFilter>('all');
+
+    function matchesFilter(u: UserRow, f: UserFilter): boolean {
+        return f === 'owners' ? u.ownedCount > 0 : matchesGlobalRoleFilter(u.roles, f);
+    }
+
+    function filterLabel(f: UserFilter): string {
+        return f === 'owners' ? 'Owns a hackathon' : globalRoleFilterLabel(f);
+    }
 
     // Matches every column the table actually shows, so a row the user can read
     // on screen is never filtered out by a term visible in it.
@@ -39,23 +53,18 @@
         })
     );
 
-    const filtered = $derived(searched.filter((u) => matchesGlobalRoleFilter(u.roles, roleFilter)));
+    const filtered = $derived(searched.filter((u) => matchesFilter(u, filter)));
 
     // Counted within the search, so each chip says how many rows picking it
     // would show — a count over all users would promise rows the search then
     // hides.
-    const roleCounts = $derived(
-        new Map(
-            GLOBAL_ROLE_FILTERS.map((f) => [
-                f,
-                searched.filter((u) => matchesGlobalRoleFilter(u.roles, f)).length,
-            ])
-        )
+    const filterCounts = $derived(
+        new Map(USER_FILTERS.map((f) => [f, searched.filter((u) => matchesFilter(u, f)).length]))
     );
 
     const searching = $derived(search.trim() !== '');
     const narrowedBy = $derived(
-        searching && roleFilter !== 'all' ? 'filters' : searching ? 'search' : 'filter'
+        searching && filter !== 'all' ? 'filters' : searching ? 'search' : 'filter'
     );
 
     // Counts the rows on screen, not the rows loaded: a search that narrows 42
@@ -71,11 +80,13 @@
     // picked doesn't claim to have searched for “”.
     const emptyLabel = $derived.by(() => {
         const who =
-            roleFilter === 'all'
+            filter === 'all'
                 ? 'users'
-                : roleFilter === 'none'
+                : filter === 'none'
                   ? 'users without a platform role'
-                  : `${globalRoleFilterLabel(roleFilter)} users`;
+                  : filter === 'owners'
+                    ? 'users who own a hackathon'
+                    : `${globalRoleFilterLabel(filter)} users`;
         return searching ? `No ${who} match “${search.trim()}”.` : `No ${who}.`;
     });
 
@@ -143,16 +154,16 @@
     {#if data.users.length > 0}
         <InfoToggle label="About platform roles">
             {#snippet heading()}
-                <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by role">
-                    {#each GLOBAL_ROLE_FILTERS as filter (filter)}
+                <div class="flex flex-wrap gap-1" role="group" aria-label="Filter users">
+                    {#each USER_FILTERS as f (f)}
                         <button
                             type="button"
-                            onclick={() => (roleFilter = filter)}
-                            aria-pressed={roleFilter === filter}
-                            class="chip {roleFilter === filter ? 'chip-active' : ''}"
+                            onclick={() => (filter = f)}
+                            aria-pressed={filter === f}
+                            class="chip {filter === f ? 'chip-active' : ''}"
                         >
-                            {globalRoleFilterLabel(filter)}
-                            <span class="tnum">{roleCounts.get(filter) ?? 0}</span>
+                            {filterLabel(f)}
+                            <span class="tnum">{filterCounts.get(f) ?? 0}</span>
                         </button>
                     {/each}
                 </div>

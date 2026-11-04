@@ -22,7 +22,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 - Platform admins can filter the user list by platform role — Admin, Hackathon
   Organizer or none — with a count beside each, and combine it with the search.
-- The user list shows how many hackathons each user owns.
+- The user list shows how many hackathons each user owns, and can be narrowed to
+  users who own one.
 - Platform admins can open any user from the user list to see the hackathons
   they own, take part in or are waitlisted for, who owns each, and a link to
   manage their role inside it.
