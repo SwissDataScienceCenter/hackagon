@@ -161,9 +161,7 @@
                                     </span>
                                 </span>
                                 <a
-                                    href={resolve(
-                                        `/my/hackathon/${data.hackathonId}/teams/${vote.submission.teamId}`
-                                    )}
+                                    href="{resolve(`/my/hackathon/${data.hackathonId}/submissions`)}#team-{vote.submission.teamId}"
                                     class="shrink-0 whitespace-nowrap text-xs font-semibold
                                            text-accent-ink no-underline hover:underline"
                                 >
@@ -267,9 +265,7 @@
                                          away, so a ballot filled in but not yet
                                          submitted is lost. -->
                                     <a
-                                        href={resolve(
-                                            `/my/hackathon/${data.hackathonId}/teams/${entry.submission.teamId}`
-                                        )}
+                                        href="{resolve(`/my/hackathon/${data.hackathonId}/submissions`)}#team-{entry.submission.teamId}"
                                         class="shrink-0 whitespace-nowrap pt-1 text-xs font-semibold
                                                text-accent-ink no-underline hover:underline"
                                     >

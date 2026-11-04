@@ -35,7 +35,6 @@ import { ClientError, Status } from "nice-grpc-common"
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
-  const platformUserId = event.locals.platformUser?.id
 
   let teams
   try {
@@ -78,7 +77,6 @@ export const load: PageServerLoad = async (event) => {
       // load, so both sites grep as a set.
       imageUrl: project?.image,
       members: t.members.map((m) => ({ name: m.displayName || m.username })),
-      isOwn: t.members.some((m) => m.id === platformUserId),
     }
   })
 
