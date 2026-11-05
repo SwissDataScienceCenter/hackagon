@@ -15,8 +15,8 @@ shows:
 ## Placings
 
 - Per category: the placed entries with medal and score.
-- Click {guilabel}`View entry` to read the team's submission on
-  [Submissions](member-submissions.md).
+- Click {guilabel}`View entry` to read the team's submission on its
+  [submission page](member-submissions.md#submission-page).
 
 ## All entries
 

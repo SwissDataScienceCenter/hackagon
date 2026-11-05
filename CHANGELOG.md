@@ -34,8 +34,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Manage Submissions now shows each version's attachments link and, folded away
   until opened, its description.
 - A new Submissions page lists what every team has handed in, with your own
-  team's first. "View entry" on the ballot and on Results opens a team's
-  submission there.
+  team's first.
+- Each submission has its own page with the full description, its links, its
+  team and its project. The Submissions list shows each entry as a short row,
+  like the projects list. "View entry" on the ballot, on Results and on a team's
+  page opens it, and its back link returns to where you came from.
 - Participants who proposed a project find it under "My projects" in the
   hackathon's menu, at any status, also after proposals have closed.
 
