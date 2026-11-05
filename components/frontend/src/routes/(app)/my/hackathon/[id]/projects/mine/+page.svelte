@@ -37,7 +37,6 @@
         {:else}
             {#each data.projects as project (project.id)}
                 <ProjectCard
-                    num={project.num}
                     title={project.title}
                     excerpt={project.excerpt}
                     creator={project.creator}
