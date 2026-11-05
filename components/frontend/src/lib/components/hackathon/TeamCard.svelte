@@ -2,14 +2,14 @@
     import { Lightbulb } from 'lucide-svelte';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import TeamMembers from '$lib/components/hackathon/TeamMembers.svelte';
     import { avatarInitials } from '$lib/utils/initials';
     import type { Snippet } from 'svelte';
 
     type TeamMember = {
         name: string;
         imageUrl?: string;
-        /** Their participant profile. Absent, the member is drawn but not a
-         *  link. The caller builds it, so this card stays ignorant of routes. */
+        /** Their participant profile — see `TeamMembers`. */
         href?: string;
     };
 
@@ -108,23 +108,7 @@
                 {/if}
             </div>
 
-            <div class="flex flex-wrap gap-4">
-                {#each members as member, i (i)}
-                    {#if member.href}
-                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the caller passes a resolved path -->
-                        <a href={member.href}
-                            class="group flex w-16 min-w-0 max-w-16 flex-col items-center gap-1
-                                   no-underline"
-                        >
-                            {@render memberFace(member)}
-                        </a>
-                    {:else}
-                        <div class="flex w-16 min-w-0 max-w-16 flex-col items-center gap-1">
-                            {@render memberFace(member)}
-                        </div>
-                    {/if}
-                {/each}
-            </div>
+            <TeamMembers {members} />
         </div>
 
         {#if actions}
@@ -135,32 +119,3 @@
     </div>
 </div>
 
-{#snippet memberFace(member: TeamMember)}
-    {#if member.imageUrl}
-        <div
-            class="relative size-9 shrink-0 overflow-hidden rounded-full
-                   border-2 border-line bg-raised"
-        >
-            <img
-                src={member.imageUrl}
-                alt=""
-                class="absolute inset-0 h-full w-full object-cover"
-            />
-        </div>
-    {:else}
-        <div
-            class="flex size-9 shrink-0 items-center justify-center
-                   rounded-full border-2 border-line
-                   bg-overlay text-xs font-bold text-ink"
-        >
-            {avatarInitials(member.name)}
-        </div>
-    {/if}
-    <span
-        class="line-clamp-2 w-full min-w-0 break-words text-center
-               text-xs leading-tight text-ink-3 group-hover:text-accent-ink"
-        title={member.name}
-    >
-        {member.name}
-    </span>
-{/snippet}
