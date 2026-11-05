@@ -92,9 +92,9 @@ export const actions: Actions = {
       throw e
     }
 
-    // The Projects page, which is where the proposal now shows up: it is
-    // `Proposed`, so it lands in that page's proposals group rather than among
-    // the approved projects.
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects`))
+    // My projects, which is where the proposal now shows up: it is `Proposed`,
+    // and Projects lists approved projects alone. It is also where the Propose
+    // button that led here lives.
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects/mine`))
   },
 }

@@ -58,11 +58,24 @@ describe("memberNav", () => {
     expect(items[0]?.href).toBe("/my/hackathon/hack-1/about")
   })
 
-  // Only for someone who proposed here, and right under Projects, whose subtree
-  // its route sits in.
+  // For someone who proposed here or may propose now, and right under
+  // Projects, whose subtree its route sits in.
   describe("myProjectCount", () => {
     it("offers no My projects entry to a viewer who proposed nothing", () => {
       expect(idsOf(memberNav("hack-1"))).not.toContain("member:my-projects")
+    })
+
+    // The Propose button lives on My projects, so before a first proposal the
+    // entry is the only way to it from the menu.
+    it("offers My projects while proposals are open, before a first one", () => {
+      const items = memberNav("hack-1", [], false, false, 0, 0, 0, 0, true)
+      expect(idsOf(items)).toContain("member:my-projects")
+    })
+
+    // A proposer finds their projects whether or not proposals are still open.
+    it("keeps My projects for a proposer after proposals close", () => {
+      const items = memberNav("hack-1", [], false, false, 0, 0, 2, 0, false)
+      expect(idsOf(items)).toContain("member:my-projects")
     })
 
     it("offers My projects right under Projects once the viewer proposed one", () => {
@@ -271,7 +284,7 @@ describe("memberNav", () => {
     }
   })
 
-  it("offers no Proposals entry, since the projects page carries them", () => {
+  it("offers no Proposals entry, since My projects carries them", () => {
     expect(idsOf(memberNav("hack-1", [], true, true))).not.toContain(
       "member:my-projects",
     )

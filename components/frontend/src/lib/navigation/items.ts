@@ -125,10 +125,12 @@ export interface HackathonPageRef {
  * "assignments not published" — two states that want the same nav either way.
  * Zero is the honest default, the same way `manageNav` treats `trackCount`.
  *
- * `myProjectCount` gates My projects: how many projects the viewer proposed
- * here, counted by `myProjects`, which already returns zero for anyone not
- * taking part. Deliberately blind to the phase and the capabilities — a
- * proposer finds their projects whether or not proposals are still open.
+ * `myProjectCount` and `proposalsOpen` gate My projects, either one enough.
+ * The count is how many projects the viewer proposed here, from `myProjects`,
+ * which returns zero for anyone not taking part — so a proposer finds their
+ * projects whether or not proposals are still open. `proposalsOpen` is whether
+ * this viewer may propose right now (`mayProposeProjects`): the Propose button
+ * lives on My projects, so the entry has to be there before a first proposal.
  *
  * `myTeamCount` gates Our submission the same way: how many of the visible
  * teams the viewer is on. Zero while assignments are unpublished too, which is
@@ -143,6 +145,7 @@ export function memberNav(
   phaseCount = 0,
   myProjectCount = 0,
   myTeamCount = 0,
+  proposalsOpen = false,
 ): NavItem[] {
   return [
     // First, ahead of Overview: it is what the hackathon *is*, so it is what a
@@ -171,22 +174,22 @@ export function memberNav(
       icon: Users,
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
-    // One entry for every project surface a participant has. There is no
-    // Proposals entry beside it: proposing is a phase of a project's life rather
-    // than a place, so the projects page carries the proposals a viewer is
-    // waiting on and the CTA that adds one, and this stays lit across
-    // `projects/propose` and `projects/<id>/edit` on its own.
+    // The approved projects. There is no Proposals entry beside it: proposing
+    // is a phase of a project's life rather than a place, so a viewer's own
+    // proposals and the button that adds one are on My projects below. This
+    // stays lit across `projects/propose` and `projects/<id>/edit` on its own.
     {
       id: "member:projects",
       label: "Projects",
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
-    // Right under Projects, as the viewer's own slice of it. Only for someone
-    // who proposed something, so most participants never see it. Its route is
-    // nested under projects/, and the longest match lights this entry rather
-    // than Projects; a project's own page and its edit form stay under Projects.
-    ...(myProjectCount > 0
+    // Right under Projects, as the viewer's own slice of it. For someone who
+    // proposed something, or who may propose now — it is where proposing
+    // starts. Its route is nested under projects/, and the longest match lights
+    // this entry rather than Projects; a project's own page and its edit form
+    // stay under Projects.
+    ...(myProjectCount > 0 || proposalsOpen
       ? [
           {
             id: "member:my-projects",

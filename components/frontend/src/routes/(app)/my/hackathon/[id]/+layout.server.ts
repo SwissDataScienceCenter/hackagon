@@ -2,7 +2,10 @@ import type { LayoutServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import { mayManagePhases } from "$lib/server/hackathon/capabilities"
+import {
+  mayManagePhases,
+  mayProposeProjects,
+} from "$lib/server/hackathon/capabilities"
 import { viewerMembership } from "$lib/server/hackathon/membership"
 import { myProjects } from "$lib/server/hackathon/myProjects"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
@@ -119,6 +122,14 @@ export const load: LayoutServerLoad = async (event) => {
   // Its own switch, not implied by voting — an organiser closes voting, checks
   // the tally, then publishes.
   const resultsVisible = caps.includes(Capability.CAPABILITY_VIEW_RESULTS)
+  // Whether this viewer may propose a project right now. Opens the sidebar's My
+  // projects entry before a first proposal, because that page is where the
+  // Propose button lives — and read by the projects pages, so the button, the
+  // entry and the Projects header link agree. See `mayProposeProjects`.
+  const proposalsOpen = mayProposeProjects(
+    myMembership ?? undefined,
+    caps.includes(Capability.CAPABILITY_PROPOSE_PROJECTS),
+  )
 
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
@@ -180,6 +191,7 @@ export const load: LayoutServerLoad = async (event) => {
     // Gates the sidebar's My projects entry. Counted off the projects `Get`
     // already returned, so it costs no call.
     myProjectCount: myProjects(result.hackathon, platformUserId).length,
+    proposalsOpen,
     myTeamCount,
     hackathonState,
   }

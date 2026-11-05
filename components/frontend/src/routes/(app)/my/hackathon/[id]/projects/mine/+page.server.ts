@@ -11,7 +11,7 @@ import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project at every status, plus the tracks that name them.
-  const { hackathon } = await event.parent()
+  const { hackathon, proposalsOpen } = await event.parent()
 
   const mine = myProjects(hackathon, event.locals.platformUser?.id)
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
@@ -32,5 +32,8 @@ export const load: PageServerLoad = async (event) => {
   return {
     projects,
     hackathonId: hackathon.id,
+    // Whether to offer the Propose button. Decided once in the layout, so the
+    // button and the sidebar entry that leads here agree.
+    proposalsOpen,
   }
 }

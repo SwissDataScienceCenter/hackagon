@@ -38,6 +38,7 @@
         trackCount = 0,
         phaseCount = 0,
         myProjectCount = 0,
+        proposalsOpen = false,
         myTeamCount = 0,
         stateNeedsAttention = false,
         isPrivate = false,
@@ -89,6 +90,11 @@
          * part. Decides whether My projects is offered — see `memberNav`.
          */
         myProjectCount?: number;
+        /**
+         * Whether the viewer may propose a project right now. Also offers My
+         * projects, where the Propose button lives — see `memberNav`.
+         */
+        proposalsOpen?: boolean;
         /**
          * How many of the visible teams the viewer is on. Decides whether Our
          * submission is offered — see `memberNav`.
@@ -145,7 +151,8 @@
             teamCount,
             phaseCount,
             myProjectCount,
-            myTeamCount
+            myTeamCount,
+            proposalsOpen
         ),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
