@@ -3,10 +3,9 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { namesByUserId } from "$lib/server/hackathon/membership"
 import { submissionEntry } from "$lib/server/hackathon/submissions"
+import { teamOrError } from "$lib/server/hackathon/teams"
 import { markdownExcerpt } from "$lib/utils/markdown"
 import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
-import { error } from "@sveltejs/kit"
-import { ClientError, Status } from "nice-grpc-common"
 
 /**
  * One team: who is on it, the project it works on, and whether it has handed
@@ -26,23 +25,7 @@ export const load: PageServerLoad = async (event) => {
   const { hackathon } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
 
-  let found
-  try {
-    ;({ team: found } = await team.get({ teamId: event.params.teamId }))
-  } catch (e) {
-    if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-      error(404, "That team does not exist.")
-    }
-    if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-      // A malformed id in the URL, not a missing team — same thing to a reader.
-      error(404, "That team does not exist.")
-    }
-    if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-      error(403, "You cannot view teams in this hackathon.")
-    }
-    throw e
-  }
-  if (!found) error(404, "That team does not exist.")
+  const found = await teamOrError(team, event.params.teamId)
 
   // Not checked against this hackathon's teams on purpose. `Get` already
   // enforces `hackathon:read` on the hackathon the team actually belongs to, so a
