@@ -224,7 +224,7 @@
                     {#if rows.length === 0}
                         <p class="m-0 text-xs text-ink-3">Nobody has voted in this category.</p>
                     {:else}
-                        <ResultsList {rows} method={category.method} hackathonId={data.hackathonId} />
+                        <ResultsList {rows} method={category.method} hackathonId={data.hackathonId} from="manage-voting" />
                     {/if}
                 </div>
             {/each}

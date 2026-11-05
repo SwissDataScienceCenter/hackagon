@@ -47,6 +47,7 @@
                     rows={category.results}
                     method={category.method}
                     hackathonId={data.hackathonId}
+                    from="results"
                 />
             </section>
         {/each}
@@ -73,7 +74,7 @@
                         <li class="card card-raised box-border w-full px-5 py-4">
                             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                                 <a
-                                    href="{resolve(`/my/hackathon/${data.hackathonId}/submissions`)}#team-{entry.teamId}"
+                                    href="{resolve(`/my/hackathon/${data.hackathonId}/submissions/${entry.teamId}`)}?from=results"
                                     class="text-sm font-semibold text-accent-ink no-underline
                                            hover:underline"
                                 >

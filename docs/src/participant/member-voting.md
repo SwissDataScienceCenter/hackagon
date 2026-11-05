@@ -17,8 +17,8 @@ open. It shows:
 - {guilabel}`Single choice`: pick one entry. {guilabel}`Points`: spread your
   points across entries.
 - Your own team is not on the ballot.
-- Click {guilabel}`View entry` to read a team's submission on
-  [Submissions](member-submissions.md). Votes you have not submitted yet are
-  lost.
+- Click {guilabel}`View entry` to read a team's submission on its
+  [submission page](member-submissions.md#submission-page). Votes you have not
+  submitted yet are lost.
 - After voting the card shows what you chose. Results come later on
   [Results](member-results.md).

@@ -6,8 +6,8 @@
 
     let { data }: { data: PageData } = $props();
 
-    // Same wording and format as the card on Submissions, which is where the
-    // entry link below lands.
+    // Same wording and format as the submission's own page, which is where
+    // the entry link below lands.
     function formatDate(d: Date | undefined): string {
         if (!d) return '';
         return d.toLocaleString('en-US', {
@@ -81,8 +81,8 @@
     <section class="flex flex-col gap-2">
         <h3 class="meta m-0">Submission</h3>
         {#if data.entry}
-            <!-- When and by whom only: the entry is read on Submissions, where
-                 this links to the team's own card. -->
+            <!-- When and by whom only: the entry is read on its own page,
+                 which leads back here. -->
             <div
                 class="card card-raised box-border flex w-full flex-wrap items-center
                        justify-between gap-2 px-5 py-4"
@@ -97,8 +97,8 @@
                 </span>
                 <a
                     href="{resolve(
-                        `/my/hackathon/${data.hackathonId}/submissions`
-                    )}#team-{data.teamId}"
+                        `/my/hackathon/${data.hackathonId}/submissions/${data.teamId}`
+                    )}?from=team"
                     class="btn btn-sm btn-ghost no-underline"
                 >
                     View entry

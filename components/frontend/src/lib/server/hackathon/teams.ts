@@ -1,5 +1,6 @@
 import type { Team } from "$lib/server/grpc/generated/hackathon/entities/team"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
+import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 /**
@@ -49,4 +50,37 @@ export async function listVisibleTeams(
     }
     throw e
   }
+}
+
+/**
+ * One team, for a page that is about it — or the 404/403 that page answers
+ * instead. Shared by the team's page and its submission's page, which are
+ * reached the same ways and refuse the same readers.
+ *
+ * `Get` gates on `team:read`, the grant `listVisibleTeams` explains, so a 403
+ * here is assignments not being published rather than a fault.
+ */
+export async function teamOrError(
+  team: TeamServiceClient,
+  teamId: string,
+): Promise<Team> {
+  let found
+  try {
+    ;({ team: found } = await team.get({ teamId }))
+  } catch (e) {
+    if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+      error(404, "That team does not exist.")
+    }
+    if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+      // A malformed id in the URL, not a missing team — same thing to a reader.
+      error(404, "That team does not exist.")
+    }
+    if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+      error(403, "You cannot view teams in this hackathon.")
+    }
+    throw e
+  }
+  if (!found) error(404, "That team does not exist.")
+
+  return found
 }
