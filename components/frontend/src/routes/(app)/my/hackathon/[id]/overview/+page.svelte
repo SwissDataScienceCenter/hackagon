@@ -46,6 +46,7 @@
         currentPhase={data.hackathonState.currentPhase}
         nextPhase={data.hackathonState.nextPhase}
         enabled={data.hackathonState.enabled}
+        progress={data.progress}
     />
 
     <!-- Two-up from md: both of these are naturally narrow — a handful of labelled

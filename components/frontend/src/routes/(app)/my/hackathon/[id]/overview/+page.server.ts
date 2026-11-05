@@ -3,11 +3,15 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
+import { mayPreferProjects } from "$lib/server/hackathon/capabilities"
 import { projectStatusLabel } from "$lib/utils/projectStatus"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import type { MyProgress } from "$lib/navigation/nextSteps"
 
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, myMembership, hackathonState } = await event.parent()
-  const { team } = requireGrpc(event.locals.grpc)
+  const { hackathon, myMembership, hackathonState, myProjectCount } =
+    await event.parent()
+  const { team, project: projectClient } = requireGrpc(event.locals.grpc)
   const platformUserId = event.locals.platformUser?.id
 
   // Approved only, so this page's counts agree with what the projects page
@@ -59,7 +63,46 @@ export const load: PageServerLoad = async (event) => {
     Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   )
 
+  // How many projects the viewer marked as preferred, for the "Your next
+  // steps" row. Asked only when that row is shown: the capability is on and the
+  // card speaks to a participant — an organiser's card keeps the hackathon-wide
+  // sentence and never reads it. Decorative, so a failure shows "none picked"
+  // rather than failing the page, as the projects page does with the same call.
+  let preferredCount = 0
+  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
+    GlobalRole.GLOBAL_ROLE_ADMIN,
+  )
+  if (
+    !hackathonState.canManage &&
+    hackathonState.enabled.includes(
+      Capability.CAPABILITY_SET_TEAM_PREFERENCES,
+    ) &&
+    mayPreferProjects(myMembership ?? undefined, isAdmin)
+  ) {
+    try {
+      const { projectIds } = await projectClient.getPreference({
+        hackathonId: hackathon.id,
+      })
+      preferredCount = projectIds.length
+    } catch {
+      // Nothing picked, as far as this card can tell.
+    }
+  }
+
+  const progress: MyProgress = {
+    proposedCount: myProjectCount,
+    preferredCount,
+    team: myTeam
+      ? {
+          id: myTeam.id,
+          name: myTeam.name,
+          submissionCount: myTeam.submissions.length,
+        }
+      : null,
+  }
+
   return {
+    progress,
     // Waitlisted members reach this page too — the badge should say so rather
     // than claim they are registered. The flag travels alongside the label so
     // the badge colour keys off it rather than string-matching the label.
