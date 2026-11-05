@@ -74,7 +74,7 @@ export const load: PageServerLoad = async (event) => {
     projectTitle: project?.title ?? found.name,
     projectDescription: project?.description ?? found.description ?? "",
     // TODO(backend: team-image): Team has no image of its own, so this is the
-    // project's. Without one the card falls back to its empty avatar.
+    // project's. Without one the card shows the project's initials.
     imageUrl: project?.image,
     // Whether to offer the way through to the full proposal — the description as
     // markdown, plus the track, proposer and status this page does not carry.
@@ -89,6 +89,10 @@ export const load: PageServerLoad = async (event) => {
       project?.status === ProjectStatus.PROJECT_STATUS_APPROVED
         ? project.id
         : undefined,
-    members: found.members.map((m) => ({ name: m.displayName || m.username })),
+    // The id is the participant profile's: `participants/<userId>`.
+    members: found.members.map((m) => ({
+      id: m.id,
+      name: m.displayName || m.username,
+    })),
   }
 }

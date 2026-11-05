@@ -66,11 +66,18 @@
         {/if}
     </div>
 
+    <!-- The project title for the bubble's initials only: no `projectHref`,
+         since the heading above is the project and the proposal link sits
+         under it. -->
     <TeamCard
         title={data.teamName}
+        projectTitle={data.projectTitle}
         projectDescription={data.projectDescription}
         imageUrl={data.imageUrl}
-        members={data.members}
+        members={data.members.map((m) => ({
+            name: m.name,
+            href: resolve(`/my/hackathon/${data.hackathonId}/participants/${m.id}`),
+        }))}
     />
 
 </div>

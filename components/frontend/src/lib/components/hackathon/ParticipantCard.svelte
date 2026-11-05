@@ -1,6 +1,7 @@
 <script lang="ts">
     import ProfileLinksRow from '$lib/components/hackathon/ProfileLinks.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import { avatarInitials } from '$lib/utils/initials';
     import type { ProfileLinks } from '$lib/utils/profileLinks';
     import type { Snippet } from 'svelte';
 
@@ -46,13 +47,7 @@
             (skills.length > 0 ? skills.slice(0, 4).join(', ') : '')
     );
 
-    const initials = name
-        .split(' ')
-        .filter(Boolean)
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+    const initials = avatarInitials(name);
 
 </script>
 

@@ -56,30 +56,34 @@
             {#each rows as { team, startsProject } (team.id)}
                 <div class="flex flex-col gap-1 {startsProject ? 'mt-2 first:mt-0' : ''}">
                     <!--
-                      The project above the card rather than inside it: the card's
-                      heading is the team, and carrying the project title in both
-                      places made the two read as one name. Absent for a team
-                      whose project the viewer cannot see, rather than an empty
-                      line.
-
-                      A link onto the project's page, which is where its
-                      description is read — the card does not carry it.
-                      `?from=teams` so that page's back link returns here.
+                      A group label, not a link: it groups a project's teams
+                      when it has several. The way onto the project is the
+                      lightbulb line inside each card. Absent for a team whose
+                      project the viewer cannot see, rather than an empty line.
                     -->
-                    {#if startsProject && team.projectId}
-                        <a
-                            href="{resolve(
-                                `/my/hackathon/${data.hackathonId}/projects/${team.projectId}`
-                            )}?from=teams"
-                            class="meta w-fit no-underline hover:underline"
-                        >
-                            {team.projectTitle}
-                        </a>
+                    {#if startsProject}
+                        <span class="meta w-fit">{team.projectTitle}</span>
                     {/if}
+                    <!--
+                      `?from=teams` on the project link so that page's back link
+                      returns here. The participant profile has no such
+                      parameter yet, and goes back to the participants list.
+                    -->
                     <TeamCard
                         title={team.name}
+                        projectTitle={team.projectTitle}
+                        projectHref={team.projectId
+                            ? `${resolve(
+                                  `/my/hackathon/${data.hackathonId}/projects/${team.projectId}`
+                              )}?from=teams`
+                            : undefined}
                         imageUrl={team.imageUrl}
-                        members={team.members}
+                        members={team.members.map((m) => ({
+                            name: m.name,
+                            href: resolve(
+                                `/my/hackathon/${data.hackathonId}/participants/${m.id}`
+                            ),
+                        }))}
                     >
                         {#snippet actions()}
                             <!--
