@@ -1,7 +1,7 @@
 # Hotfixing to the current release branch
 
 The branch model, deployment and changelog rules are in
-[RELEASING.md](RELEASING.md); this is only the hotfix protocol.
+[RELEASING.md](RELEASING.md). This is only the hotfix protocol.
 
 ## Release branch
 
@@ -14,8 +14,8 @@ Hotfixes are tagged `v0.x.1`, `v0.x.2`, etc.
 
 For each hotfix tag, images are built as `release/backend-service:0.x.1` and
 `release/frontend-service:0.x.1`, etc. Once the images are there, the chart can
-be installed on prod. Dev does not run release images — it follows `main` (see
-[RELEASING.md](RELEASING.md#dev-follows-main)) — so test the hotfix locally.
+be installed on staging and then on prod. Dev does not run release images — it follows `main` (see
+[RELEASING.md](RELEASING.md#dev-follows-main)).
 
 ## Order of steps:
 
