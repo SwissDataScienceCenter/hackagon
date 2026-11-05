@@ -78,8 +78,12 @@
                     descriptionOpen={detailsOpen}
                 />
                 <span class="text-xs text-ink-3">
-                    Last updated {formatDate(c.entry.updatedAt)}{#if c.entry.updatedBy}
-                        by {c.entry.updatedBy}{/if}
+                    <!-- One expression rather than an `{#if}` block: Svelte trims
+                         the whitespace that opens a block, which glued "by" to
+                         the time ("11:22 AMby"). -->
+                    Last updated {formatDate(c.entry.updatedAt)}{c.entry.updatedBy
+                        ? ` by ${c.entry.updatedBy}`
+                        : ''}
                 </span>
             {:else}
                 <span class="text-xs text-ink-3">Not submitted yet</span>
