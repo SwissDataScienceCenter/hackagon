@@ -20,6 +20,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Each hackathon has an About page again, first in its menu, with the
+  organizers' description of the hackathon. It used to sit at the bottom of the
+  overview.
 - Platform admins can filter the user list by platform role — Admin, Hackathon
   Organizer or none — with a count beside each, and combine it with the search.
 - The user list shows how many hackathons each user owns, and can be narrowed to

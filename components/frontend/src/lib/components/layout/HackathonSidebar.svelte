@@ -39,6 +39,7 @@
         phaseCount = 0,
         myProjectCount = 0,
         myTeamCount = 0,
+        hasDescription = false,
         stateNeedsAttention = false,
         isPrivate = false,
     }: {
@@ -99,6 +100,7 @@
          * — see `memberNav`. False, and there is nothing to read, so the entry
          * is not offered rather than leading to an empty page.
          */
+        hasDescription?: boolean;
         /**
          * Badges the Settings entry — the page the capability switches
          * live on. Organiser-only by construction, since the whole Manage
@@ -150,7 +152,8 @@
             teamCount,
             phaseCount,
             myProjectCount,
-            myTeamCount
+            myTeamCount,
+            hasDescription
         ),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage

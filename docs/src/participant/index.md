@@ -10,6 +10,7 @@ so some of these pages appear only at certain stages.
 :maxdepth: 1
 :caption: Pages
 
+member-about
 member-overview
 member-participants
 member-projects

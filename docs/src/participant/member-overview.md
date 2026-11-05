@@ -12,8 +12,8 @@ It might also show:
 
 - [The current phase](#the-current-phase): if the hackathon has phases
 - [Projects](#projects): once projects are approved
-- [About this hackathon](#about-this-hackathon): if the owners wrote a
-  description
+
+The hackathon's description is on its own page, see [About](member-about.md).
 
 :::
 
@@ -50,7 +50,3 @@ It might also show:
 
 - The number of approved projects, per track if there are tracks.
 - Click {guilabel}`View all` to go to [Projects](member-projects.md).
-
-## About this hackathon
-
-- The hackathon's description.
