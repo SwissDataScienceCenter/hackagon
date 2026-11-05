@@ -7,13 +7,15 @@
 </script>
 
 {#snippet edit()}
-    <!-- To the form rather than a form here: one place edits, the one with the
-         unsaved-changes guard. -->
+    <!-- Straight to the open form on Our submission rather than a form here:
+         one place edits, the one with the unsaved-changes guard. -->
     <a
-        href={resolve(`/my/hackathon/${data.hackathonId}/submissions/mine`)}
+        href="{resolve(
+            `/my/hackathon/${data.hackathonId}/submissions/mine`
+        )}?edit={data.teamId}"
         class="btn btn-sm btn-outline-accent no-underline"
     >
-        Edit
+        {data.entry ? 'Edit' : 'Make your first submission'}
     </a>
 {/snippet}
 

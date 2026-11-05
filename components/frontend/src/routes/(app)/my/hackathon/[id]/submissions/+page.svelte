@@ -23,13 +23,16 @@
     >
         {#snippet actions()}
             {#if c.isOwn && data.maySubmit}
-                <!-- To the form rather than a form here: one place edits,
-                     the one with the unsaved-changes guard. -->
+                <!-- Straight to the open form on Our submission rather than a
+                     form here: one place edits, the one with the
+                     unsaved-changes guard. -->
                 <a
-                    href={resolve(`/my/hackathon/${data.hackathonId}/submissions/mine`)}
+                    href="{resolve(
+                        `/my/hackathon/${data.hackathonId}/submissions/mine`
+                    )}?edit={c.teamId}"
                     class="btn btn-sm btn-outline-accent no-underline"
                 >
-                    Edit
+                    {c.entry ? 'Edit' : 'Submit'}
                 </a>
             {/if}
         {/snippet}

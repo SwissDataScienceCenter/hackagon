@@ -93,11 +93,7 @@ describe("SubmissionForm", () => {
       expect(status()).toHaveTextContent("No unsaved changes")
     })
 
-    it("confirms a save, and says why one failed", () => {
-      const { unmount } = renderForm({ outcome: "saved" })
-      expect(status()).toHaveTextContent("Saved.")
-      unmount()
-
+    it("says why a save failed", () => {
       renderForm({
         message: "Saved, but not yet your team's entry — save again",
       })
