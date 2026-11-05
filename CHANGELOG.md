@@ -20,9 +20,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
-- Each hackathon has an About page again, first in its menu, with the
-  organizers' description of the hackathon. It used to sit at the bottom of the
-  overview.
+- Each hackathon has an About page again, first in its menu. It carries the
+  hackathon's banner, its phases and the organizers' description, which all used
+  to sit on the overview.
 - A hackathon's overview shows participants their next steps. Each open activity
   says what is still to do, or what they have already done, such as the projects
   they proposed or the team they are on.

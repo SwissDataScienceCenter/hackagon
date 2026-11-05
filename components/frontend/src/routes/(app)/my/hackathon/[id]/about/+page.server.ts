@@ -1,24 +1,18 @@
 import type { PageServerLoad } from "./$types"
 
-// The hackathon's own description, rendered as the markdown it is written in.
+// The hackathon's identity page: the layout's hero and phase bar, then the
+// description rendered as the markdown it is written in.
 //
-// It used to sit at the foot of the overview, under every card a member came
-// back for, so a first visit had to scroll past "Right now" to learn what the
-// hackathon was. This page is the destination the sidebar's About entry points
-// at — first in the rail, offered only when there is a description to read (see
-// `memberNav`).
+// The description used to sit at the foot of the overview, under every card a
+// member came back for, so a first visit had to scroll past "Right now" to learn
+// what the hackathon was. The hero used to head the overview too; both moved
+// here so the overview is only about where the viewer stands.
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already carries the
-  // description, so the entry that offers this page and the page itself cannot
-  // disagree about whether there is one.
+  // description.
   const { hackathon } = await event.parent()
 
   return {
-    name: hackathon.name,
     description: hackathon.description,
-    // The same address the overview's hero draws. Carried here because About is
-    // the one member page whose subject *is* the hackathon — everywhere else the
-    // picture would be decoration above someone's real errand.
-    logo: hackathon.logo,
   }
 }

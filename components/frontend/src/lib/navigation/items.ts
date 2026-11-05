@@ -133,11 +133,6 @@ export interface HackathonPageRef {
  * `myTeamCount` gates Our submission the same way: how many of the visible
  * teams the viewer is on. Zero while assignments are unpublished too, which is
  * right — the page has nothing to submit against until they are.
- *
- * `hasDescription` gates About on the same principle: the hackathon's
- * description is optional, and with none written the entry leads to a blank
- * page. False by default, so a caller that has not looked cannot claim there is
- * one.
  */
 export function memberNav(
   hackathonId: string,
@@ -148,23 +143,22 @@ export function memberNav(
   phaseCount = 0,
   myProjectCount = 0,
   myTeamCount = 0,
-  hasDescription = false,
 ): NavItem[] {
   return [
     // First, ahead of Overview: it is what the hackathon *is*, so it is what a
     // first visit wants to read before anything else. Not where a link into the
     // hackathon lands, though — that stays Overview, because every later visit
     // comes back for what is open right now, not for text already read.
-    ...(hasDescription
-      ? [
-          {
-            id: "member:about",
-            label: "About",
-            icon: Info,
-            href: resolve(`/my/hackathon/${hackathonId}/about`),
-          },
-        ]
-      : []),
+    //
+    // Always offered, description or not: the hackathon's banner and phase bar
+    // live on this page and nowhere else, so even with nothing written it is
+    // where the dates, the picture and the shape of the hackathon are.
+    {
+      id: "member:about",
+      label: "About",
+      icon: Info,
+      href: resolve(`/my/hackathon/${hackathonId}/about`),
+    },
     {
       id: "member:overview",
       label: "Overview",

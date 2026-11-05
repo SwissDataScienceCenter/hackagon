@@ -46,31 +46,16 @@ describe("memberNav", () => {
     ])
   })
 
-  // The description is optional on a hackathon, so the entry is too: About with
-  // nothing on it is a destination that wastes the trip.
-  describe("hasDescription", () => {
-    it("offers no About entry when there is no description", () => {
-      expect(
-        idsOf(memberNav("hack-1", [], true, true, 1, 1, 1, 1, false)),
-      ).not.toContain("member:about")
-    })
+  // First, ahead of Overview: what the hackathon is comes before what is open
+  // in it. Unconditional, because the hero lives there whether or not there is
+  // a description under it.
+  it("offers About first, ahead of Overview", () => {
+    const items = memberNav("hack-1")
 
-    // False by default, so a caller that has not looked cannot claim there is
-    // one — the same contract `teamCount` and `trackCount` give.
-    it("defaults to offering no About entry", () => {
-      expect(idsOf(memberNav("hack-1"))).not.toContain("member:about")
-    })
-
-    // First, ahead of Overview: what the hackathon is comes before what is
-    // open in it.
-    it("offers it first, ahead of Overview", () => {
-      const items = memberNav("hack-1", [], false, false, 0, 0, 0, 0, true)
-
-      expect(items[0]?.id).toBe("member:about")
-      expectOrder(items, ["member:about", "member:overview"])
-      expect(items[0]?.label).toBe("About")
-      expect(items[0]?.href).toBe("/my/hackathon/hack-1/about")
-    })
+    expect(items[0]?.id).toBe("member:about")
+    expectOrder(items, ["member:about", "member:overview"])
+    expect(items[0]?.label).toBe("About")
+    expect(items[0]?.href).toBe("/my/hackathon/hack-1/about")
   })
 
   // Only for someone who proposed here, and right under Projects, whose subtree

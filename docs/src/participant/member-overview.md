@@ -4,7 +4,6 @@
 
 The first page of a hackathon. It shows:
 
-- [Your hackathon](#your-hackathon): its dates and number of participants
 - [Your next steps](#your-next-steps): what is open now, and what you have done
 - [Your team](#your-team): your team, or how to find one
 
@@ -13,15 +12,12 @@ It might also show:
 - [The current phase](#the-current-phase): if the hackathon has phases
 - [Projects](#projects): once projects are approved
 
-The hackathon's description is on its own page, see [About](member-about.md).
+The hackathon's dates, picture and description are on its own page, see
+[About](member-about.md).
 
 :::
 
 ![The Overview page of a hackathon, as a participant sees it](../static/screenshots/member-overview.png)
-
-## Your hackathon
-
-- Start and end date, and how many participants it has.
 
 ## Your next steps
 
