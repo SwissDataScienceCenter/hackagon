@@ -39,6 +39,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   team and its project. The Submissions list shows each entry as a short row,
   like the projects list. "View entry" on the ballot, on Results and on a team's
   page opens it, and its back link returns to where you came from.
+- Our submission shows your team's submission as everyone else sees it. Click
+  "Edit" to change it, or "Make your first submission" if your team has not
+  submitted yet. "Edit" on Submissions and on a submission's page opens the form
+  directly.
 - Participants who proposed a project find it under "My projects" in the
   hackathon's menu, at any status, also after proposals have closed.
 

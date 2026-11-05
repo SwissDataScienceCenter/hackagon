@@ -9,13 +9,15 @@ import {
   sameSubmission,
 } from "$lib/server/hackathon/submissionForm"
 import { submissionEntry } from "$lib/server/hackathon/submissions"
+import { submissionView } from "$lib/server/hackathon/submissionView"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
-import { fail } from "@sveltejs/kit"
+import { fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
-// The viewer's own team's entry, edited in place — the page behind the
-// sidebar's Our submission entry. Every team's entry, read only, is the
-// Submissions page one level up.
+// The viewer's own team's entry — the page behind the sidebar's Our
+// submission entry. Shown first as everyone else reads it, with Edit opening
+// the form (`?edit=<teamId>`). Every team's entry is the Submissions page one
+// level up.
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
@@ -44,18 +46,6 @@ export const load: PageServerLoad = async (event) => {
     t.members.some((m) => m.id === platformUserId),
   )
 
-  const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
-
-  // Who saved comes back as a bare user id — resolved against every confirmed
-  // hackathon member, not just the team's current roster, since the person who
-  // saved may since have left the team. Same fallback as the overview page: a
-  // member who has left resolves to nothing.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
-
   const groups = await Promise.all(
     myTeams.map(async (t) => {
       // ListSubmissions rather than the submissions nested in `team.list`: the
@@ -64,17 +54,26 @@ export const load: PageServerLoad = async (event) => {
       const { submissions } = await team.listSubmissions({ teamId: t.id })
 
       return {
-        teamId: t.id,
-        teamName: t.name,
+        // The entry as everyone else reads it on its own page — the same
+        // builder, so the two cannot drift apart.
+        ...submissionView(hackathon, t, submissions),
+        // What the form posts: the team's project whether or not the viewer
+        // may open its page, which `submissionView`'s `project` is about.
         projectId: t.projectId,
-        projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-        entry: submissionEntry(submissions, memberNames),
       }
     }),
   )
 
   return {
+    hackathonId: hackathon.id,
     groups,
+    // Which team's form is open, from Edit's `?edit=<teamId>`. Only ever
+    // compared with the viewer's own team ids, so any other value opens
+    // nothing.
+    editTeamId: event.url.searchParams.get("edit"),
+    // How the last save went, from the action's redirect — see `readView`.
+    savedTeamId: event.url.searchParams.get("saved"),
+    unchangedTeamId: event.url.searchParams.get("unchanged"),
     // TODO(backend: submissions-need-view-teams): false hides the whole page
     // behind an explanation. `CAPABILITY_CREATE_PROJECT_SUBMISSIONS` grants
     // `submission:create` and nothing else (`hackathon_service.go:1019`), so an
@@ -133,7 +132,7 @@ export const actions: Actions = {
       if (
         sameSubmission(submissionEntry(submissions, new Map()), parsed.values)
       ) {
-        return { success: true, teamId, unchanged: true }
+        redirect(303, readView(event.params.id, "unchanged", teamId))
       }
 
       ;({ id } = await team.createSubmission({
@@ -175,6 +174,21 @@ export const actions: Actions = {
       throw e
     }
 
-    return { success: true, teamId, unchanged: false }
+    redirect(303, readView(event.params.id, "saved", teamId))
   },
+}
+
+/**
+ * Back to the read view after a save, saying how it went: `?saved=` or
+ * `?unchanged=`, each naming the team. A redirect rather than an answer on
+ * the form's own URL, so the page leaves `?edit=` behind and Edit opens the
+ * form again from a plain link.
+ */
+function readView(
+  hackathonId: string,
+  outcome: "saved" | "unchanged",
+  teamId: string,
+): string {
+  const params = new URLSearchParams({ [outcome]: teamId })
+  return `/my/hackathon/${hackathonId}/submissions/mine?${params}`
 }

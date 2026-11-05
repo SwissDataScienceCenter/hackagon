@@ -19,15 +19,12 @@
         teamId,
         projectId,
         saved,
-        outcome,
         message,
     }: {
         teamId: string;
         projectId: string;
         /** The team's entry as it stands, or null before its first save. */
         saved: SavedEntry | null;
-        /** What the last save of *this* team's form came to, if it succeeded. */
-        outcome?: 'saved' | 'unchanged';
         /** Why the last save of this team's form failed. */
         message?: string;
     } = $props();
@@ -143,7 +140,11 @@
     class="flex flex-col gap-3 border-t border-line pt-3"
     use:enhance={() => {
         pending = true;
-        return async ({ update }) => {
+        return async ({ result, update }) => {
+            // A save that went through redirects to the read view. The fields
+            // still differ from the entry this page was loaded with, so the
+            // guard would take that for leaving with unsaved changes.
+            if (result.type === 'redirect') leaving = true;
             // Not reset: a reset would put back the values the page was
             // loaded with, not what the team typed.
             await update({ reset: false });
@@ -167,10 +168,6 @@
                 Saving…
             {:else if dirty}
                 Unsaved changes: {summary}
-            {:else if outcome === 'saved' && !message}
-                <span class="text-success-ink">Saved.</span>
-            {:else if outcome === 'unchanged' && !message}
-                Nothing changed, so nothing was saved.
             {:else if saved}
                 No unsaved changes · last saved {formatDate(saved.updatedAt)}{#if saved.updatedBy}
                     by {saved.updatedBy}{/if}
