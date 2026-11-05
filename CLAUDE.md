@@ -113,7 +113,7 @@ just helm::template [args]      # render the chart to stdout
 just helm::check-bump           # fail if helm-chart/ changed without a version bump
 just helm::publish              # push the chart if Chart.yaml's version is unpublished
 
-# Deployed dev or staging only, via ~/.config/kube/sck-sit-dev (override: HACKAGON_KUBECONFIG)
+# Deployed dev or staging only — set HACKAGON_KUBECONFIG to the cluster's kubeconfig first
 just cluster::backup <dev|staging>  # pg_dumpall to ~/hackagon-backups
 just cluster::wipe <dev|staging>    # backup, then drop + recreate the app DB; the instance restarts empty
 just cluster::reseed <dev|staging>  # backup, wipe, then seed built from origin/main (dev) or the newest origin/release/* (staging)

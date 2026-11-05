@@ -48,7 +48,7 @@ Three instances, all installed from the Helm chart by the GitOps setup in
 `sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-instance overrides. The
 only thing that differs between them is which images they pull. Dev and staging
 share one cluster, each in its own namespace, reached through the kubeconfig
-`~/.config/kube/sck-sit-dev`.
+that `HACKAGON_KUBECONFIG` points at.
 
 | Instance                                                      | Namespace          | Images                                       | Moves when                       |
 | ------------------------------------------------------------- | ------------------ | -------------------------------------------- | -------------------------------- |
@@ -74,7 +74,7 @@ A restart is not always something you chose: an eviction or a node drain
 restarts the container too. To restart it on purpose:
 
 ```bash
-kubectl --kubeconfig ~/.config/kube/sck-sit-dev -n hackagon-dev \
+kubectl --kubeconfig "$HACKAGON_KUBECONFIG" -n hackagon-dev \
     rollout restart deploy/hackagon-frontend
 ```
 

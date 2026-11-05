@@ -16,9 +16,10 @@ app_db_owner := "hackagon"
 backup_dir := env("HOME") + "/hackagon-backups"
 local_pg_port := "15432"
 
-# Dev and staging share one cluster, reached through this kubeconfig and its
-# current context. Override with HACKAGON_KUBECONFIG.
-kubeconfig := env("HACKAGON_KUBECONFIG", env("HOME") + "/.config/kube/sck-sit-dev")
+# Dev and staging share one cluster, reached through the kubeconfig that
+# HACKAGON_KUBECONFIG points at, and its current context. No default: where
+# that file lives is each operator's business, and _guard refuses when unset.
+kubeconfig := env("HACKAGON_KUBECONFIG", "")
 
 # Sourced by every recipe: `resolve_instance <name>` sets the namespace and the
 # host its ingress must serve. Only these two names exist, so a recipe can never
@@ -59,8 +60,8 @@ help:
 
     echo ""
     echo -e "  ${bold}Cluster Commands${reset}"
-    echo -e "  ${dim}Act on a deployed instance — dev or staging, never prod — through${reset}"
-    echo -e "  ${dim}{{kubeconfig}} (override with HACKAGON_KUBECONFIG).${reset}"
+    echo -e "  ${dim}Act on a deployed instance — dev or staging, never prod — through the${reset}"
+    echo -e "  ${dim}kubeconfig HACKAGON_KUBECONFIG points at.${reset}"
     echo -e "  ${dim}Every recipe refuses a namespace whose ingress does not serve that instance's host.${reset}"
     echo ""
     echo -e "  ${cyan}just cluster::backup${reset} <dev|staging>"
@@ -283,8 +284,10 @@ _guard instance:
     set -euo pipefail
     {{instances}}
     resolve_instance "{{instance}}"
+    [ -n "{{kubeconfig}}" ] \
+        || { echo "✗ HACKAGON_KUBECONFIG is not set. Point it at the kubeconfig for dev and staging." >&2; exit 1; }
     [ -f "{{kubeconfig}}" ] \
-        || { echo "✗ No kubeconfig at {{kubeconfig}}. Set HACKAGON_KUBECONFIG." >&2; exit 1; }
+        || { echo "✗ HACKAGON_KUBECONFIG points at {{kubeconfig}}, which is not a file." >&2; exit 1; }
     hosts="$(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns" get ingress \
         -o jsonpath='{.items[*].spec.rules[*].host}')"
     if [[ " $hosts " != *" $host "* ]]; then
