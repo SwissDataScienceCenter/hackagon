@@ -67,16 +67,20 @@ export const load: PageServerLoad = async (event) => {
       // team, so the team is the subject here — the inverse of the detail page,
       // where the project a voter is judging is the heading.
       projectTitle: project?.title ?? "",
-      // For the title's link onto the project page. No description: a full
-      // proposal on every card buried the roster this page is for, and the
-      // link is one click from it.
+      // For the card's project link onto the project page. No description: a
+      // full proposal on every card buried the roster this page is for, and
+      // the link is one click from it.
       projectId: project?.id,
       // TODO(backend: team-image): Team has no image of its own, so this is the
       // project's — there is no team URL for it to fall back *from* yet. Without
-      // one the card shows its empty avatar. Same handle as the detail page's
-      // load, so both sites grep as a set.
+      // one the card shows the project's initials. Same handle as the detail
+      // page's load, so both sites grep as a set.
       imageUrl: project?.image,
-      members: t.members.map((m) => ({ name: m.displayName || m.username })),
+      // The id is the participant profile's: `participants/<userId>`.
+      members: t.members.map((m) => ({
+        id: m.id,
+        name: m.displayName || m.username,
+      })),
     }
   })
 

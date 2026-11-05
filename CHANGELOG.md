@@ -60,6 +60,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   Info".
 - Project lists no longer show a number beside each project. It was only the
   row's position in the list, and changed as projects were approved.
+- On the Teams page, each team shows its project's image or, without one, the
+  same letters as the project. A lightbulb link under the team name opens the
+  project, and each member opens their profile. The project name above a group
+  of teams is now a label, not a link.
 
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
