@@ -1,6 +1,5 @@
 <script lang="ts">
     import { ArrowRight, Check, Circle } from 'lucide-svelte';
-    import { resolve } from '$app/paths';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
     import { nextStep, type MyProgress, type NextStep } from '$lib/navigation/nextSteps';
     import { ALL_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
@@ -161,7 +160,13 @@
   shut for most of a hackathon, so the line was always present and never told
   anyone anything they could act on — and the question behind it is never "is
   voting closed" but "when does it open", which this card cannot answer and the
-  timeline can. The "Next" line at the foot now leads there.
+  timeline can.
+
+  What comes *next* is not here either. A "Next: <phase>" line used to close the
+  card, but the card is about what the viewer can do now, and the sequence of
+  phases is on About and Timeline, both a click away in the sidebar. With no
+  phase running the card therefore shows no countdown: it only ever counted to
+  the phase that line named.
 
   `border-line-strong` rather than the plain `card` its siblings use: this one
   leads the page and is different in kind from the cards below it. Same
@@ -273,33 +278,6 @@
                     : 'Nothing is open right now.'}
             </p>
         {/if}
-    {/if}
-
-    {#if nextPhase}
-        <!-- A link rather than a statement: this is the one forward-looking line on
-             the card, and the timeline is where the rest of the answer is — the
-             whole sequence, and how long until this phase hands over. Everyone who
-             can read this card can read that page. -->
-        <a
-            href={resolve(`/my/hackathon/${hackathonId}/timeline`)}
-            class="group flex flex-wrap items-baseline gap-x-2 border-t border-line pt-3
-                   text-xs text-ink-3 no-underline"
-        >
-            <span class="tnum group-hover:underline">
-                Next: <span class="font-semibold text-ink-2">{nextPhase.name}</span>
-                · {formatPhaseRange(nextPhase.startsAt, nextPhase.endsAt)}
-            </span>
-            <ArrowRight
-                class="h-3 w-3 shrink-0 self-center text-ink-3 group-hover:text-accent-ink"
-                aria-hidden="true"
-            />
-            {#if !currentPhase && boundary}
-                <!-- With no phase heading this is the countdown's only home, and it
-                     belongs here anyway: with nothing running it counts to the next
-                     phase's start, which is the phase this line names. -->
-                <span class="ms-auto"><Countdown {boundary} /></span>
-            {/if}
-        </a>
     {/if}
 
     {#if phaseEnded || datesAreAGuide}
