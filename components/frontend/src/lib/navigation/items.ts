@@ -18,6 +18,7 @@ import {
   type ViewerMembership,
 } from "$lib/utils/hackathonRole"
 
+import Info from "lucide-svelte/icons/info"
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
 import UsersRound from "lucide-svelte/icons/users-round"
@@ -144,6 +145,20 @@ export function memberNav(
   myTeamCount = 0,
 ): NavItem[] {
   return [
+    // First, ahead of Overview: it is what the hackathon *is*, so it is what a
+    // first visit wants to read before anything else. Not where a link into the
+    // hackathon lands, though — that stays Overview, because every later visit
+    // comes back for what is open right now, not for text already read.
+    //
+    // Always offered, description or not: the hackathon's banner and phase bar
+    // live on this page and nowhere else, so even with nothing written it is
+    // where the dates, the picture and the shape of the hackathon are.
+    {
+      id: "member:about",
+      label: "About",
+      icon: Info,
+      href: resolve(`/my/hackathon/${hackathonId}/about`),
+    },
     {
       id: "member:overview",
       label: "Overview",

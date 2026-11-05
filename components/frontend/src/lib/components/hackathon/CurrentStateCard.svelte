@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { ArrowRight, Check } from 'lucide-svelte';
-    import { resolve } from '$app/paths';
+    import { ArrowRight, Check, Circle } from 'lucide-svelte';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
+    import { nextStep, type MyProgress, type NextStep } from '$lib/navigation/nextSteps';
     import { ALL_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
     import { nextBoundary } from '$lib/utils/relativeTime';
     import Countdown from './Countdown.svelte';
@@ -15,6 +15,7 @@
         currentPhase,
         nextPhase,
         enabled,
+        progress,
     }: {
         hackathonId: string;
         /**
@@ -48,6 +49,8 @@
         nextPhase: { name: string; startsAt?: Date; endsAt?: Date } | null;
         /** Capability numbers actually switched on. */
         enabled: number[];
+        /** The viewer's own part so far. Read only in the participant voice. */
+        progress: MyProgress;
     } = $props();
 
     const open = $derived(ALL_CAPABILITIES.filter((c) => enabled.includes(c.value)));
@@ -70,7 +73,34 @@
     // two labels the timeline pages use, so no two surfaces name it differently.
     const phaseBadge = $derived(declared ? 'Current phase' : 'In progress');
 
-    const openHeading = $derived(organiserVoice ? 'Participants can now' : 'You can now');
+    const openHeading = $derived(organiserVoice ? 'Participants can now' : 'Your next steps');
+
+    // One row per open capability, in two voices.
+    //
+    // A participant gets where *they* stand: a step already taken is done and
+    // points at what they did, one not taken is the next thing to do (see
+    // `nextStep`). Register has no row — they have already joined. Every row used
+    // to carry the same check, which read as "done" when it only meant "open".
+    //
+    // An organiser keeps the hackathon-wide sentence and the check for "open":
+    // none of the personal states are about them, and Register is still worth
+    // knowing about from their side.
+    const rows = $derived.by((): (NextStep & { value: number })[] => {
+        if (organiserVoice) {
+            return open.map((c) => ({
+                value: c.value,
+                label: c.label,
+                description: capabilityDescription(c.value) ?? '',
+                done: true,
+                href: linked ? capabilityHref(hackathonId, c.value) : undefined,
+            }));
+        }
+        return open.flatMap((c) => {
+            const step = nextStep(hackathonId, c.value, progress);
+            if (!step) return [];
+            return [{ value: c.value, ...step, href: linked ? step.href : undefined }];
+        });
+    });
 
     // Which boundary to count down to, decided here so the card knows whether
     // there is one at all. `new Date()` is only ever compared against, never
@@ -130,12 +160,36 @@
   shut for most of a hackathon, so the line was always present and never told
   anyone anything they could act on — and the question behind it is never "is
   voting closed" but "when does it open", which this card cannot answer and the
-  timeline can. The "Next" line at the foot now leads there.
+  timeline can.
+
+  What comes *next* is not here either. A "Next: <phase>" line used to close the
+  card, but the card is about what the viewer can do now, and the sequence of
+  phases is on About and Timeline, both a click away in the sidebar. With no
+  phase running the card therefore shows no countdown: it only ever counted to
+  the phase that line named.
 
   `border-line-strong` rather than the plain `card` its siblings use: this one
   leads the page and is different in kind from the cards below it. Same
   distinction CapabilitiesPanel draws for the same reason.
 -->
+
+<!-- A check only for what is done (or, for an organiser, open); a step still to
+     take gets an empty circle, so the list reads as a to-do list rather than a
+     row of ticks the viewer never earned. -->
+{#snippet rowBody(row: NextStep)}
+    {#if row.done}
+        <Check class="mt-0.5 h-4 w-4 shrink-0 text-success-ink" aria-hidden="true" />
+    {:else}
+        <Circle class="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />
+    {/if}
+    <span class="flex min-w-0 flex-col gap-0.5">
+        <span class="text-sm font-semibold text-ink">{row.label}</span>
+        {#if row.description}
+            <span class="font-sans text-xs text-ink-3">{row.description}</span>
+        {/if}
+    </span>
+{/snippet}
+
 <section
     class="card flex flex-col gap-4 border-line-strong p-5"
     aria-labelledby={currentPhase ? 'right-now' : undefined}
@@ -183,35 +237,21 @@
             </p>
         {/if}
 
-        {#if open.length > 0}
+        {#if rows.length > 0}
             <div class="flex flex-col gap-2">
                 <span class="meta">{openHeading}</span>
-                {#each open as capability (capability.value)}
-                    {@const href = linked
-                        ? capabilityHref(hackathonId, capability.value)
-                        : undefined}
-                    {@const description = capabilityDescription(capability.value)}
-                    {#if href}
+                {#each rows as row (row.value)}
+                    {#if row.href}
                         <!-- eslint-disable svelte/no-navigation-without-resolve -- built with
-                             resolve() in $lib/navigation/capabilityLinks; the rule only
-                             recognizes a literal resolve() call in the attribute itself. -->
+                             resolve() in $lib/navigation/capabilityLinks and nextSteps; the
+                             rule only recognizes a literal resolve() call in the attribute
+                             itself. -->
                         <a
-                            {href}
+                            href={row.href}
                             class="group flex items-start gap-3 rounded-card bg-raised p-3
                                    no-underline hover:bg-overlay"
                         >
-                            <Check
-                                class="mt-0.5 h-4 w-4 shrink-0 text-success-ink"
-                                aria-hidden="true"
-                            />
-                            <span class="flex min-w-0 flex-col gap-0.5">
-                                <span class="text-sm font-semibold text-ink"
-                                    >{capability.label}</span
-                                >
-                                {#if description}
-                                    <span class="font-sans text-xs text-ink-3">{description}</span>
-                                {/if}
-                            </span>
+                            {@render rowBody(row)}
                             <ArrowRight
                                 class="mt-0.5 ms-auto h-4 w-4 shrink-0 text-ink-3
                                        group-hover:text-accent-ink"
@@ -221,22 +261,12 @@
                         <!-- eslint-enable svelte/no-navigation-without-resolve -->
                     {:else}
                         <!-- Open, but with nowhere to send them: `Register` happens
-                             on the dashboard, and a waitlisted viewer would be
-                             refused every destination. Same row without the arrow,
-                             so nothing looks clickable that is not. -->
+                             on the dashboard, submitting needs a team, and a
+                             waitlisted viewer would be refused every destination.
+                             Same row without the arrow, so nothing looks clickable
+                             that is not. -->
                         <div class="flex items-start gap-3 rounded-card bg-raised p-3">
-                            <Check
-                                class="mt-0.5 h-4 w-4 shrink-0 text-success-ink"
-                                aria-hidden="true"
-                            />
-                            <span class="flex min-w-0 flex-col gap-0.5">
-                                <span class="text-sm font-semibold text-ink"
-                                    >{capability.label}</span
-                                >
-                                {#if description}
-                                    <span class="font-sans text-xs text-ink-3">{description}</span>
-                                {/if}
-                            </span>
+                            {@render rowBody(row)}
                         </div>
                     {/if}
                 {/each}
@@ -248,33 +278,6 @@
                     : 'Nothing is open right now.'}
             </p>
         {/if}
-    {/if}
-
-    {#if nextPhase}
-        <!-- A link rather than a statement: this is the one forward-looking line on
-             the card, and the timeline is where the rest of the answer is — the
-             whole sequence, and how long until this phase hands over. Everyone who
-             can read this card can read that page. -->
-        <a
-            href={resolve(`/my/hackathon/${hackathonId}/timeline`)}
-            class="group flex flex-wrap items-baseline gap-x-2 border-t border-line pt-3
-                   text-xs text-ink-3 no-underline"
-        >
-            <span class="tnum group-hover:underline">
-                Next: <span class="font-semibold text-ink-2">{nextPhase.name}</span>
-                · {formatPhaseRange(nextPhase.startsAt, nextPhase.endsAt)}
-            </span>
-            <ArrowRight
-                class="h-3 w-3 shrink-0 self-center text-ink-3 group-hover:text-accent-ink"
-                aria-hidden="true"
-            />
-            {#if !currentPhase && boundary}
-                <!-- With no phase heading this is the countdown's only home, and it
-                     belongs here anyway: with nothing running it counts to the next
-                     phase's start, which is the phase this line names. -->
-                <span class="ms-auto"><Countdown {boundary} /></span>
-            {/if}
-        </a>
     {/if}
 
     {#if phaseEnded || datesAreAGuide}

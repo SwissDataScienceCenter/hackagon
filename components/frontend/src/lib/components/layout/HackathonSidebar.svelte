@@ -95,11 +95,6 @@
          */
         myTeamCount?: number;
         /**
-         * Whether the hackathon has a description at all. Gates the About entry
-         * — see `memberNav`. False, and there is nothing to read, so the entry
-         * is not offered rather than leading to an empty page.
-         */
-        /**
          * Badges the Settings entry — the page the capability switches
          * live on. Organiser-only by construction, since the whole Manage
          * section is, and the caller passes false for anyone who could not act

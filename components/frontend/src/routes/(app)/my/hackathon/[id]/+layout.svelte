@@ -64,14 +64,17 @@
         return chips;
     })());
 
-    // The hero and phase bar belong to the overview and nowhere else: every other
+    // The hero and phase bar belong to About and nowhere else: they are what the
+    // hackathon *is*, read once, like the description under them. Every other
     // member page carries its own heading, and repeating the hackathon's identity
-    // above it just pushes the content down.
+    // above it just pushes the content down. That includes the overview, which is
+    // about where the viewer stands right now and already names the running phase
+    // on its own card.
     //
     // Keyed on the route id rather than the last path segment, which cannot
     // express a route whose final segment is a parameter — /pages/[pageId] ends in
     // a uuid, so a segment blocklist silently let the hero back in there.
-    const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
+    const showHero = $derived($page.route.id?.endsWith('/about') ?? false);
 
     // Empty for anyone who cannot fix what it reports, which is what keeps the
     // bar off a participant's screen — they would read a problem they have no

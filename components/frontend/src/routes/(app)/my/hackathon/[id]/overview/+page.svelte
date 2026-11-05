@@ -1,6 +1,5 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
-    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import TrackBreakdown from '$lib/components/hackathon/TrackBreakdown.svelte';
@@ -22,10 +21,9 @@
   which badges each count onto the tile that clears it.
 
   Order is by how fast it changes, and only things that change are here at all.
-  "Right now" leads because it differs from one visit to the next. The About
-  section is gone: a description is read once, ever, so it sits with the rest of
-  the hackathon's identity in the hero — and the dashboard card a member clicks to
-  get here already carries it.
+  "Right now" leads because it differs from one visit to the next. The
+  description is not here: it is read once, ever, so it has the About page, first
+  in the sidebar, rather than a section under every card a member came back for.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects).
   No width cap of its own — `.prose` caps the one thing here that needs a measure.
@@ -48,6 +46,7 @@
         currentPhase={data.hackathonState.currentPhase}
         nextPhase={data.hackathonState.nextPhase}
         enabled={data.hackathonState.enabled}
+        progress={data.progress}
     />
 
     <!-- Two-up from md: both of these are naturally narrow — a handful of labelled
@@ -111,22 +110,4 @@
             />
         {/if}
     </div>
-
-    <!-- What the hackathon is, in the organiser's own words and through the same
-         component the public page and the editor's preview use.
-
-         Last, and deliberately: what a member came back for is their state, and
-         this is what they read once. But a member who never opens the About tab
-         never saw it at all, while a stranger gets nothing else — which is a
-         strange way round. Heading rather than bare prose, because after a column
-         of cards an unlabelled block of text reads as something that failed to
-         load. -->
-    {#if data.description}
-        <section class="flex flex-col gap-3">
-            <h2 class="text-title">About this hackathon</h2>
-            <div class="max-w-3xl">
-                <MarkdownContent content={data.description} />
-            </div>
-        </section>
-    {/if}
 </div>

@@ -4,32 +4,32 @@
 
 The first page of a hackathon. It shows:
 
-- [Your hackathon](#your-hackathon): its dates and number of participants
-- [What you can do](#what-you-can-do): links to everything that is open now
+- [Your next steps](#your-next-steps): what is open now, and what you have done
 - [Your team](#your-team): your team, or how to find one
 
 It might also show:
 
 - [The current phase](#the-current-phase): if the hackathon has phases
 - [Projects](#projects): once projects are approved
-- [About this hackathon](#about-this-hackathon): if the owners wrote a
-  description
+
+The hackathon's dates, picture and description are on its own page, see
+[About](member-about.md).
 
 :::
 
 ![The Overview page of a hackathon, as a participant sees it](../static/screenshots/member-overview.png)
 
-## Your hackathon
+## Your next steps
 
-- Start and end date, and how many participants it has.
-
-## What you can do
-
-- One link per activity the owners have opened:
+- One row per activity the owners have opened:
   [propose projects](member-projects.md#propose-a-project),
   [choose preferred projects](member-projects.md#preferences),
   [see teams](member-teams.md), [submit work](member-submissions.md),
   [vote](member-voting.md), [see results](member-results.md).
+- An empty circle marks something still to do. Click the row to do it.
+- A check marks something you have done, for example "You proposed 2 projects".
+  Click the row to see it or change it.
+- Submitting needs a team. Without one the row says so and has no link.
 - "Nothing is open right now" when the owners have opened nothing.
 - On the waitlist the links stay closed until an owner approves you.
 
@@ -50,7 +50,3 @@ It might also show:
 
 - The number of approved projects, per track if there are tracks.
 - Click {guilabel}`View all` to go to [Projects](member-projects.md).
-
-## About this hackathon
-
-- The hackathon's description.
