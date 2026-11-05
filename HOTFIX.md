@@ -14,8 +14,8 @@ Hotfixes are tagged `v0.x.1`, `v0.x.2`, etc.
 
 For each hotfix tag, images are built as `release/backend-service:0.x.1` and
 `release/frontend-service:0.x.1`, etc. Once the images are there, the chart can
-be installed on staging and then on prod. Dev does not run release images — it follows `main` (see
-[RELEASING.md](RELEASING.md#dev-follows-main)).
+be installed on staging and then on prod. Dev does not run release images — it
+follows `main` (see [RELEASING.md](RELEASING.md#dev-follows-main)).
 
 ## Order of steps:
 
@@ -57,8 +57,7 @@ A wrong bump is undone as in
 [If you bumped the wrong way](RELEASING.md#if-you-bumped-the-wrong-way), but
 resetting to `origin/release/0.x` instead of `origin/main`.
 
-The images and the chart should build now. Install the new chart version on prod
-through `sdsc-ordes/cloud-infra`.
+The images and the chart should build now. Install the new chart version on prod.
 
 ### Bring the change to main:
 
