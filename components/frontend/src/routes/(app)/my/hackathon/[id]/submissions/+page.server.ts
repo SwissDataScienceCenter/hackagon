@@ -6,6 +6,8 @@ import { mayCreateSubmissions } from "$lib/server/hackathon/capabilities"
 import { namesByUserId } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { teamEntries } from "$lib/server/hackathon/submissions"
+import { markdownExcerpt } from "$lib/utils/markdown"
+import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 
 // Every team's entry, read only — the page behind the sidebar's Submissions
 // entry. The viewer's own team edits theirs one level down, on Our submission.
@@ -30,25 +32,37 @@ export const load: PageServerLoad = async (event) => {
     hackathon.id,
     namesByUserId(hackathon.members, hackathon.owners),
   )
-  const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
+  const projects = new Map(hackathon.projects.map((p) => [p.id, p]))
 
-  // Field by field rather than the whole entry: only what the card shows
-  // leaves the server.
-  const cards = (rows ?? []).map(({ team: t, entry }) => ({
-    teamId: t.id,
-    teamName: t.name,
-    projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-    isOwn: t.members.some((m) => m.id === platformUserId),
-    entry: entry
-      ? {
-          repositoryUrl: entry.repositoryUrl,
-          attachmentFolderUrl: entry.attachmentFolderUrl,
-          description: entry.description,
-          updatedAt: entry.updatedAt,
-          updatedBy: entry.updatedBy,
-        }
-      : null,
-  }))
+  // Only what the row shows leaves the server: an excerpt, not the
+  // description — the entry is read in full on its own page.
+  const cards = (rows ?? []).map(({ team: t, entry }) => {
+    const project = projects.get(t.projectId)
+    // As long as a project row's, so the two lists read alike.
+    const excerpt = entry?.description
+      ? markdownExcerpt(entry.description, PROJECT_EXCERPT_CHARS)
+      : ""
+
+    return {
+      teamId: t.id,
+      teamName: t.name,
+      projectTitle: project?.title ?? "Unknown project",
+      // TODO(backend: team-image): the project's, as on the team's page.
+      imageUrl: project?.image,
+      isOwn: t.members.some((m) => m.id === platformUserId),
+      entry: entry
+        ? {
+            excerpt: excerpt || undefined,
+            // Only without an excerpt: an entry that is nothing but a link
+            // would otherwise say nothing on its row.
+            link: excerpt
+              ? undefined
+              : (entry.repositoryUrl ?? entry.attachmentFolderUrl),
+            updatedAt: entry.updatedAt,
+          }
+        : null,
+    }
+  })
 
   return {
     hackathonId: hackathon.id,
