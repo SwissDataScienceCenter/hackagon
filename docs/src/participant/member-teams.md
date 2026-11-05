@@ -23,6 +23,10 @@ them. It shows:
 
 ## A team
 
-- Its members, and its project with the full proposal.
+- Its members. Click a member to open their profile.
+- Its project, as on the [projects](member-projects.md) page. Click
+  {guilabel}`View` to open it.
+- Whether the team has handed in its work. Click {guilabel}`View entry` to read
+  it on [Submissions](member-submissions.md).
 - Hand in your own team's work on [Our submission](member-our-submission.md).
 - Read what each team handed in on [Submissions](member-submissions.md).

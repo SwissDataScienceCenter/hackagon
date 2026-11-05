@@ -27,7 +27,6 @@
     let {
         project,
         backHref,
-        backQuery = '',
         backLabel,
         children
     }: {
@@ -48,13 +47,8 @@
             modifiedAt?: Date;
         };
         /** Unresolved route path — `resolve()` is called at the anchor below,
-            same as PhaseForm's `cancelHref`. Path only: a query string belongs
-            in `backQuery`, since `resolve()` takes a route and not a URL. */
+            same as PhaseForm's `cancelHref`. */
         backHref: string;
-        /** Query string for `backHref`, leading `?` included, appended after it
-            is resolved. The participant route uses it to hand a team page back
-            the origin it was opened with; the organiser's route needs none. */
-        backQuery?: string;
         backLabel: string;
         /** Extra sections, rendered last inside this component's page shell so
             they pick up its padding instead of hanging off the bottom of it. */
@@ -88,7 +82,7 @@
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-    <a href="{resolve(backHref as any)}{backQuery}" class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline">
+    <a href={resolve(backHref as any)} class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline">
         &larr; {backLabel}
     </a>
 

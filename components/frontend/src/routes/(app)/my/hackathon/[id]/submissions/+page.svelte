@@ -57,12 +57,8 @@
                         Edit
                     </a>
                 {/if}
-                <!-- `?from=teams` so the team's page offers a way back to the
-                     teams list rather than to the ballot. -->
                 <a
-                    href="{resolve(
-                        `/my/hackathon/${data.hackathonId}/teams/${c.teamId}`
-                    )}?from=teams"
+                    href={resolve(`/my/hackathon/${data.hackathonId}/teams/${c.teamId}`)}
                     class="btn btn-sm btn-ghost no-underline"
                 >
                     View team
@@ -82,8 +78,12 @@
                     descriptionOpen={detailsOpen}
                 />
                 <span class="text-xs text-ink-3">
-                    Last updated {formatDate(c.entry.updatedAt)}{#if c.entry.updatedBy}
-                        by {c.entry.updatedBy}{/if}
+                    <!-- One expression rather than an `{#if}` block: Svelte trims
+                         the whitespace that opens a block, which glued "by" to
+                         the time ("11:22 AMby"). -->
+                    Last updated {formatDate(c.entry.updatedAt)}{c.entry.updatedBy
+                        ? ` by ${c.entry.updatedBy}`
+                        : ''}
                 </span>
             {:else}
                 <span class="text-xs text-ink-3">Not submitted yet</span>

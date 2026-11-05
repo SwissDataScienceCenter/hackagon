@@ -77,8 +77,8 @@ export const load: PageServerLoad = async (event) => {
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
   // Where "back" goes. The projects list unless a team detail page sent the
-  // reader here, in which case it returns to that team — a voter following the
-  // chain from a ballot would otherwise land on a list they were never on.
+  // reader here, in which case it returns to that team — a reader who came
+  // from a team would otherwise land on a list they were never on.
   //
   // The team id is only ever used to build a path of our own, never followed as
   // a supplied URL, so the shape check is all this needs: a well-formed id that
@@ -88,11 +88,6 @@ export const load: PageServerLoad = async (event) => {
   const fromTeam = event.url.searchParams.get("from") === "team"
   const teamId = event.url.searchParams.get("team") ?? ""
   const backToTeam = fromTeam && UUID.test(teamId)
-  // The team page's own origin, forwarded one hop so returning there restores
-  // its back link instead of resetting it. Only that page's own vocabulary is
-  // passed on, so this cannot introduce a target it would not have chosen itself.
-  const teamQuery =
-    event.url.searchParams.get("teamFrom") === "teams" ? "?from=teams" : ""
   // The teams list links each project title here, and a reader who came from
   // it was never on the projects list either.
   const backToTeams = event.url.searchParams.get("from") === "teams"
@@ -103,8 +98,6 @@ export const load: PageServerLoad = async (event) => {
       : backToTeams
         ? `/my/hackathon/${hackathon.id}/teams`
         : `/my/hackathon/${hackathon.id}/projects`,
-    // Separate from the path: `resolve()` takes a route, not a URL.
-    backQuery: backToTeam ? teamQuery : "",
     backLabel: backToTeam
       ? "Back to the team"
       : backToTeams

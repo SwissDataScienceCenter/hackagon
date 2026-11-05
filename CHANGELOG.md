@@ -64,6 +64,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   same letters as the project. A lightbulb link under the team name opens the
   project, and each member opens their profile. The project name above a group
   of teams is now a label, not a link.
+- A team's page is now headed by the team's name. It shows the members, the
+  project as a card like on the projects list, and when the team last handed in
+  its work, with a link to its entry on Submissions.
 
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
@@ -71,6 +74,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A team's page always leads back to Teams. Opened from a participant's profile
+  while voting was open, it led to the ballot, which no longer links to it.
+- On Submissions, "Last updated" has a space again between the time and who
+  saved it, instead of reading "11:22 AMby Alice".
 - Participants can see published results after voting has closed; the results
   page used to fail with an error once an organizer turned voting off.
 - A participant removed from a hackathon by an organizer is now also taken off
