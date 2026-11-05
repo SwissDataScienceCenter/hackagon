@@ -1,14 +1,17 @@
 package schema
 
 import (
+	"context"
 	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/intercept"
 )
 
 // Hackathon holds the schema definition for the Hackathon entity.
@@ -106,6 +109,20 @@ func (Hackathon) Indexes() []ent.Index {
 		index.Fields("starts_at"),
 		index.Fields("ends_at"),
 		index.Fields("visibility"),
+	}
+}
+
+// Interceptors of the Hackathon.
+func (Hackathon) Interceptors() []ent.Interceptor {
+	return []ent.Interceptor{
+		// Hides deleted hackathons from every query, including the ones behind
+		// WithHackathon() and QueryHackathon(). A child whose hackathon is
+		// deleted then has no hackathon: use Edges.HackathonOrErr().
+		intercept.TraverseFunc(func(_ context.Context, q intercept.Query) error {
+			q.WhereP(sql.FieldIsNull("deleted_at"))
+
+			return nil
+		}),
 	}
 }
 

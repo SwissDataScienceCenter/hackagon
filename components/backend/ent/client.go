@@ -836,7 +836,8 @@ func (c *HackathonClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *HackathonClient) Interceptors() []Interceptor {
-	return c.inters.Hackathon
+	inters := c.inters.Hackathon
+	return append(inters[:len(inters):len(inters)], hackathon.Interceptors[:]...)
 }
 
 func (c *HackathonClient) mutate(ctx context.Context, m *HackathonMutation) (Value, error) {

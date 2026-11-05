@@ -51,6 +51,8 @@ func init() {
 	// answer.DefaultID holds the default value on creation for the id field.
 	answer.DefaultID = answerDescID.Default.(func() uuid.UUID)
 	hackathonMixin := schema.Hackathon{}.Mixin()
+	hackathonInters := schema.Hackathon{}.Interceptors()
+	hackathon.Interceptors[0] = hackathonInters[0]
 	hackathonMixinFields0 := hackathonMixin[0].Fields()
 	_ = hackathonMixinFields0
 	hackathonFields := schema.Hackathon{}.Fields()
