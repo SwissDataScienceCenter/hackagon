@@ -57,7 +57,8 @@ A wrong bump is undone as in
 [If you bumped the wrong way](RELEASING.md#if-you-bumped-the-wrong-way), but
 resetting to `origin/release/0.x` instead of `origin/main`.
 
-The images and the chart should build now. Install the new chart version on prod.
+The images and the chart should build now. Install the new chart version on
+prod.
 
 ### Bring the change to main:
 
