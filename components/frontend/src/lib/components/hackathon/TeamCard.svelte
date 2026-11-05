@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Lightbulb } from 'lucide-svelte';
-    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import TeamMembers from '$lib/components/hackathon/TeamMembers.svelte';
     import { avatarInitials } from '$lib/utils/initials';
@@ -18,7 +17,6 @@
         title,
         projectTitle,
         projectHref,
-        projectDescription,
         imageUrl,
         members,
         actions,
@@ -36,16 +34,9 @@
         projectTitle?: string;
         /**
          * Where the project line under the team name leads. Without it there is
-         * no project line: the detail page already has the project as its
-         * heading, so it passes the title for the initials and leaves this out.
+         * no project line, and the title only gives the initials.
          */
         projectHref?: string;
-        /**
-         * Markdown, rendered in full. Optional because the teams list leaves it
-         * out — there the project line links to its page instead — and only
-         * the team detail page carries it.
-         */
-        projectDescription?: string;
         imageUrl?: string;
         members: TeamMember[];
         /**
@@ -53,8 +44,7 @@
          * `ParticipantCard` uses, and left to the caller for the same reason:
          * this card stays ignorant of where a team can be looked at or acted on.
          *
-         * The teams list passes a View link onto `teams/<teamId>` this way. The
-         * detail page passes nothing, since that link would lead to itself.
+         * The teams list passes a View link onto `teams/<teamId>` this way.
          */
         actions?: Snippet;
     } = $props();
@@ -65,13 +55,12 @@
 </script>
 
 <!--
-  ParticipantCard-style row: avatar | text column (title, project, description, members).
-  Members sit in the text column so they line up with title/description, not under the team avatar.
+  ParticipantCard-style row: avatar | text column (title, project, members).
+  Members sit in the text column so they line up with the title, not under the team avatar.
 
-  `actions` is the caller's, and only the list passes one: renaming, deleting and
-  assigning people are organiser actions that live on the manage page, so the one
-  control a read-only surface has to offer is a way in to the single team — which
-  is the list's View link and nothing the detail page needs.
+  `actions` is the caller's: renaming, deleting and assigning people are
+  organiser actions that live on the manage page, so the one control a read-only
+  surface has to offer is a way in to the single team — the list's View link.
 -->
 <div
     class="card card-raised box-border w-full px-5 py-4"
@@ -97,14 +86,6 @@
                         <Lightbulb class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         {projectTitle}
                     </a>
-                {/if}
-                {#if projectDescription}
-                    <!-- Rendered, as on the project's own page: the proposal is
-                         written in the markdown editor, and as plain text its
-                         headings and lists arrived as raw `#` and `-`. -->
-                    <div class="w-2/3 min-w-0 text-xs leading-snug text-ink-2">
-                        <MarkdownContent content={projectDescription} />
-                    </div>
                 {/if}
             </div>
 
