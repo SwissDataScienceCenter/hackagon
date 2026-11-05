@@ -90,7 +90,6 @@
             </h3>
             {#each data.proposals as proposal (proposal.id)}
                 <ProjectCard
-                    num={proposal.num}
                     title={proposal.title}
                     excerpt={proposal.excerpt}
                     creator={proposal.creator}
@@ -113,7 +112,6 @@
         {:else}
             {#each pagedProjects as project (project.id)}
                 <ProjectCard
-                    num={project.num}
                     title={project.title}
                     excerpt={project.excerpt}
                     creator={project.creator}

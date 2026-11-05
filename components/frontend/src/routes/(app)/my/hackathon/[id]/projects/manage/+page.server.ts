@@ -90,14 +90,8 @@ export const load: PageServerLoad = async (event) => {
 
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
-  // TODO(backend: display-ordinals): `num` is a position in this list, not an
-  // identifier. Project has no display number, so two viewers sorting the same
-  // set agree, but the number a project shows changes as approvals land — and
-  // now also as the filter changes, since it numbers the rows on screen rather
-  // than the whole set. Swap in the real field once it exists.
-  const projects = shown.map((p, i) => ({
+  const projects = shown.map((p) => ({
     id: p.id,
-    num: shown.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: names.get(p.creatorId),

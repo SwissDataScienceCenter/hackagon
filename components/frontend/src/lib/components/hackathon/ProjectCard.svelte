@@ -5,7 +5,6 @@
     import type { Snippet } from 'svelte';
 
     let {
-        num,
         title,
         excerpt,
         creator,
@@ -17,7 +16,6 @@
         badgeVariant = 'badge-neutral',
         actions,
     }: {
-        num: number;
         title: string;
         /** The description, flattened out of markdown and cut to a row's worth
          *  by the loader — never the raw body. Absent when the project has no
@@ -57,16 +55,13 @@
     );
 </script>
 
-<!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
+<!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA.
+     No ordinal: Project has no display number, and a row's position in the
+     list shifted as approvals landed and the filter changed, so it named
+     nothing a reader could refer back to. -->
 <div
     class="card card-raised box-border flex w-full items-start gap-4 px-5 py-4"
 >
-    <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
-         start on one left edge and the numbers align down the list. -->
-    <span class="tnum shrink-0 pt-0.5 text-meta text-ink-3">
-        {String(num).padStart(2, '0')}
-    </span>
-
     <RoundMedia src={imageUrl} {initials} />
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">

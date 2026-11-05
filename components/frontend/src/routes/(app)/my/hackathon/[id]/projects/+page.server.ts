@@ -128,13 +128,8 @@ export const load: PageServerLoad = async (event) => {
   // deleted resolves to nothing and the card omits it.
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
-  // TODO(backend: display-ordinals): `num` is a position in this list, not an
-  // identifier. Project has no display number, so two viewers sorting the same
-  // set agree, but the number a project shows changes as approvals land. Swap
-  // in the real field once it exists.
-  const projects = ordered.map((p, i) => ({
+  const projects = ordered.map((p) => ({
     id: p.id,
-    num: ordered.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: names.get(p.creatorId),
@@ -145,9 +140,8 @@ export const load: PageServerLoad = async (event) => {
   }))
 
   // No edit flag on either list: a proposer edits from My projects, not here.
-  const proposals = myProposals.map((p, i) => ({
+  const proposals = myProposals.map((p) => ({
     id: p.id,
-    num: myProposals.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: names.get(p.creatorId),

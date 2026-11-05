@@ -19,9 +19,8 @@ export const load: PageServerLoad = async (event) => {
 
   // `creator` although every row is the viewer's own: a project card reads the
   // same on every list, and this one is no exception.
-  const projects = mine.map((p, i) => ({
+  const projects = mine.map((p) => ({
     id: p.id,
-    num: mine.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: names.get(p.creatorId),

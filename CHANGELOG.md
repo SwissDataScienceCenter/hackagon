@@ -58,6 +58,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   also when an organiser proposed it without joining the hackathon.
 - The button that opens a project from a list now reads "View" instead of "More
   Info".
+- Project lists no longer show a number beside each project. It was only the
+  row's position in the list, and changed as projects were approved.
 
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
