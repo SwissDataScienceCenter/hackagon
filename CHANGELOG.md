@@ -55,6 +55,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A hackathon's Projects page lists only approved projects. Participants find
+  their own proposals, and the button to propose one, on My projects, which is
+  in the menu whenever proposing is open.
 - The overview shows the running phase in a box of its own, above the next
   steps, and no longer adds notes about phase dates below them.
 - The back link on a project, a team, a submission, a participant's profile, and

@@ -2,15 +2,16 @@
 
 :::{admonition} Participant's Projects
 
-The projects you can work on. It shows:
+The approved projects you can work on. It shows:
 
 - [Approved projects](#approved-projects): the projects of this hackathon
 
 It might also show:
 
-- [Propose a project](#propose-a-project): while the owners take proposals
-- [Your proposals](#your-proposals): your proposals that are not approved yet
 - [Preferences](#preferences): while the owners collect project preferences
+
+Your own proposals are on [My projects](member-my-projects.md). That is also
+where you propose a project.
 
 :::
 
@@ -18,22 +19,11 @@ It might also show:
 
 ## Approved projects
 
+- Only approved projects. A proposal appears here once an owner approves it.
 - Eight projects per page. Each opens its details: description, track and who
   proposed it.
-
-## Propose a project
-
-- Click {guilabel}`Propose a Project`, then enter a title, a description, and a
-  track if the hackathon has tracks.
-- An owner reviews it before it appears in the list, see
-  [Manage Projects](../owner/manage-projects.md).
-
-## Your proposals
-
-- Each with its status, for example {guilabel}`Rejected`, and the owner's
-  reason.
-- To change a project you proposed, approved ones included, go to
-  [My projects](member-my-projects.md).
+- Click {guilabel}`Your proposals are on My projects` to see your own. The link
+  shows while the owners take proposals, or once you have proposed one.
 
 ## Preferences
 

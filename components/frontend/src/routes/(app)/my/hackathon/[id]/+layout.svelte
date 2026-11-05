@@ -99,6 +99,7 @@
         trackCount={hackathon.tracks.length}
         phaseCount={hackathon.phases.length}
         myProjectCount={data.myProjectCount}
+        proposalsOpen={data.proposalsOpen}
         myTeamCount={data.myTeamCount}
         stateNeedsAttention={alerts.length > 0}
         isPrivate={isPrivate(hackathon.visibility)}

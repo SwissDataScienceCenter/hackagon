@@ -22,7 +22,7 @@ The hackathon's dates, picture and description are on its own page, see
 ## Your next steps
 
 - One row per activity the owners have opened:
-  [propose projects](member-projects.md#propose-a-project),
+  [propose projects](member-my-projects.md#propose-a-project),
   [choose preferred projects](member-projects.md#preferences),
   [see teams](member-teams.md), [submit work](member-submissions.md),
   [vote](member-voting.md), [see results](member-results.md).

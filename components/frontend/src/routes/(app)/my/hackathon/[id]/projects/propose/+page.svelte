@@ -11,10 +11,10 @@
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects`)}
+            href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine`)}
             class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
-            &larr; Back to projects
+            &larr; Back to my projects
         </a>
         <h1 class="m-0 text-title text-ink">Propose a Project</h1>
         <p class="m-0 text-xs text-ink-3">

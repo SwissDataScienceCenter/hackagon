@@ -1,18 +1,14 @@
 <script lang="ts">
-    import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const countLabel = $derived(
-        data.projects.length === 1 ? '1 project' : `${data.projects.length} projects`
-    );
-
-    const proposalsLabel = $derived(
-        data.proposals.length === 1 ? '1 proposal' : `${data.proposals.length} proposals`
+        data.projects.length === 1
+            ? '1 approved project'
+            : `${data.projects.length} approved projects`
     );
 
     const pageSize = 8;
@@ -29,79 +25,43 @@
 </script>
 
 <!--
-  Every project surface a participant has, on one page: the approved projects
-  with the one action a participant has on them — marking a preference — and,
-  above them, this viewer's own proposals that have not become projects.
-  No Edit anywhere here: a proposer edits their projects from My projects, the
-  one place that lists all of them, and the owner edits everyone's from Manage
-  Projects.
-  Proposals had a page of its own and a sidebar entry; it is a stage of a
-  project's life rather than a place, and a hackathon that does not use proposals
-  now shows a plain list instead of an entry leading to an empty page.
+  The hackathon's approved projects, with the one action a participant has on
+  them — marking a preference. Nothing else: proposals, the viewer's own at
+  every status, and the Propose button live on My projects. A pending proposal
+  is not a project yet, and a page that mixed the two had to explain the
+  difference with a second group and badges.
 
-  Deciding lives under Manage Projects (see $lib/navigation's manageNav), so the
-  projects list reads the same whatever the viewer's role.
+  No Edit anywhere here: a proposer edits their projects from My projects, and
+  the owner edits everyone's from Manage Projects. Deciding lives under Manage
+  Projects too (see $lib/navigation's manageNav), so this list reads the same
+  whatever the viewer's role.
 
-  No status badges on the projects below: they are approved by construction, and
-  a badge repeated on every row would only repeat the heading. The proposals
-  group does badge them, because it is the one place a participant sees two
-  statuses side by side — a proposal still waiting, and one that was turned down.
-  A rejected row is how its author learns the decision, and its page is where the
-  organiser's reason is read.
+  No status badges: every row is approved by construction, which the count line
+  says once.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">Projects</h2>
-            <span class="text-xs text-ink-3">{countLabel}</span>
-        </div>
-        <!-- Absent when the hackathon runs without proposals, for an organiser
-             as much as for a member: this section reads the same for everyone,
-             and an organiser adds a project from Manage Projects instead. -->
-        {#if data.takesProposals}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
-                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
-            >
-                <Plus class="h-3.5 w-3.5 shrink-0" />
-                Propose a Project
-            </a>
-        {/if}
+    <div class="flex min-w-0 flex-col gap-1">
+        <h2 class="m-0 text-title text-ink">Projects</h2>
+        <span class="text-xs text-ink-3">
+            {countLabel}
+            <!-- Where a proposer's own rows went, said where they look for
+                 them. Only when My projects is in the sidebar too. -->
+            {#if data.showMineLink}
+                &middot;
+                <a
+                    href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine`)}
+                    class="font-semibold text-accent-ink no-underline hover:underline"
+                >
+                    Your proposals are on My projects &rarr;
+                </a>
+            {/if}
+        </span>
     </div>
 
     {#if form?.message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
-    {/if}
-
-    <!-- Rendered only when the viewer has one, so the page carries no empty
-         section for the many people who never propose anything. No pagination
-         either: one person's own open proposals are few, and a member with
-         enough of them to page through is not a case worth building for before
-         it exists. -->
-    {#if data.proposals.length > 0}
-        <section class="flex w-full flex-col gap-2 self-start">
-            <!-- "Your proposals", not "awaiting review": the group holds decided
-                 rows now too, and a heading claiming they are all still pending
-                 would contradict the Rejected badge on one of them. -->
-            <h3 class="m-0 text-meta text-ink-3">
-                Your proposals &middot; {proposalsLabel}
-            </h3>
-            {#each data.proposals as proposal (proposal.id)}
-                <ProjectCard
-                    title={proposal.title}
-                    excerpt={proposal.excerpt}
-                    creator={proposal.creator}
-                    track={proposal.track}
-                    imageUrl={proposal.imageUrl}
-                    badge={projectStatusLabel(proposal.status)}
-                    badgeVariant={projectStatusBadgeVariant(proposal.status) ??
-                        'badge-neutral'}
-                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}"
-                />
-            {/each}
-        </section>
     {/if}
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
