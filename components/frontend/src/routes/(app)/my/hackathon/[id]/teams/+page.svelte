@@ -64,18 +64,13 @@
                     {#if startsProject}
                         <span class="meta w-fit">{team.projectTitle}</span>
                     {/if}
-                    <!--
-                      `?from=teams` on the project link so that page's back link
-                      returns here. The participant profile has no such
-                      parameter yet, and goes back to the participants list.
-                    -->
                     <TeamCard
                         title={team.name}
                         projectTitle={team.projectTitle}
                         projectHref={team.projectId
-                            ? `${resolve(
+                            ? resolve(
                                   `/my/hackathon/${data.hackathonId}/projects/${team.projectId}`
-                              )}?from=teams`
+                              )
                             : undefined}
                         imageUrl={team.imageUrl}
                         members={team.members.map((m) => ({

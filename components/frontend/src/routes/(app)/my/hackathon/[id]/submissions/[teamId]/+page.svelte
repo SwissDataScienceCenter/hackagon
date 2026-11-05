@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import SubmissionDetail from '$lib/components/hackathon/SubmissionDetail.svelte';
+    import BackLink from '$lib/components/layout/BackLink.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -22,14 +23,14 @@
 <!--
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects).
 
-  Laid out like the team's page; the back link goes to whichever page sent the
-  reader here — resolved in the load, Submissions when it cannot tell.
+  Laid out like the team's page; the back link returns to the page the reader
+  came from, and to Submissions when there is none to know of (see BackLink).
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-    <a href={resolve(data.backHref as any)} class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline">
-        &larr; {data.backLabel}
-    </a>
+    <BackLink
+        fallbackHref={resolve(`/my/hackathon/${data.hackathonId}/submissions`)}
+        fallbackLabel="Back to submissions"
+    />
 
     <SubmissionDetail
         projectTitle={data.projectTitle}

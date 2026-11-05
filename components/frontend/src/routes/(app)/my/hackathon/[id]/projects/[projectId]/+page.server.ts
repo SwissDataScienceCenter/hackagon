@@ -76,33 +76,11 @@ export const load: PageServerLoad = async (event) => {
   const names = namesByUserId(hackathon.members, hackathon.owners)
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
-  // Where "back" goes. The projects list unless a team detail page sent the
-  // reader here, in which case it returns to that team — a reader who came
-  // from a team would otherwise land on a list they were never on.
-  //
-  // The team id is only ever used to build a path of our own, never followed as
-  // a supplied URL, so the shape check is all this needs: a well-formed id that
-  // names no team lands on that page's own 404, exactly as typing one would, and
-  // anything malformed falls back to the list. The edit form redirects here
-  // carrying no query at all and so keeps the list, unchanged.
-  const fromTeam = event.url.searchParams.get("from") === "team"
-  const teamId = event.url.searchParams.get("team") ?? ""
-  const backToTeam = fromTeam && UUID.test(teamId)
-  // The teams list links each project title here, and a reader who came from
-  // it was never on the projects list either.
-  const backToTeams = event.url.searchParams.get("from") === "teams"
-
   return {
-    backHref: backToTeam
-      ? `/my/hackathon/${hackathon.id}/teams/${teamId}`
-      : backToTeams
-        ? `/my/hackathon/${hackathon.id}/teams`
-        : `/my/hackathon/${hackathon.id}/projects`,
-    backLabel: backToTeam
-      ? "Back to the team"
-      : backToTeams
-        ? "Back to teams"
-        : "Back to projects",
+    // Only when the reader came from nowhere the app remembers — BackLink
+    // otherwise returns to the page they came from.
+    backHref: `/my/hackathon/${hackathon.id}/projects`,
+    backLabel: "Back to projects",
     project: {
       id: project.id,
       title: project.title,
@@ -125,6 +103,3 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: hackathon.id,
   }
 }
-
-/** 8-4-4-4-12 hex, the shape every id the backend issues takes. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

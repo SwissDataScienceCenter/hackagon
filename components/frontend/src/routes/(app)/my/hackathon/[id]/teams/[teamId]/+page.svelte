@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import BackLink from '$lib/components/layout/BackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import TeamMembers from '$lib/components/hackathon/TeamMembers.svelte';
     import type { PageData } from './$types';
@@ -28,19 +29,15 @@
   the project it works on, and whether it has handed anything in — each the
   way that thing is drawn elsewhere, so nothing here has a look of its own.
 
-  The back link always goes to the teams list, whichever way the reader came
-  in: it is where every team is, and the one page this always belongs under.
-  It used to fall back to the ballot, from when the ballot linked here — it now
-  links to Submissions, so that fallback led somewhere this page is not.
+  The back link returns to the page the reader came from, and to the teams
+  list — where every team is — when there is none to know of (see BackLink).
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to teams
-        </a>
+        <BackLink
+            fallbackHref={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
+            fallbackLabel="Back to teams"
+        />
         <h2 class="m-0 text-title text-ink">{data.teamName}</h2>
         <span class="text-xs text-ink-3">
             {data.members.length === 1 ? '1 member' : `${data.members.length} members`}
@@ -60,20 +57,15 @@
     {#if data.project}
         <section class="flex flex-col gap-2">
             <h3 class="meta m-0">Project</h3>
-            <!--
-              The projects list's own card, its View the way onto the project.
-
-              `?from=team` carries this team back, so the chain stays reversible
-              instead of returning to a projects list the reader was never on.
-            -->
+            <!-- The projects list's own card, its View the way onto the
+                 project. -->
             <ProjectCard
                 title={data.project.title}
                 excerpt={data.project.excerpt}
                 creator={data.project.creator}
                 track={data.project.track}
                 imageUrl={data.project.imageUrl}
-                moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{data.project
-                    .id}?from=team&team={data.teamId}"
+                moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{data.project.id}"
             />
         </section>
     {/if}
@@ -96,9 +88,9 @@
                         : ''}
                 </span>
                 <a
-                    href="{resolve(
+                    href={resolve(
                         `/my/hackathon/${data.hackathonId}/submissions/${data.teamId}`
-                    )}?from=team"
+                    )}
                     class="btn btn-sm btn-ghost no-underline"
                 >
                     View entry

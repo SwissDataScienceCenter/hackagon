@@ -36,3 +36,5 @@ It might also show:
 - Click {guilabel}`Make owner` or {guilabel}`Remove owner` to change their role.
 - Click {guilabel}`Remove from hackathon` to remove them. For an owner, remove
   the owner role first.
+- The back link returns to the page you came from. Opened on its own, it goes to
+  the tab you opened the person from.

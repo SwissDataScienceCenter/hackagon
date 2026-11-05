@@ -29,7 +29,10 @@ declare global {
       platformUser?: User
     }
     // interface PageData {}
-    // interface PageState {}
+    export interface PageState {
+      /** Where this page's back link leads — see `$lib/navigation/backLink`. */
+      back?: import("$lib/navigation/backLink").Back
+    }
     // interface Platform {}
   }
 }

@@ -38,45 +38,9 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     hackathonId: hackathon.id,
-    ...backTo(hackathon.id, found.id, event.url.searchParams.get("from")),
     // From the team the backend returned rather than the URL, so no link
     // inherits a malformed id that `Get` would have refused.
     ...submissionView(hackathon, found, found.submissions),
     mayEdit: maySubmit && found.members.some((m) => m.id === platformUserId),
-  }
-}
-
-/**
- * Where "back" goes: to the page that sent the reader here, named by `?from=`,
- * and the Submissions list when there is none or it is one this does not know.
- * Only ever builds a path of our own, so an unknown value cannot send anyone
- * elsewhere.
- */
-function backTo(
-  hackathonId: string,
-  teamId: string,
-  from: string | null,
-): { backHref: string; backLabel: string } {
-  const base = `/my/hackathon/${hackathonId}`
-  switch (from) {
-    case "voting":
-      return { backHref: `${base}/voting`, backLabel: "Back to voting" }
-    case "results":
-      return { backHref: `${base}/results`, backLabel: "Back to results" }
-    case "manage-voting":
-      return {
-        backHref: `${base}/voting/manage`,
-        backLabel: "Back to manage voting",
-      }
-    case "team":
-      return {
-        backHref: `${base}/teams/${teamId}`,
-        backLabel: "Back to the team",
-      }
-    default:
-      return {
-        backHref: `${base}/submissions`,
-        backLabel: "Back to submissions",
-      }
   }
 }

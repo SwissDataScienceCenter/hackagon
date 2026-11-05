@@ -48,6 +48,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- The back link on a project, a team, a submission, a participant's profile, and
+  Manage's project and person pages returns to the page you came from, and says
+  which. Opened on its own, it goes to the page's list as before.
 - A user's platform role is now changed on their own page instead of from a
   dropdown in the user list. Switching a Hackathon Organizer to Admin, or back,
   is one step rather than revoke then grant. Changes are saved with a Save bar,

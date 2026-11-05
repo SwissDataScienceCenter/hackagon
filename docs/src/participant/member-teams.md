@@ -30,3 +30,5 @@ them. It shows:
   it on its [submission page](member-submissions.md#submission-page).
 - Hand in your own team's work on [Our submission](member-our-submission.md).
 - Read what each team handed in on [Submissions](member-submissions.md).
+- The back link returns to the page you came from. Opened on its own, it goes to
+  the teams list.

@@ -26,6 +26,8 @@ Every project, whatever its status. It shows:
   decision.
 - Only approved projects appear on [Projects](../participant/member-projects.md)
   and on [Manage Teams](manage-teams.md).
+- The back link returns to the page you came from. Opened on its own, it goes to
+  the list of projects, on the status you were looking at.
 
 ## New project
 
