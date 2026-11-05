@@ -97,7 +97,8 @@ overwritten; those never do, so a specific build can be pinned:
 
 ### staging runs the latest release
 
-Staging runs the newest release, hotfixes included: it is there to test hotfixes before they go to prod.
+Staging runs the newest release, hotfixes included: it is there to test hotfixes
+before they go to prod.
 
 ### prod follows releases
 
