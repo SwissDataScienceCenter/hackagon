@@ -71,8 +71,8 @@ help:
     echo -e "  ${dim}The backend recreates the schema on startup, so the instance comes back empty.${reset}"
     echo ""
     echo -e "  ${cyan}just cluster::reseed${reset} <dev|staging>"
-    echo -e "  ${dim}Back up, wipe, then run cmd/seed. components/backend must match what the${reset}"
-    echo -e "  ${dim}instance serves: origin/main for dev, the newest origin/release/* for staging.${reset}"
+    echo -e "  ${dim}Back up, wipe, then run cmd/seed built from the code the instance serves —${reset}"
+    echo -e "  ${dim}origin/main for dev, the newest origin/release/* for staging — whatever is checked out.${reset}"
     echo ""
     echo -e "  ${dim}e.g. just cluster::reseed staging${reset}"
     echo ""
@@ -125,7 +125,7 @@ wipe instance:
     just -f "{{source_file()}}" _backend-down "{{instance}}"
     just -f "{{source_file()}}" _wipe-db "{{instance}}"
 
-# Back up, wipe, then seed the dev fixture from this checkout.
+# Back up, wipe, then seed the dev fixture, built from the code the instance serves.
 [group('cluster')]
 reseed instance:
     #!/usr/bin/env bash
@@ -134,7 +134,7 @@ reseed instance:
     resolve_instance "{{instance}}"
     cd "{{root_dir}}"
 
-    just -f "{{source_file()}}" _backend-matches "{{instance}}"
+    ref="$(just -f "{{source_file()}}" _seed-ref "{{instance}}")"
     just -f "{{source_file()}}" _guard "{{instance}}"
 
     kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
@@ -147,19 +147,23 @@ reseed instance:
         echo "==> Scaling backend back to $replicas"
         "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
     }
-    # However this ends: close the tunnel, delete the temp dir, and bring the
-    # backend back if it was taken down.
+    # However this ends: close the tunnel, delete the temp dir and the worktree
+    # in it, and bring the backend back if it was taken down.
     cleanup() {
         [ -n "$pf_pid" ] && kill "$pf_pid" 2>/dev/null || true
         rm -rf "$tmp"
+        git -C "{{root_dir}}" worktree prune
         [ -z "$backend_down" ] || restore_backend
     }
     trap cleanup EXIT
 
     # Everything that can fail without changing the cluster happens first, so
     # a failure here leaves the instance exactly as it was.
-    echo "==> Building the seed"
-    (cd components/backend && go build -o "$tmp/seed" ./cmd/seed/)
+    # The seed runs the backend's handlers in-process and creates the schema, so
+    # it is built from the code the instance serves, not from this checkout.
+    echo "==> Building the seed from $ref"
+    git worktree add --quiet --detach "$tmp/src" "$ref"
+    (cd "$tmp/src/components/backend" && go build -o "$tmp/seed" ./cmd/seed/)
 
     echo "==> Fetching backend config and database password from the cluster"
     "${kc[@]}" get cm "{{backend_config}}" -o jsonpath='{.data.config\.yaml}' > "$tmp/config.yaml"
@@ -196,7 +200,7 @@ reseed instance:
         || { echo "✗ The port-forward to postgres did not open within 10s." >&2; exit 1; }
 
     echo "==> Seeding"
-    cd components/backend
+    cd "$tmp/src/components/backend"
     HACKAGON_DATABASE_HOST=127.0.0.1 \
     HACKAGON_DATABASE_PORT="{{local_pg_port}}" \
     HACKAGON_DATABASE_PASSWORD="$db_password" \
@@ -250,10 +254,10 @@ _wipe-db instance:
         -c 'CREATE DATABASE {{app_db}} OWNER {{app_db_owner}};'
     echo "✓ Database {{app_db}} is empty"
 
-# Refuse unless this checkout's backend is the code the instance serves: dev
-# follows origin/main, staging the newest origin/release/* branch.
+# Fetch and print the ref whose code the instance serves: dev follows
+# origin/main, staging the newest origin/release/* branch.
 [private]
-_backend-matches instance:
+_seed-ref instance:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{root_dir}}"
@@ -270,20 +274,7 @@ _backend-matches instance:
         ;;
       *) echo "✗ Unknown instance '{{instance}}': expected dev or staging." >&2; exit 1 ;;
     esac
-
-    if ! git merge-base --is-ancestor "$ref" HEAD; then
-        echo "✗ This checkout is behind $ref. Check out or merge $ref first." >&2
-        exit 1
-    fi
-    if ! git diff --quiet "$ref" -- components/backend; then
-        echo "✗ components/backend differs from $ref, which {{instance}} is serving." >&2
-        exit 1
-    fi
-    if [ -n "$(git status --porcelain components/backend)" ]; then
-        echo "✗ components/backend has uncommitted changes." >&2
-        exit 1
-    fi
-    echo "✓ components/backend matches $ref"
+    echo "$ref"
 
 # Refuse unless the kubeconfig reaches a namespace whose ingress serves the instance's host.
 [private]
