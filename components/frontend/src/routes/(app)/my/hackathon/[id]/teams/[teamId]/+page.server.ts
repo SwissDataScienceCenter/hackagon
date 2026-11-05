@@ -10,11 +10,11 @@ import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 /**
  * One team: who is on it, the project it works on, and whether it has handed
  * anything in. Reached from the teams list, a participant's profile, a
- * project's page and the Submissions page.
+ * project's page, the Submissions page and a submission's page.
  *
  * The entry itself is not shown here, only that it exists and when it was
- * saved: it is read on the Submissions page, which is where the ballot and the
- * results link to as well, so there is one place that shows it.
+ * saved: it is read on its own page, which is where the ballot and the results
+ * link to as well, so there is one place that shows it.
  *
  * `TeamService.Get` eager-loads every submission a team has, drafts included
  * (see `TODO(backend: submission-cross-team-read)` in `teamEntries`).
@@ -44,7 +44,7 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: event.params.id,
     // Its own id, so the project link can carry a way back to this page, and
-    // the entry link can point at this team's card on Submissions. Taken from
+    // the entry link can point at this team's submission page. Taken from
     // the team the backend returned rather than from the URL, so neither can
     // inherit a malformed id that `Get` would have already refused.
     teamId: found.id,
@@ -75,7 +75,7 @@ export const load: PageServerLoad = async (event) => {
             imageUrl: project.image,
           }
         : undefined,
-    // When and by whom, nothing more: the content is read on Submissions.
+    // When and by whom, nothing more: the content is read on its own page.
     entry: entry
       ? { updatedAt: entry.updatedAt, updatedBy: entry.updatedBy }
       : null,
