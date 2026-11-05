@@ -283,12 +283,10 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 		return err
 	}
 
+	// No "About" page: the member menu has an About entry of its own, built
+	// from the hackathon's description above, and a page of the same name would
+	// sit in the menu beside it saying the same thing.
 	if err := h.createPages(alice, id, []pageSpec{
-		{
-			"About",
-			"# Data for Good Hackathon 2026\n\nOne week, fifteen projects, and a hundred participants working with open data on problems that matter: public health, education, and civic transparency.\n\nRegistration has closed. We are now forming teams from the project preferences you gave us.",
-			true,
-		},
 		{
 			"How teams are formed",
 			"## From preferences to teams\n\nEveryone picked between one and four projects they would like to work on. Organizers now assign each participant to exactly **one** team, weighing:\n\n1. Your stated preferences, highest first\n2. Team size — we aim for 4–6 people per project\n3. A spread of skills within each team\n\nProjects that nobody picked will not run. Projects that everybody picked may be split into two teams.",
