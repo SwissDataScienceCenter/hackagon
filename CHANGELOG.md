@@ -74,6 +74,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A team's page always leads back to Teams. Opened from a participant's profile
+  while voting was open, it led to the ballot, which no longer links to it.
 - Participants can see published results after voting has closed; the results
   page used to fail with an error once an organizer turned voting off.
 - A participant removed from a hackathon by an organizer is now also taken off

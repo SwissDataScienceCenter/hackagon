@@ -57,12 +57,8 @@
                         Edit
                     </a>
                 {/if}
-                <!-- `?from=teams` so the team's page offers a way back to the
-                     teams list rather than to the ballot. -->
                 <a
-                    href="{resolve(
-                        `/my/hackathon/${data.hackathonId}/teams/${c.teamId}`
-                    )}?from=teams"
+                    href={resolve(`/my/hackathon/${data.hackathonId}/teams/${c.teamId}`)}
                     class="btn btn-sm btn-ghost no-underline"
                 >
                     View team

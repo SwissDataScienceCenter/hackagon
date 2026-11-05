@@ -28,27 +28,19 @@
   the project it works on, and whether it has handed anything in — each the
   way that thing is drawn elsewhere, so nothing here has a look of its own.
 
-  Two ways in — the ballot and the teams list — so the back link follows the
-  `?from` the teams list sets, and falls back to voting for a bookmark, a reload
-  or a shared URL that carries none. See the load.
+  The back link always goes to the teams list, whichever way the reader came
+  in: it is where every team is, and the one page this always belongs under.
+  It used to fall back to the ballot, from when the ballot linked here — it now
+  links to Submissions, so that fallback led somewhere this page is not.
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        {#if data.backToTeams}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to teams
-            </a>
-        {:else}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/voting`)}
-                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-            >
-                &larr; Back to voting
-            </a>
-        {/if}
+        <a
+            href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+        >
+            &larr; Back to teams
+        </a>
         <h2 class="m-0 text-title text-ink">{data.teamName}</h2>
         <span class="text-xs text-ink-3">
             {data.members.length === 1 ? '1 member' : `${data.members.length} members`}
@@ -72,10 +64,7 @@
               The projects list's own card, its View the way onto the project.
 
               `?from=team` carries this team back, so the chain stays reversible
-              instead of returning to a projects list the reader was never on,
-              and `teamFrom` carries one more hop — where *this* page came from —
-              so returning here restores this page's own back link rather than
-              resetting it to the default.
+              instead of returning to a projects list the reader was never on.
             -->
             <ProjectCard
                 title={data.project.title}
@@ -84,9 +73,7 @@
                 track={data.project.track}
                 imageUrl={data.project.imageUrl}
                 moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{data.project
-                    .id}?from=team&team={data.teamId}{data.backToTeams
-                    ? '&teamFrom=teams'
-                    : ''}"
+                    .id}?from=team&team={data.teamId}"
             />
         </section>
     {/if}

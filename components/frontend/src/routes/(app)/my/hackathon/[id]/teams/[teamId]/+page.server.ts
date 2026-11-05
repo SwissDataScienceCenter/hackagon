@@ -23,7 +23,7 @@ import { ClientError, Status } from "nice-grpc-common"
  * the server — the same containment `teamEntries` relies on.
  */
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, votingEnabled } = await event.parent()
+  const { hackathon } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
 
   let found
@@ -52,20 +52,6 @@ export const load: PageServerLoad = async (event) => {
   // may see and a team can sit on a project that is not in it.
   const project = hackathon.projects.find((p) => p.id === found.projectId)
 
-  // Where the back link goes, since there are several ways in. Read from an
-  // explicit `?from` rather than the Referer header: a bookmark, a reload or a
-  // shared URL sends no referrer. Only the value the teams list sets is
-  // honoured, so an arbitrary query string cannot point the link anywhere else.
-  //
-  // `votingEnabled` is the second half, and it is not a nicety. The ballot used
-  // to be the only way in, which made voting a safe default — reaching this page
-  // at all meant voting was open. The teams list is reachable whether or not it
-  // is, so a reader arriving with no `?from` (a bookmark, or the return trip from
-  // the proposal below) would otherwise be handed a link to a ballot they cannot
-  // open. The teams list is always a real destination for a team that exists.
-  const backToTeams =
-    event.url.searchParams.get("from") === "teams" || !votingEnabled
-
   // Who saved the entry, and who proposed the project — members and owners, so
   // an organiser who proposed without joining is named too.
   const names = namesByUserId(hackathon.members, hackathon.owners)
@@ -79,7 +65,6 @@ export const load: PageServerLoad = async (event) => {
     // the team the backend returned rather than from the URL, so neither can
     // inherit a malformed id that `Get` would have already refused.
     teamId: found.id,
-    backToTeams,
     teamName: found.name,
     // The project as the projects list draws it, so the card reads the same in
     // both places.

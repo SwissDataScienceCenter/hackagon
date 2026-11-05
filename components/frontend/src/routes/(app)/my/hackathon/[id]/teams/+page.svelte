@@ -86,15 +86,10 @@
                         }))}
                     >
                         {#snippet actions()}
-                            <!--
-                              `?from=teams` so the detail page comes back here
-                              rather than to the ballot — it is reached from both
-                              now. See its load.
-                            -->
                             <a
-                                href="{resolve(
+                                href={resolve(
                                     `/my/hackathon/${data.hackathonId}/teams/${team.id}`
-                                )}?from=teams"
+                                )}
                                 class="btn btn-sm btn-ghost no-underline"
                             >
                                 View

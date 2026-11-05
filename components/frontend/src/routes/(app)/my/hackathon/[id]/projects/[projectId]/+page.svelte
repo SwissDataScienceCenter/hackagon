@@ -15,7 +15,6 @@
 <ProjectDetail
     project={data.project}
     backHref={data.backHref}
-    backQuery={data.backQuery}
     backLabel={data.backLabel}
 >
     {#if data.review}
