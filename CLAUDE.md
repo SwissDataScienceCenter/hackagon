@@ -113,10 +113,10 @@ just helm::template [args]      # render the chart to stdout
 just helm::check-bump           # fail if helm-chart/ changed without a version bump
 just helm::publish              # push the chart if Chart.yaml's version is unpublished
 
-# Deployed dev instance only — takes the kube context, refuses any other cluster
-just cluster::backup <context>  # pg_dumpall to ~/hackagon-backups
-just cluster::wipe <context>    # backup, then drop + recreate the app DB; dev restarts empty
-just cluster::reseed <context>  # backup, wipe, then seed; refuses if components/backend differs from origin/main
+# Deployed dev or staging only, via ~/.config/kube/sck-sit-dev (override: HACKAGON_KUBECONFIG)
+just cluster::backup <dev|staging>  # pg_dumpall to ~/hackagon-backups
+just cluster::wipe <dev|staging>    # backup, then drop + recreate the app DB; the instance restarts empty
+just cluster::reseed <dev|staging>  # backup, wipe, then seed built from origin/main (dev) or the newest origin/release/* (staging)
 ```
 
 Backend listens on **:3000**, frontend on **:8081**. Dev users (Keycloak
@@ -169,10 +169,12 @@ These hold across the whole codebase; the skills explain the mechanisms.
   focused pull request per change, each carrying its manually added
   `CHANGELOG.md` entry. Each released minor line has a `release/X.Y` branch that
   takes hotfixes only, released from its own tags and cherry-picked back to
-  `main`. Both clusters install the same chart from the GitOps setup in
-  `sdsc-ordes/cloud-infra` and differ only in image overrides: **dev** runs
-  `temporary/*:latest` with `pullPolicy: Always`, so every push to `main`
-  reaches it on the next container restart; **prod** takes the chart defaults,
+  `main`. All three instances install the same chart from the GitOps setup in
+  `sdsc-ordes/cloud-infra` and differ only in image overrides: **dev**
+  (namespace `hackagon-dev`) runs `temporary/*:latest` with
+  `pullPolicy: Always`, so every push to `main` reaches it on the next container
+  restart; **staging** (namespace `hackagon-staging`, same cluster as dev) runs
+  the latest release, hotfixes included; **prod** takes the chart defaults,
   `release/*` at `appVersion`, so nothing merged can reach it until someone
   bumps `appVersion` and installs the new chart version. See `RELEASING.md`.
 - **The chart versions itself; `VERSION` never touches it.**

@@ -15,7 +15,7 @@ main ──●──●──●──●──●──●──●──●─
           │
           v0.12.1 + its chart bump
           │
-          └── release/0.12 ──●── v0.12.2 ──●── v0.12.3   hotfixes only; prod runs these tags
+          └── release/0.12 ──●── v0.12.2 ──●── v0.12.3   hotfixes only; staging and prod run these tags
                              ▲
                          hotfix/… PRs
 ```
@@ -44,14 +44,24 @@ itself builds nothing; only its tags do.
 
 ## Deployment
 
-Two clusters, both installed from the Helm chart by the GitOps setup in
-`sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-cluster overrides. The
-only thing that differs between them is which images they pull.
+Three instances, all installed from the Helm chart by the GitOps setup in
+`sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-instance overrides. The
+only thing that differs between them is which images they pull. Dev and staging
+share one cluster, each in its own namespace, reached through the kubeconfig
+`~/.config/kube/sck-sit-dev`.
 
-| Cluster | Images                                       | Moves when                       |
-| ------- | -------------------------------------------- | -------------------------------- |
-| dev     | `temporary/*:latest`, `pullPolicy: Always`   | anything is merged to `main`     |
-| prod    | chart defaults — `release/*` at `appVersion` | a new chart version is installed |
+| Instance                                                      | Namespace          | Images                                       | Moves when                       |
+| ------------------------------------------------------------- | ------------------ | -------------------------------------------- | -------------------------------- |
+| [dev](https://hackagon-dev.sck-sit-dev.dscompute.ch/)         | `hackagon-dev`     | `temporary/*:latest`, `pullPolicy: Always`   | anything is merged to `main`     |
+| [staging](https://hackagon-staging.sck-sit-dev.dscompute.ch/) | `hackagon-staging` | the latest release, hotfixes included        | a new release or hotfix is out   |
+| prod                                                          |                    | chart defaults — `release/*` at `appVersion` | a new chart version is installed |
+
+None of them seeds itself. Dev and staging get the test fixture from
+`just cluster::reseed dev` or `just cluster::reseed staging`, which builds the
+seed from the code that instance serves — `origin/main` or the newest
+`origin/release/*` — whatever is checked out; see
+[the seed README](components/backend/cmd/seed/README.md#when-to-re-seed). Prod
+is never seeded, and the `cluster::` recipes cannot name it.
 
 ### dev follows `main`
 
@@ -64,7 +74,8 @@ A restart is not always something you chose: an eviction or a node drain
 restarts the container too. To restart it on purpose:
 
 ```bash
-kubectl rollout restart deploy/hackagon-frontend
+kubectl --kubeconfig ~/.config/kube/sck-sit-dev -n hackagon-dev \
+    rollout restart deploy/hackagon-frontend
 ```
 
 To see which build it is serving, read the version at the bottom of the page.
@@ -83,6 +94,11 @@ overwritten; those never do, so a specific build can be pinned:
 ```
 
 `skopeo list-tags docker://<repository>` shows which tags exist.
+
+### staging runs the latest release
+
+Staging runs the newest release, hotfixes included: what prod would get on its
+next install, while prod itself stays on the release it was installed with.
 
 ### prod follows releases
 

@@ -53,10 +53,10 @@ cannot log in — see [Users](#users).
 ## When to re-seed
 
 **Nothing re-seeds automatically.** The backend never runs `cmd/seed`: a deploy,
-a restart or a new image only migrates the schema and keeps every row. So the
-dev cluster holds whatever the last manual re-seed wrote, plus everything people
-have done to it since; production is never seeded at all. CI does run the seed,
-but against a throwaway stack, to prove it still works — nothing it writes
+a restart or a new image only migrates the schema and keeps every row. So dev
+and staging hold whatever the last manual re-seed wrote, plus everything people
+have done to them since; production is never seeded at all. CI does run the
+seed, but against a throwaway stack, to prove it still works — nothing it writes
 survives the job.
 
 Re-seed when one of these is true:
@@ -95,10 +95,12 @@ just deploy::down && just deploy::up # reload the casbin policy, see below
 # Or all of that at once, regenerating code too
 just schema-change
 
-# The dev cluster — backs up, wipes the app database (Keycloak is kept),
-# seeds from your checkout and restarts the backend. Refuses unless
-# components/backend matches origin/main.
-just cluster::reseed <kube-context>
+# Dev or staging — backs up, wipes the app database (Keycloak is kept), seeds
+# and restarts the backend. The seed is built from the code the instance:
+# origin/main for dev, the newest origin/release/* for staging,
+# needs HACKAGON_KUBECONFIG to be set.
+just cluster::reseed dev
+just cluster::reseed staging
 ```
 
 ## Running the seed
