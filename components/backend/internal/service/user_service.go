@@ -33,7 +33,7 @@ func (s *UserService) List(
 	ctx context.Context,
 	_ *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
-	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Read); err != nil {
+	if err := s.enforcer.RequireGlobalPermission(ctx, m.User, m.Read); err != nil {
 		return nil, err
 	}
 	users, err := s.dbClient.User.Query().All(ctx)
@@ -145,7 +145,7 @@ func (s *UserService) Get(
 	ctx context.Context,
 	req *msgs.GetRequest,
 ) (*msgs.GetResponse, error) {
-	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Read); err != nil {
+	if err := s.enforcer.RequireGlobalPermission(ctx, m.User, m.Read); err != nil {
 		return nil, err
 	}
 	id, err := uuid.Parse(req.GetUserId())
@@ -220,7 +220,7 @@ func (s *UserService) AddRole(
 	if _, _, err := m.RequireSubject(ctx); err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+	if err := s.enforcer.RequireGlobalPermission(ctx, m.User, m.Write); err != nil {
 		return nil, err
 	}
 
@@ -266,7 +266,7 @@ func (s *UserService) RemoveRole(
 	if err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+	if err := s.enforcer.RequireGlobalPermission(ctx, m.User, m.Write); err != nil {
 		return nil, err
 	}
 

@@ -41,28 +41,14 @@ func (s *TrackService) List(
 	}
 
 	// Check Track.Read permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Track,
 		mw.Read,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Query tracks ordered by name
@@ -107,12 +93,17 @@ func (s *TrackService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := track.Edges.Hackathon.ID
+	h, err := track.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Track.Read permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Track,
 		mw.Read,
 	); err != nil {
@@ -137,28 +128,14 @@ func (s *TrackService) Create(
 	}
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Track,
 		mw.Write,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Ensure user exists and get their entity ID
@@ -217,12 +194,17 @@ func (s *TrackService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := track.Edges.Hackathon.ID
+	h, err := track.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Track,
 		mw.Write,
 	); err != nil {
@@ -302,12 +284,17 @@ func (s *TrackService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := track.Edges.Hackathon.ID
+	h, err := track.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Track,
 		mw.Write,
 	); err != nil {

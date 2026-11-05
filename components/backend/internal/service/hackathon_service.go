@@ -48,7 +48,7 @@ func (s *HackathonService) Create(
 	if err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(ctx, "*", mw.Hackathon, mw.Create); err != nil {
+	if err := s.enforcer.RequireGlobalPermission(ctx, mw.Hackathon, mw.Create); err != nil {
 		return nil, err
 	}
 
@@ -145,7 +145,13 @@ func (s *HackathonService) Get(
 
 	// Read, so members, owners and admins only — this response carries the
 	// participant roster. A public hackathon grants View, not Read.
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -238,7 +244,13 @@ func (s *HackathonService) CreateInvite(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -304,22 +316,14 @@ func (s *HackathonService) ListInvites(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	invites, err := s.dbClient.HackathonInvite.Query().
@@ -365,10 +369,15 @@ func (s *HackathonService) RevokeInvite(
 	}
 
 	// Check write permission on the invite's hackathon
-	hackID := invite.Edges.Hackathon.ID
-	if err := s.enforcer.RequirePermission(
+	h, err := invite.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackID := h.ID
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackID.String(),
+		s.dbClient,
+		hackID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -413,29 +422,19 @@ func (s *HackathonService) PreviewInvite(
 		return nil, status.Error(codes.Internal, "couldn't query invite")
 	}
 
-	// Check not revoked
 	if invite.RevokedAt != nil {
 		return nil, status.Error(codes.NotFound, "invalid or expired invitation")
 	}
 
-	// Check not expired
 	if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
 		return nil, status.Error(codes.NotFound, "invalid or expired invitation")
 	}
 
-	hackID := invite.Edges.Hackathon.ID
-
-	// Get shallow hackathon
-	h, err := s.dbClient.Hackathon.Query().
-		Where(enthackathon.IDEQ(hackID)).
-		Only(ctx)
+	h, err := invite.Edges.HackathonOrErr()
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Error(codes.NotFound, "invalid or expired invitation")
-		}
-		slog.Error("query hackathon", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query hackathon")
+		return nil, edgeError(err, "invalid or expired invitation")
 	}
+	hackID := h.ID
 
 	hackEntry := hackathonEntryFromEnt(h, time.Now())
 
@@ -573,7 +572,13 @@ func (s *HackathonService) Join(
 	// a hackathon need to have join permission enabled(== registration phase open), and
 	// the user needs to either be able to view the hackathon (a public one is
 	// viewable by anyone) or have a valid invite to join
-	if err = s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Join); err != nil {
+	if err = s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Join,
+	); err != nil {
 		return nil, err
 	}
 
@@ -736,6 +741,67 @@ func (s *HackathonService) ApproveParticipant(
 		return nil, err
 	}
 
+	// Reject anonymous users.
+	if uid == mw.AnonSubject {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot remove participants",
+		)
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon.
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists.
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).WithParticipants(
+		func(pq *ent.ParticipantQuery) {
+			pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
+		},
+	).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if len(h.Edges.Participants) == 0 {
+		return nil, status.Errorf(codes.NotFound, "Participant %s not found", userId)
+	}
+
+	// Find the user to approve.
+	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user to approve", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
 	// The same confirmation a private hackathon does for itself in `Join`.
 	if err := s.grantMembership(ctx, id, user); err != nil {
 		return nil, err
@@ -838,7 +904,29 @@ func (s *HackathonService) Leave(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	// Check Write permission on hackathon (owners/organizers only).
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists.
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).
+		WithParticipants(
+			func(pq *ent.ParticipantQuery) {
+				pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
+			},
+		).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -1046,7 +1134,13 @@ func (s *HackathonService) Edit(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, h.ID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		h.ID,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1135,6 +1229,60 @@ func (s *HackathonService) Edit(
 	return &msgs.EditResponse{Hackathon: entry}, nil
 }
 
+// Delete hides a hackathon by setting deleted_at; nothing is removed, so its
+// data and casbin rows stay for a potential restore.
+func (s *HackathonService) Delete(
+	ctx context.Context,
+	req *msgs.DeleteRequest,
+) (*msgs.DeleteResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Delete,
+	); err != nil {
+		return nil, err
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// DeletedAtIsNil: if a concurrent Delete got there first, this call gets a NotFound error.
+	n, err := s.dbClient.Hackathon.Update().
+		Where(enthackathon.IDEQ(id), enthackathon.DeletedAtIsNil()).
+		SetDeletedAt(time.Now()).
+		SetDeleter(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("delete hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't delete hackathon in database")
+	}
+	if n == 0 {
+		return nil, status.Errorf(codes.NotFound, "hackathon %s not found", id)
+	}
+
+	return &msgs.DeleteResponse{}, nil
+}
+
 func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long because of the switch
 	ctx context.Context,
 	req *msgs.SetCapabilitiesRequest,
@@ -1150,7 +1298,13 @@ func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1387,9 +1541,10 @@ func (s *HackathonService) SetCurrentPhase(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -1484,9 +1639,10 @@ func (s *HackathonService) AddOwner(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -1569,9 +1725,10 @@ func (s *HackathonService) RemoveOwner(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -1826,22 +1983,14 @@ func (s *HackathonService) CreateQuestion(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Check for duplicate key
@@ -1916,9 +2065,10 @@ func (s *HackathonService) EditQuestion(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackID.String(),
+		s.dbClient,
+		hackID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -2026,9 +2176,10 @@ func (s *HackathonService) RemoveQuestion(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackID.String(),
+		s.dbClient,
+		hackID,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -2073,7 +2224,13 @@ func (s *HackathonService) ListQuestions(
 	}
 	// View, not Read: the registration form is fetched by people who have not
 	// joined yet, which is the whole point of it.
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.View); err != nil {
+	if err := s.enforcer.RequireHackathonPermission(
+		ctx,
+		s.dbClient,
+		id,
+		mw.Hackathon,
+		mw.View,
+	); err != nil {
 		return nil, err
 	}
 
@@ -2112,27 +2269,14 @@ func (s *HackathonService) SubmitAnswers(
 	}
 
 	// View, for the same reason as ListQuestions above.
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackID.String(),
+		s.dbClient,
+		hackID,
 		mw.Hackathon,
 		mw.View,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
@@ -2205,6 +2349,16 @@ func (s *HackathonService) ListParticipantAnswers(
 			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
 		}
 		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackID)
+		}
+		slog.Error("query hackathon", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 

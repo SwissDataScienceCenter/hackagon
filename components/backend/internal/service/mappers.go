@@ -461,8 +461,8 @@ func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
 		v := int32(c.MaxPoints)
 		entry.MaxPoints = &v
 	}
-	if c.Edges.Hackathon != nil {
-		entry.HackathonId = c.Edges.Hackathon.ID.String()
+	if h, err := c.Edges.HackathonOrErr(); err == nil {
+		entry.HackathonId = h.ID.String()
 	}
 	if len(c.Edges.JuryMembers) > 0 {
 		entry.JuryMembers = make([]*userEnts.User, 0, len(c.Edges.JuryMembers))
