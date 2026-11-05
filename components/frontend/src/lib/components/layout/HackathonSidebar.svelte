@@ -7,10 +7,9 @@
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import ExternalLink from 'lucide-svelte/icons/external-link';
     import UserRound from 'lucide-svelte/icons/user-round';
-    import Lock from 'lucide-svelte/icons/lock';
     import { resolve } from '$app/paths';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import { manageNav, memberNav } from '$lib/navigation/items';
+    import { hackathonNav } from '$lib/navigation/items';
     import { activeNavId } from '$lib/navigation/active';
     import { hackathonRoleBadge } from '$lib/utils/hackathonRole';
 
@@ -28,7 +27,6 @@
 
     let {
         hackathonId,
-        hackathonName,
         pages,
         membership,
         isGlobalAdmin,
@@ -44,7 +42,6 @@
         isPrivate = false,
     }: {
         hackathonId: string;
-        hackathonName: string;
         /**
          * The hackathon's content pages, already filtered to the visible ones and
          * ordered by the backend.
@@ -142,32 +139,30 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
-    const items = $derived(
-        memberNav(
+    // Through `hackathonNav`, the same builder the layout's breadcrumb reads, so
+    // the two cannot disagree about which entries exist. Given the same
+    // `membership`/`isGlobalAdmin` as `badge` below, so the Manage section and
+    // the "Owner" chip can never disagree about the role.
+    const nav = $derived(
+        hackathonNav({
             hackathonId,
             pages,
+            membership,
+            isGlobalAdmin,
             votingEnabled,
             resultsVisible,
             teamCount,
+            trackCount,
             phaseCount,
             myProjectCount,
+            proposalsOpen,
             myTeamCount,
-            proposalsOpen
-        ),
-    );
-    // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
-    // section and the "Owner" chip can never disagree about the role.
-    const manageItems = $derived(
-        manageNav(
-            hackathonId,
-            membership ?? undefined,
-            isGlobalAdmin,
             stateNeedsAttention,
-            trackCount,
             isPrivate,
-            phaseCount,
-        ),
+        }),
     );
+    const items = $derived(nav.items);
+    const manageItems = $derived(nav.manageItems);
 
     // One call across both sections, per activeNavId's contract: computing it per
     // section let each highlight its own best match, so two could light at once.
@@ -259,9 +254,9 @@
     }
 </script>
 
-<!-- Off-canvas on mobile, so the hackathon's nav needs its own trigger. The bar
-     names the hackathon rather than repeating the wordmark, which NavBar above it
-     already carries. -->
+<!-- Off-canvas on mobile, so the hackathon's nav needs its own trigger. It says
+     "Menu" rather than naming the hackathon: the breadcrumb right below it names
+     the hackathon, and the two said the same thing one line apart. -->
 <div
     class="flex h-12 items-center gap-3 border-b border-line bg-surface px-4
            md:hidden"
@@ -269,11 +264,11 @@
     <button
         onclick={() => (mobileOpen = true)}
         aria-label="Open hackathon navigation"
-        class="btn btn-icon btn-sm"
+        class="btn btn-sm btn-quiet"
     >
         <Menu class="h-5 w-5" />
+        Menu
     </button>
-    <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
 </div>
 
 {#if mobileOpen}
@@ -296,16 +291,18 @@
            md:h-[calc(100vh-3.5rem)] md:translate-x-0 md:self-start md:transition-[width]
            {mobileOpen ? 'translate-x-0' : ''} {collapsed ? 'md:w-16' : 'md:w-64'}"
 >
-    <!-- Two lines, not one. The name, its role chip and the collapse control
-         were competing for a 16rem rail, and the name — the thing the header is
-         for — lost, truncating to "Climate Tech …" while a badge sat beside it
-         at full width. The name now has the first line to itself.
+    <!-- No hackathon name. It used to head this column, cut off at 16rem
+         ("Data for Good Hackatho…") and gone entirely once the column folded
+         to its rail. The breadcrumb at the top of the content column carries
+         it now, in full and whatever this column is doing — see
+         HackathonBreadcrumb.
 
-         The second carries the chip and the way out to the public page, which
-         belongs with the hackathon's identity rather than among the member
-         entries below: it is the same hackathon seen from outside, not another
-         place inside it. Omitted for a private hackathon, which has no such
-         page, so the line can collapse to the chip alone. -->
+         What is left is two rows, mirroring the folded rail. First the viewer's
+         role chip and the collapse control. Then the way out to the public
+         page — the same hackathon seen from outside, so it belongs up here
+         rather than among the entries below — omitted for a private hackathon,
+         which has no such page. -->
+
     <div class="flex shrink-0 flex-col gap-1 border-b border-line px-4 py-2
                 {effectiveCollapsed ? 'items-center px-0' : ''}">
         {#if effectiveCollapsed}
@@ -328,16 +325,12 @@
                 </a>
             {/if}
         {:else}
-            <!-- The heading is load-bearing rather than decorative: these entries
-                 all belong to one hackathon, and once the shell-wide sidebar is
-                 gone this is the only place its name appears on pages that carry
-                 no hero. -->
-            <div class="flex items-center gap-2">
-                <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
-                <!-- The same padlock the list rows and the hero carry, in the
-                     same place: after the name it qualifies. -->
-                {#if isPrivate}
-                    <Lock class="h-3.5 w-3.5 shrink-0 text-ink-3" aria-label="Private" />
+            <div class="flex min-w-0 items-center gap-2">
+                {#if badge}
+                    <span class="badge shrink-0 badge-accent">
+                        <UserRound class="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {badge}
+                    </span>
                 {/if}
                 <span class="flex-1"></span>
                 <button
@@ -355,24 +348,19 @@
                     <X class="h-4 w-4" />
                 </button>
             </div>
-            <div class="flex min-w-0 items-center gap-2">
-                {#if badge}
-                    <span class="badge shrink-0 badge-accent">
-                        <UserRound class="h-3 w-3 shrink-0" aria-hidden="true" />
-                        {badge}
-                    </span>
-                {/if}
-                {#if !isPrivate}
-                    <a
-                        href={resolve(`/hackathon/${hackathonId}`)}
-                        class="ml-auto inline-flex shrink-0 items-center gap-1 text-xs
-                               text-ink-3 hover:text-ink-2"
-                    >
-                        <ExternalLink class="h-3 w-3" />
-                        Public page
-                    </a>
-                {/if}
-            </div>
+            <!-- A row of its own, as on the folded rail, where it sits under the
+                 expand control: it leaves the member area, so it is kept apart
+                 from the controls for this column. -->
+            {#if !isPrivate}
+                <a
+                    href={resolve(`/hackathon/${hackathonId}`)}
+                    class="inline-flex w-fit items-center gap-1 text-xs text-ink-3
+                           hover:text-ink-2"
+                >
+                    <ExternalLink class="h-3 w-3" />
+                    Public page
+                </a>
+            {/if}
         {/if}
     </div>
 

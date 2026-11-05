@@ -3,7 +3,10 @@
     import HackathonHero from '$lib/components/hackathon/HackathonHero.svelte';
     import OrganizerStateAlert from '$lib/components/hackathon/OrganizerStateAlert.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
+    import HackathonBreadcrumb from '$lib/components/layout/HackathonBreadcrumb.svelte';
     import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
+    import { activeNavId } from '$lib/navigation/active';
+    import { hackathonNav, type HackathonNavInput } from '$lib/navigation/items';
     import { stateAlerts } from '$lib/utils/hackathonState';
 
     import type { Snippet } from 'svelte';
@@ -84,30 +87,51 @@
             ? stateAlerts({ hasState: data.hackathonState.hasState })
             : [],
     );
+
+    // What both nav lists are built from, once: spread into the sidebar, which
+    // draws them, and read here for the breadcrumb, which names the lit entry.
+    const navInput = $derived({
+        hackathonId: hackathon.id,
+        pages: data.hackathonPages,
+        membership: data.myMembership,
+        isGlobalAdmin: data.isGlobalAdmin,
+        votingEnabled: data.votingEnabled,
+        resultsVisible: data.resultsVisible,
+        teamCount: data.teamCount,
+        trackCount: hackathon.tracks.length,
+        phaseCount: hackathon.phases.length,
+        myProjectCount: data.myProjectCount,
+        proposalsOpen: data.proposalsOpen,
+        myTeamCount: data.myTeamCount,
+        stateNeedsAttention: alerts.length > 0,
+        isPrivate: isPrivate(hackathon.visibility),
+    } satisfies HackathonNavInput);
+
+    // The entry the sidebar lights, found the way the sidebar finds it — one
+    // `activeNavId` across both sections — so the breadcrumb's last part and
+    // the highlighted row are always the same entry.
+    const currentNav = $derived.by(() => {
+        const { items, manageItems } = hackathonNav(navInput);
+        const all = [...items, ...manageItems];
+        const id = activeNavId($page.url.pathname, all);
+        return all.find((item) => item.id === id);
+    });
 </script>
 
 <div class="flex flex-col md:flex-row">
-    <HackathonSidebar
-        hackathonId={hackathon.id}
-        hackathonName={hackathon.name}
-        pages={data.hackathonPages}
-        membership={data.myMembership}
-        isGlobalAdmin={data.isGlobalAdmin}
-        votingEnabled={data.votingEnabled}
-        resultsVisible={data.resultsVisible}
-        teamCount={data.teamCount}
-        trackCount={hackathon.tracks.length}
-        phaseCount={hackathon.phases.length}
-        myProjectCount={data.myProjectCount}
-        proposalsOpen={data.proposalsOpen}
-        myTeamCount={data.myTeamCount}
-        stateNeedsAttention={alerts.length > 0}
-        isPrivate={isPrivate(hackathon.visibility)}
-    />
+    <HackathonSidebar {...navInput} />
 
     <!-- min-w-0 so a wide child (a table, a code block) shrinks inside the column
          instead of pushing the sidebar off screen. -->
     <div class="min-w-0 flex-1">
+        <!-- First in the column, so it is there whatever state the sidebar is
+             in — open, folded to its rail, or shut on a phone. -->
+        <HackathonBreadcrumb
+            hackathonName={hackathon.name}
+            isPrivate={navInput.isPrivate}
+            section={currentNav?.label}
+        />
+
         <!-- Above the hero and outside `showHero`: this follows an organiser
              across every page in the hackathon, because the whole failure mode is
              not knowing to go and look. -->

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { manageNav, memberNav, platformNav, type NavItem } from "./items"
+import {
+  hackathonNav,
+  manageNav,
+  memberNav,
+  platformNav,
+  type NavItem,
+} from "./items"
 import { activeNavId } from "./active"
 
 // HackathonRole numeric values.
@@ -712,5 +718,59 @@ describe("platformNav", () => {
     for (const item of platformNav({ isGlobalAdmin: true })) {
       expect(item.href, `${item.id} has no href`).toBeTruthy()
     }
+  })
+})
+
+// The sidebar draws these lists and the breadcrumb names the lit entry in
+// them, both through `hackathonNav`. So it must be exactly the two builders,
+// fed the same inputs, or the two surfaces could disagree about an entry.
+describe("hackathonNav", () => {
+  it("builds exactly memberNav and manageNav from one input", () => {
+    const owner = { role: 1, isWaiting: false }
+    const nav = hackathonNav({
+      hackathonId: "hack-1",
+      pages: [],
+      membership: owner,
+      isGlobalAdmin: false,
+      votingEnabled: true,
+      resultsVisible: true,
+      teamCount: 2,
+      trackCount: 1,
+      phaseCount: 1,
+      myProjectCount: 1,
+      myTeamCount: 1,
+      stateNeedsAttention: true,
+      isPrivate: true,
+    })
+
+    expect(idsOf(nav.items)).toEqual(
+      idsOf(memberNav("hack-1", [], true, true, 2, 1, 1, 1)),
+    )
+    expect(idsOf(nav.manageItems)).toEqual(
+      idsOf(manageNav("hack-1", owner, false, true, 1, true, 1)),
+    )
+  })
+
+  // The fixture above has a project, so it would pass with `proposalsOpen`
+  // dropped on the way through. With none, it alone decides My projects.
+  it("passes proposalsOpen through to My projects", () => {
+    const base = { hackathonId: "hack-1", pages: [], isGlobalAdmin: false }
+
+    expect(
+      idsOf(hackathonNav({ ...base, proposalsOpen: true }).items),
+    ).toContain("member:my-projects")
+    expect(idsOf(hackathonNav(base).items)).not.toContain("member:my-projects")
+  })
+
+  // A null membership — an admin who never joined — is no membership.
+  it("treats a null membership as none", () => {
+    const nav = hackathonNav({
+      hackathonId: "hack-1",
+      pages: [],
+      membership: null,
+      isGlobalAdmin: false,
+    })
+
+    expect(nav.manageItems).toEqual([])
   })
 })
