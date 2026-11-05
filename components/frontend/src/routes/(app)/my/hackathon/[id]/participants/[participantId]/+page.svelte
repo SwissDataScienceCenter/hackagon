@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
+    import BackLink from '$lib/components/layout/BackLink.svelte';
     import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
     import type { ActionData, PageData } from './$types';
 
@@ -86,12 +87,10 @@
 -->
 <div class="flex w-full flex-col px-4 py-8 sm:px-10 md:px-20">
     <div class="flex w-full max-w-3xl flex-col gap-6">
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/participants`)}
-            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
-        >
-            &larr; Back to participants
-        </a>
+        <BackLink
+            fallbackHref={resolve(`/my/hackathon/${data.hackathonId}/participants`)}
+            fallbackLabel="Back to participants"
+        />
 
         <div class="card card-raised box-border w-full px-5 py-4">
             <div class="flex w-full items-start gap-4">

@@ -10,8 +10,7 @@
     let {
         rows,
         method,
-        hackathonId,
-        from
+        hackathonId
     }: {
         rows: {
             key: string;
@@ -27,9 +26,6 @@
         /** Decides the score's unit: votes, points, or a ranked score. */
         method: string;
         hackathonId: string;
-        /** Which page this list sits on, so an entry's page leads back to it —
-            the `?from=` that page understands. */
-        from: 'results' | 'manage-voting';
     } = $props();
 
     function score(n: number): string {
@@ -71,7 +67,7 @@
                  to. -->
             {#if row.teamId}
                 <a
-                    href="{resolve(`/my/hackathon/${hackathonId}/submissions/${row.teamId}`)}?from={from}"
+                    href={resolve(`/my/hackathon/${hackathonId}/submissions/${row.teamId}`)}
                     class="shrink-0 whitespace-nowrap text-xs font-semibold text-accent-ink
                            no-underline hover:underline"
                 >

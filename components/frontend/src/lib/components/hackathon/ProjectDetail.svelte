@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import BackLink from '$lib/components/layout/BackLink.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import { avatarInitials } from '$lib/utils/initials';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
@@ -27,6 +28,7 @@
     let {
         project,
         backHref,
+        backQuery = '',
         backLabel,
         children
     }: {
@@ -46,9 +48,12 @@
             createdAt?: Date;
             modifiedAt?: Date;
         };
-        /** Unresolved route path — `resolve()` is called at the anchor below,
-            same as PhaseForm's `cancelHref`. */
+        /** Where "back" goes when the reader came from nowhere this app
+            remembers (see BackLink). Unresolved route path — `resolve()` is
+            called below, same as PhaseForm's `cancelHref`. */
         backHref: string;
+        /** Appended to `backHref` as is: the organiser's queue slice. */
+        backQuery?: string;
         backLabel: string;
         /** Extra sections, rendered last inside this component's page shell so
             they pick up its padding instead of hanging off the bottom of it. */
@@ -82,9 +87,7 @@
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-    <a href={resolve(backHref as any)} class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline">
-        &larr; {backLabel}
-    </a>
+    <BackLink fallbackHref="{resolve(backHref as any)}{backQuery}" fallbackLabel={backLabel} />
 
     <!-- Identity block: same size-16 round media and text scale as ProjectCard,
          so arriving here from a row reads as the same project enlarged. -->

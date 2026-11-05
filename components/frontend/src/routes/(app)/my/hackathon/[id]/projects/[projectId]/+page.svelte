@@ -8,9 +8,9 @@
 
 <!-- Thin by design: `ProjectDetail` is shared with the organiser's detail route
      under projects/manage, so the two cannot drift apart on how a project reads.
-     All that differs is where "back" goes — and this route has two answers to
-     that, resolved in the load rather than here — and that the organiser's route
-     also carries the Reject form. The review record is the same component there,
+     All that differs is where "back" falls back to when the reader came from
+     nowhere remembered, and that the organiser's route also carries the Reject
+     form. The review record is the same component there,
      so a proposer reads exactly what the organiser wrote. -->
 <ProjectDetail
     project={data.project}

@@ -39,4 +39,5 @@ What every team has handed in, once the owners publish the teams. It shows:
 - On your own team's page, click {guilabel}`Edit` to change it on
   [Our submission](member-our-submission.md). The button shows only while
   submitting is open.
-- The back link returns to the page you came from.
+- The back link returns to the page you came from. Opened on its own, it goes to
+  Submissions.

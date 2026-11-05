@@ -25,6 +25,8 @@ Everyone taking part in the hackathon. It shows:
 - {guilabel}`Shared answers`: the registration answers they chose to share.
 - {guilabel}`Teams`: their teams, once teams are published. Each links to its
   [team](member-teams.md).
+- The back link returns to the page you came from. Opened on its own, it goes to
+  the participants list.
 
 On your own profile:
 
