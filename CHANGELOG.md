@@ -54,6 +54,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- The overview shows the running phase in a box of its own, above the next
+  steps, and no longer adds notes about phase dates below them.
 - The back link on a project, a team, a submission, a participant's profile, and
   Manage's project and person pages returns to the page you came from, and says
   which. Opened on its own, it goes to the page's list as before.
