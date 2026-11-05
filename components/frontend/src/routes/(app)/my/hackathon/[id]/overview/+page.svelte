@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import CurrentPhaseCard from '$lib/components/hackathon/CurrentPhaseCard.svelte';
     import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import TrackBreakdown from '$lib/components/hackathon/TrackBreakdown.svelte';
@@ -36,15 +37,23 @@
 
          Participant-shaped for everyone, including organisers, who see exactly
          what a participant sees in the third person — their own controls live on
-         Settings. -->
+         Settings.
+
+         The running phase is a card of its own above it, and only while one is
+         running: with no phases, or between them, there is nothing to report. -->
+    {#if data.hackathonState.currentPhase}
+        <CurrentPhaseCard
+            currentPhase={data.hackathonState.currentPhase}
+            nextPhase={data.hackathonState.nextPhase}
+            declared={data.hackathonState.declared}
+        />
+    {/if}
+
     <CurrentStateCard
         hackathonId={data.hackathon.id}
         organiserVoice={data.hackathonState.canManage}
         isWaiting={data.membershipIsWaiting}
         hasState={data.hackathonState.hasState}
-        declared={data.hackathonState.declared}
-        currentPhase={data.hackathonState.currentPhase}
-        nextPhase={data.hackathonState.nextPhase}
         enabled={data.hackathonState.enabled}
         progress={data.progress}
     />

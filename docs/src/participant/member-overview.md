@@ -35,7 +35,8 @@ The hackathon's dates, picture and description are on its own page, see
 
 ## The current phase
 
-- Name, dates, countdown and description of the phase that is running.
+- A box of its own, above your next steps, while a phase is running.
+- Name, dates, countdown and description of the phase.
 - Phases are for orientation only, see [Timeline](member-timeline.md).
 
 ## Your team

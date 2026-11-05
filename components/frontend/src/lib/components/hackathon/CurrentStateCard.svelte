@@ -2,18 +2,13 @@
     import { ArrowRight, Check, Circle } from 'lucide-svelte';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
     import { nextStep, type MyProgress, type NextStep } from '$lib/navigation/nextSteps';
-    import { ALL_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
-    import { nextBoundary } from '$lib/utils/relativeTime';
-    import Countdown from './Countdown.svelte';
+    import { ALL_CAPABILITIES, capabilityDescription } from '$lib/utils/phase';
 
     let {
         hackathonId,
         organiserVoice,
         isWaiting,
         hasState,
-        declared,
-        currentPhase,
-        nextPhase,
         enabled,
         progress,
     }: {
@@ -38,15 +33,6 @@
         isWaiting: boolean;
         /** False when the hackathon has no HackathonState row at all. */
         hasState: boolean;
-        /** True when an organiser declared this phase, false when the dates did. */
-        declared: boolean;
-        currentPhase: {
-            name: string;
-            description: string;
-            startsAt?: Date;
-            endsAt?: Date;
-        } | null;
-        nextPhase: { name: string; startsAt?: Date; endsAt?: Date } | null;
         /** Capability numbers actually switched on. */
         enabled: number[];
         /** The viewer's own part so far. Read only in the participant voice. */
@@ -68,10 +54,6 @@
     // arrives with `ApproveParticipant`, not with `Join`, so they hold none of
     // those reads and every one of these would 403.
     const linked = $derived(!isWaiting && hasState);
-
-    // "Current phase" is a declaration, "In progress" is the calendar — the same
-    // two labels the timeline pages use, so no two surfaces name it differently.
-    const phaseBadge = $derived(declared ? 'Current phase' : 'In progress');
 
     const openHeading = $derived(organiserVoice ? 'Participants can now' : 'Your next steps');
 
@@ -101,52 +83,10 @@
             return [{ value: c.value, ...step, href: linked ? step.href : undefined }];
         });
     });
-
-    // Which boundary to count down to, decided here so the card knows whether
-    // there is one at all. `new Date()` is only ever compared against, never
-    // rendered — the visible clock lives in `Countdown`, which is what keeps this
-    // from becoming a hydration mismatch.
-    const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date(), declared));
-
-    // Deliberately kept out of the banner (see `stateAlerts`): untidy rather than
-    // blocking, so an organiser reads it here without being interrupted by it
-    // elsewhere. Organiser-only, because it is a prompt to act.
-    //
-    // Its counterpart — "no phase is declared current" — used to sit beside it and
-    // is gone, along with the whole heading block below. With no phase running the
-    // card had a heading that named nothing and a footnote restating it; what an
-    // organiser can act on is the capability list, and what a participant wants is
-    // the timeline. Neither needs announcing that there is nothing to announce.
-    const phaseEnded = $derived(
-        organiserVoice && currentPhase?.endsAt !== undefined && currentPhase.endsAt < new Date(),
-    );
-
-    // The participant's version of the same fact, and the one thing manual mode
-    // owes them: with a phase declared current the dates on this card and on the
-    // timeline have stopped deciding anything, so a window that disagrees with the
-    // clock is not a mistake and not something to plan around.
-    //
-    // Both directions, unlike `phaseEnded` above: an organiser who declares a
-    // phase early leaves a "current" phase whose start is still days off, which
-    // reads just as oddly as one held past its end. Suppressing the countdown
-    // (see `nextBoundary`) removes the false statement; this is what replaces it.
-    //
-    // A declared phase whose window still covers now says nothing — the dates and
-    // the declaration agree, and there is nothing to explain.
-    const outsideWindow = $derived.by(() => {
-        if (!declared || !currentPhase) return false;
-        const now = new Date();
-        return (
-            (currentPhase.endsAt !== undefined && currentPhase.endsAt < now) ||
-            (currentPhase.startsAt !== undefined && currentPhase.startsAt > now)
-        );
-    });
-    const datesAreAGuide = $derived(!organiserVoice && outsideWindow);
 </script>
 
 <!--
-  What is true of this hackathon at this moment: where we are, how long that
-  lasts, and what it lets people do. Deliberately the *actual* capability state
+  What this hackathon lets people do at this moment. Deliberately the *actual* capability state
   rather than the current phase's plan — the participant timeline shows the plan,
   and the two genuinely disagree, because advancing a phase grants nobody
   anything.
@@ -162,11 +102,10 @@
   voting closed" but "when does it open", which this card cannot answer and the
   timeline can.
 
-  What comes *next* is not here either. A "Next: <phase>" line used to close the
-  card, but the card is about what the viewer can do now, and the sequence of
-  phases is on About and Timeline, both a click away in the sidebar. With no
-  phase running the card therefore shows no countdown: it only ever counted to
-  the phase that line named.
+  Nor is anything about phases. The running phase used to head this card and is
+  now `CurrentPhaseCard` above it. A "Next: <phase>" line and notes on stale
+  phase dates used to close it. The card is about what the viewer can do now,
+  and the sequence of phases is on About and Timeline, a click away.
 
   `border-line-strong` rather than the plain `card` its siblings use: this one
   leads the page and is different in kind from the cards below it. Same
@@ -190,35 +129,9 @@
     </span>
 {/snippet}
 
-<section
-    class="card flex flex-col gap-4 border-line-strong p-5"
-    aria-labelledby={currentPhase ? 'right-now' : undefined}
-    aria-label={currentPhase ? undefined : 'Right now'}
->
-    <!-- The whole header is the phase, so with no phase there is no header: the
-         card opens on what is actually open. The section keeps its name for a
-         screen reader either way — an unnamed <section> is not a landmark. -->
-    {#if currentPhase}
-        <span class="meta">Right now</span>
-
-        <div class="flex flex-col gap-1">
-            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 class="m-0 text-section text-ink" id="right-now">{currentPhase.name}</h2>
-                <span class="badge badge-info">{phaseBadge}</span>
-                {#if boundary}
-                    <span class="ms-auto"><Countdown {boundary} /></span>
-                {/if}
-            </div>
-
-            <span class="tnum text-xs text-ink-3">
-                {formatPhaseRange(currentPhase.startsAt, currentPhase.endsAt)}
-            </span>
-            {#if currentPhase.description}
-                <p class="prose m-0 pt-1 text-xs">{currentPhase.description}</p>
-            {/if}
-        </div>
-    {/if}
-
+<!-- Named by its heading for a screen reader, which also needs it as a landmark
+     when the list below is empty: an unnamed <section> is not one. -->
+<section class="card flex flex-col gap-4 border-line-strong p-5" aria-label={openHeading}>
     {#if !hasState}
         <!-- Nothing is enabled and nothing can be, so listing six closed
              capabilities would report the same fact six times. -->
@@ -280,19 +193,4 @@
         {/if}
     {/if}
 
-    {#if phaseEnded || datesAreAGuide}
-        <div class="flex flex-col gap-1 border-t border-line pt-3">
-            {#if phaseEnded}
-                <span class="text-xs text-ink-3">
-                    This phase's dates have passed — it stays current until you change it.
-                </span>
-            {/if}
-            {#if datesAreAGuide}
-                <span class="text-xs text-ink-3">
-                    The organisers decide when the hackathon moves on, so the dates on the
-                    timeline are a guide rather than a deadline.
-                </span>
-            {/if}
-        </div>
-    {/if}
 </section>

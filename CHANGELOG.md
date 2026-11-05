@@ -26,6 +26,7 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - A hackathon's overview shows participants their next steps. Each open activity
   says what is still to do, or what they have already done, such as the projects
   they proposed or the team they are on.
+- A hackathon's About page shows who organizes it.
 - Platform admins can filter the user list by platform role — Admin, Hackathon
   Organizer or none — with a count beside each, and combine it with the search.
 - The user list shows how many hackathons each user owns, and can be narrowed to
@@ -54,6 +55,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- The overview shows the running phase in a box of its own, above the next
+  steps, and no longer adds notes about phase dates below them.
 - The back link on a project, a team, a submission, a participant's profile, and
   Manage's project and person pages returns to the page you came from, and says
   which. Opened on its own, it goes to the page's list as before.

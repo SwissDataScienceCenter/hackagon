@@ -5,6 +5,7 @@
 What the hackathon is. First in the menu. It shows:
 
 - [Your hackathon](#your-hackathon): its name, dates and number of participants
+- [Organized by](#organized-by): the owners who run it
 - [The description](#the-description): in the owners' own words
 
 It might also show:
@@ -18,6 +19,11 @@ It might also show:
 - The hackathon's name and picture, if the owners added one.
 - Start and end date, and how many participants it has.
 - Whether you are registered or on the waitlist.
+
+## Organized by
+
+- The name of every owner of the hackathon.
+- They are the people to ask about it.
 
 ## The phases
 
