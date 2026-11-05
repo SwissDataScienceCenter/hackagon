@@ -2,6 +2,7 @@
     import { resolve } from '$app/paths';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import { avatarInitials } from '$lib/utils/initials';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { Snippet } from 'svelte';
 
@@ -72,15 +73,7 @@
 
     // Stands in for the image the project has none of — same treatment as
     // ProjectCard, so a row and this header show the same two letters.
-    const initials = $derived(
-        project.title
-            .split(' ')
-            .filter(Boolean)
-            .map((w) => w[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2)
-    );
+    const initials = $derived(avatarInitials(project.title));
 
     const proposedOn = $derived(on(project.createdAt));
     // Only worth a line when it says something the proposed date does not.

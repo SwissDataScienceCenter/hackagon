@@ -2,6 +2,7 @@
     import { resolve } from '$app/paths';
     import { Tag, User } from 'lucide-svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
+    import { avatarInitials } from '$lib/utils/initials';
     import type { Snippet } from 'svelte';
 
     let {
@@ -44,15 +45,7 @@
 
     // The project's own initials stand in for the image it lacks — same
     // treatment as ParticipantCard, on the title rather than a person.
-    const initials = $derived(
-        title
-            .split(' ')
-            .filter(Boolean)
-            .map((w) => w[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2)
-    );
+    const initials = $derived(avatarInitials(title));
 </script>
 
 <!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA.

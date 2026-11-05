@@ -1,5 +1,6 @@
 <script lang="ts">
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import { avatarInitials } from '$lib/utils/initials';
     import type { Snippet } from 'svelte';
 
     type TeamMember = {
@@ -37,16 +38,6 @@
          */
         actions?: Snippet;
     } = $props();
-
-    function memberInitials(name: string): string {
-        return name
-            .split(' ')
-            .filter(Boolean)
-            .map((w) => w[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    }
 </script>
 
 <!--
@@ -115,7 +106,7 @@
                                        rounded-full border-2 border-line
                                        bg-overlay text-xs font-bold text-ink"
                             >
-                                {memberInitials(member.name)}
+                                {avatarInitials(member.name)}
                             </div>
                         {/if}
                         <span
