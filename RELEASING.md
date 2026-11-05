@@ -59,7 +59,7 @@ that `HACKAGON_KUBECONFIG` points at.
 None of them seeds itself. Dev and staging get the test fixture from
 `just cluster::reseed dev` or `just cluster::reseed staging`, which builds the
 seed from the code that instance serves — `origin/main` or the newest
-`origin/release/*` — whatever is checked out; see
+`origin/release/*`. See
 [the seed README](components/backend/cmd/seed/README.md#when-to-re-seed). Prod
 is never seeded, and the `cluster::` recipes cannot name it.
 
@@ -97,8 +97,7 @@ overwritten; those never do, so a specific build can be pinned:
 
 ### staging runs the latest release
 
-Staging runs the newest release, hotfixes included: what prod would get on its
-next install, while prod itself stays on the release it was installed with.
+Staging runs the newest release, hotfixes included: it is there to test hotfixes before they go to prod.
 
 ### prod follows releases
 
