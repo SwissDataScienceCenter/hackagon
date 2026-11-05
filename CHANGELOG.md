@@ -58,6 +58,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   directly.
 - Participants who proposed a project find it under "My projects" in the
   hackathon's menu, at any status, also after proposals have closed.
+- Backend: An owner or an admin can now delete a hackathon. It disappears for
+  everyone, with its tracks, teams, projects and pages, but nothing is erased.
 
 ### Changed
 
