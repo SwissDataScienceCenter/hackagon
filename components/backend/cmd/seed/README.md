@@ -651,7 +651,8 @@ the same fixture exactly. Change `dataForGoodSeed` if you want a different draw.
   and the overview's track breakdown has nothing to group by. H1-H3 keep their
   tracks, so both shapes stay covered.
 
-Pages: `About`, `How teams are formed`, `Code of Conduct` (all visible).
+Pages: `How teams are formed`, `Code of Conduct` (both visible). No `About`
+page: the member menu's own About entry shows the description.
 
 ## H5 — Partner Data Sprint 2026
 
