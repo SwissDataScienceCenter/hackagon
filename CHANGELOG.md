@@ -107,6 +107,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- After saving your registration answers, signing up for a hackathon or
+  accepting an invite, the back link no longer leads into that form again.
 - The explanations behind an ⓘ button no longer break a line in the middle of a
   sentence.
 - A team's page always leads back to Teams. Opened from a participant's profile

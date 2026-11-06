@@ -40,7 +40,6 @@ export const BACK_NAMES: Record<string, string> = {
   [`${HACKATHON}/pages/[pageId]`]: "the page",
   [`${HACKATHON}/participants`]: "participants",
   [`${HACKATHON}/participants/[participantId]`]: "the profile",
-  [`${HACKATHON}/participants/[participantId]/answers`]: "the answers",
   [`${HACKATHON}/participants/manage`]: "Manage Participants",
   [`${HACKATHON}/participants/manage/waitlist`]: "Waitlist",
   [`${HACKATHON}/participants/manage/[participantId]`]: "the participant",
@@ -70,6 +69,17 @@ export const BACK_NAMES: Record<string, string> = {
 const FORM_ROUTE = /\/(edit|new|propose|create)$/
 
 /**
+ * Forms whose route does not end in one of those words. Named one by one: a
+ * pattern on `/answers` would also catch Manage's registration answers, which is
+ * a list worth going back to.
+ */
+const FORM_ROUTES = new Set([
+  `${HACKATHON}/participants/[participantId]/answers`,
+  "/(app)/register/[id]",
+  "/(public)/invite/[token]",
+])
+
+/**
  * The back target for the page a navigation lands on.
  *
  * @param from the page being left; null on the first page a browser loads.
@@ -91,7 +101,13 @@ export function backFor(
     return fromBack && { ...fromBack, adjacent: false }
   }
 
-  if (from.routeId === null || FORM_ROUTE.test(from.routeId)) return undefined
+  if (
+    from.routeId === null ||
+    FORM_ROUTE.test(from.routeId) ||
+    FORM_ROUTES.has(from.routeId)
+  ) {
+    return undefined
+  }
 
   const name = BACK_NAMES[from.routeId]
   return {
