@@ -61,6 +61,40 @@ func (h *harness) register(keycloakID, username, displayName, email string) (*ac
 	return a, nil
 }
 
+// profileLinks are the GitHub, LinkedIn and Renku addresses a user can add on
+// their Account page. An empty one is left unset.
+type profileLinks struct {
+	github   string
+	linkedin string
+	renku    string
+}
+
+// setLinks adds profile links the way the Account page does: as the user
+// themselves, through Edit — which refuses anybody editing somebody else.
+func (h *harness) setLinks(who *actor, links profileLinks) error {
+	// Edit reads a field left out as "keep it", so an empty link is sent as
+	// nil rather than as "", which would ask for it to be removed.
+	orNil := func(s string) *string {
+		if s == "" {
+			return nil
+		}
+
+		return &s
+	}
+
+	_, err := h.user.Edit(who.ctx, &userMsgs.EditRequest{
+		UserId:      who.id,
+		GithubUrl:   orNil(links.github),
+		LinkedinUrl: orNil(links.linkedin),
+		RenkuUrl:    orNil(links.renku),
+	})
+	if err != nil {
+		return fmt.Errorf("set profile links of %s: %w", who.username, err)
+	}
+
+	return nil
+}
+
 // makeOrganizer grants the global role that lets somebody create a hackathon.
 // Only an admin may hand it out, which is why it takes one.
 func (h *harness) makeOrganizer(admin, who *actor) error {
