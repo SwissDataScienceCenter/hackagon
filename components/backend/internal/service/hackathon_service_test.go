@@ -5344,7 +5344,10 @@ var _ = Describe("HackathonService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Delete(ctxFor("delete-owner"), &msgs.DeleteRequest{HackathonId: hackathonID})
+			_, err = client.Delete(
+				ctxFor("delete-owner"),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -5355,12 +5358,18 @@ var _ = Describe("HackathonService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Delete(ctxFor("delete-outsider"), &msgs.DeleteRequest{HackathonId: hackathonID})
+			_, err = client.Delete(
+				ctxFor("delete-outsider"),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 
 		It("refuses an anonymous caller", func() {
-			_, err := client.Delete(context.Background(), &msgs.DeleteRequest{HackathonId: hackathonID})
+			_, err := client.Delete(
+				context.Background(),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
 			Expect(err).To(HaveOccurred())
 		})
 
