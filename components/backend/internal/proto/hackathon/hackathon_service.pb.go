@@ -25,7 +25,7 @@ var File_hackathon_hackathon_service_proto protoreflect.FileDescriptor
 
 const file_hackathon_hackathon_service_proto_rawDesc = "" +
 	"\n" +
-	"!hackathon/hackathon_service.proto\x12\thackathon\x1a8hackathon/messages/hackathon_svc/add_owner_request.proto\x1a9hackathon/messages/hackathon_svc/add_owner_response.proto\x1aBhackathon/messages/hackathon_svc/approve_participant_request.proto\x1aChackathon/messages/hackathon_svc/approve_participant_response.proto\x1a<hackathon/messages/hackathon_svc/create_invite_request.proto\x1a=hackathon/messages/hackathon_svc/create_invite_response.proto\x1a>hackathon/messages/hackathon_svc/create_question_request.proto\x1a?hackathon/messages/hackathon_svc/create_question_response.proto\x1a5hackathon/messages/hackathon_svc/create_request.proto\x1a6hackathon/messages/hackathon_svc/create_response.proto\x1a5hackathon/messages/hackathon_svc/delete_request.proto\x1a6hackathon/messages/hackathon_svc/delete_response.proto\x1a<hackathon/messages/hackathon_svc/edit_question_request.proto\x1a=hackathon/messages/hackathon_svc/edit_question_response.proto\x1a3hackathon/messages/hackathon_svc/edit_request.proto\x1a4hackathon/messages/hackathon_svc/edit_response.proto\x1a2hackathon/messages/hackathon_svc/get_request.proto\x1a3hackathon/messages/hackathon_svc/get_response.proto\x1a3hackathon/messages/hackathon_svc/join_request.proto\x1a4hackathon/messages/hackathon_svc/join_response.proto\x1a;hackathon/messages/hackathon_svc/list_invites_request.proto\x1a<hackathon/messages/hackathon_svc/list_invites_response.proto\x1aGhackathon/messages/hackathon_svc/list_participant_answers_request.proto\x1aHhackathon/messages/hackathon_svc/list_participant_answers_response.proto\x1a=hackathon/messages/hackathon_svc/list_questions_request.proto\x1a>hackathon/messages/hackathon_svc/list_questions_response.proto\x1a3hackathon/messages/hackathon_svc/list_request.proto\x1a4hackathon/messages/hackathon_svc/list_response.proto\x1a=hackathon/messages/hackathon_svc/preview_invite_request.proto\x1a>hackathon/messages/hackathon_svc/preview_invite_response.proto\x1a;hackathon/messages/hackathon_svc/remove_owner_request.proto\x1a<hackathon/messages/hackathon_svc/remove_owner_response.proto\x1aAhackathon/messages/hackathon_svc/remove_participant_request.proto\x1aBhackathon/messages/hackathon_svc/remove_participant_response.proto\x1a>hackathon/messages/hackathon_svc/remove_question_request.proto\x1a?hackathon/messages/hackathon_svc/remove_question_response.proto\x1a<hackathon/messages/hackathon_svc/revoke_invite_request.proto\x1a=hackathon/messages/hackathon_svc/revoke_invite_response.proto\x1a?hackathon/messages/hackathon_svc/set_capabilities_request.proto\x1a@hackathon/messages/hackathon_svc/set_capabilities_response.proto\x1a@hackathon/messages/hackathon_svc/set_current_phase_request.proto\x1aAhackathon/messages/hackathon_svc/set_current_phase_response.proto\x1a=hackathon/messages/hackathon_svc/submit_answers_request.proto\x1a>hackathon/messages/hackathon_svc/submit_answers_response.proto2\xd3\x15\n" +
+	"!hackathon/hackathon_service.proto\x12\thackathon\x1a8hackathon/messages/hackathon_svc/add_owner_request.proto\x1a9hackathon/messages/hackathon_svc/add_owner_response.proto\x1aBhackathon/messages/hackathon_svc/approve_participant_request.proto\x1aChackathon/messages/hackathon_svc/approve_participant_response.proto\x1a<hackathon/messages/hackathon_svc/create_invite_request.proto\x1a=hackathon/messages/hackathon_svc/create_invite_response.proto\x1a>hackathon/messages/hackathon_svc/create_question_request.proto\x1a?hackathon/messages/hackathon_svc/create_question_response.proto\x1a5hackathon/messages/hackathon_svc/create_request.proto\x1a6hackathon/messages/hackathon_svc/create_response.proto\x1a5hackathon/messages/hackathon_svc/delete_request.proto\x1a6hackathon/messages/hackathon_svc/delete_response.proto\x1a<hackathon/messages/hackathon_svc/edit_question_request.proto\x1a=hackathon/messages/hackathon_svc/edit_question_response.proto\x1a3hackathon/messages/hackathon_svc/edit_request.proto\x1a4hackathon/messages/hackathon_svc/edit_response.proto\x1a2hackathon/messages/hackathon_svc/get_request.proto\x1a3hackathon/messages/hackathon_svc/get_response.proto\x1a3hackathon/messages/hackathon_svc/join_request.proto\x1a4hackathon/messages/hackathon_svc/join_response.proto\x1a4hackathon/messages/hackathon_svc/leave_request.proto\x1a5hackathon/messages/hackathon_svc/leave_response.proto\x1a;hackathon/messages/hackathon_svc/list_invites_request.proto\x1a<hackathon/messages/hackathon_svc/list_invites_response.proto\x1aGhackathon/messages/hackathon_svc/list_participant_answers_request.proto\x1aHhackathon/messages/hackathon_svc/list_participant_answers_response.proto\x1a=hackathon/messages/hackathon_svc/list_questions_request.proto\x1a>hackathon/messages/hackathon_svc/list_questions_response.proto\x1a3hackathon/messages/hackathon_svc/list_request.proto\x1a4hackathon/messages/hackathon_svc/list_response.proto\x1a=hackathon/messages/hackathon_svc/preview_invite_request.proto\x1a>hackathon/messages/hackathon_svc/preview_invite_response.proto\x1a;hackathon/messages/hackathon_svc/remove_owner_request.proto\x1a<hackathon/messages/hackathon_svc/remove_owner_response.proto\x1aAhackathon/messages/hackathon_svc/remove_participant_request.proto\x1aBhackathon/messages/hackathon_svc/remove_participant_response.proto\x1a>hackathon/messages/hackathon_svc/remove_question_request.proto\x1a?hackathon/messages/hackathon_svc/remove_question_response.proto\x1a<hackathon/messages/hackathon_svc/revoke_invite_request.proto\x1a=hackathon/messages/hackathon_svc/revoke_invite_response.proto\x1a?hackathon/messages/hackathon_svc/set_capabilities_request.proto\x1a@hackathon/messages/hackathon_svc/set_capabilities_response.proto\x1a@hackathon/messages/hackathon_svc/set_current_phase_request.proto\x1aAhackathon/messages/hackathon_svc/set_current_phase_response.proto\x1a=hackathon/messages/hackathon_svc/submit_answers_request.proto\x1a>hackathon/messages/hackathon_svc/submit_answers_response.proto2\xbd\x16\n" +
 	"\x10HackathonService\x12e\n" +
 	"\x04List\x12-.hackathon.messages.hackathon_svc.ListRequest\x1a..hackathon.messages.hackathon_svc.ListResponse\x12b\n" +
 	"\x03Get\x12,.hackathon.messages.hackathon_svc.GetRequest\x1a-.hackathon.messages.hackathon_svc.GetResponse\x12k\n" +
@@ -66,36 +66,38 @@ var file_hackathon_hackathon_service_proto_goTypes = []any{
 	(*hackathon_svc.JoinRequest)(nil),                    // 11: hackathon.messages.hackathon_svc.JoinRequest
 	(*hackathon_svc.ApproveParticipantRequest)(nil),      // 12: hackathon.messages.hackathon_svc.ApproveParticipantRequest
 	(*hackathon_svc.RemoveParticipantRequest)(nil),       // 13: hackathon.messages.hackathon_svc.RemoveParticipantRequest
-	(*hackathon_svc.AddOwnerRequest)(nil),                // 14: hackathon.messages.hackathon_svc.AddOwnerRequest
-	(*hackathon_svc.RemoveOwnerRequest)(nil),             // 15: hackathon.messages.hackathon_svc.RemoveOwnerRequest
-	(*hackathon_svc.CreateQuestionRequest)(nil),          // 16: hackathon.messages.hackathon_svc.CreateQuestionRequest
-	(*hackathon_svc.EditQuestionRequest)(nil),            // 17: hackathon.messages.hackathon_svc.EditQuestionRequest
-	(*hackathon_svc.RemoveQuestionRequest)(nil),          // 18: hackathon.messages.hackathon_svc.RemoveQuestionRequest
-	(*hackathon_svc.ListQuestionsRequest)(nil),           // 19: hackathon.messages.hackathon_svc.ListQuestionsRequest
-	(*hackathon_svc.SubmitAnswersRequest)(nil),           // 20: hackathon.messages.hackathon_svc.SubmitAnswersRequest
-	(*hackathon_svc.ListParticipantAnswersRequest)(nil),  // 21: hackathon.messages.hackathon_svc.ListParticipantAnswersRequest
-	(*hackathon_svc.ListResponse)(nil),                   // 22: hackathon.messages.hackathon_svc.ListResponse
-	(*hackathon_svc.GetResponse)(nil),                    // 23: hackathon.messages.hackathon_svc.GetResponse
-	(*hackathon_svc.CreateResponse)(nil),                 // 24: hackathon.messages.hackathon_svc.CreateResponse
-	(*hackathon_svc.DeleteResponse)(nil),                 // 25: hackathon.messages.hackathon_svc.DeleteResponse
-	(*hackathon_svc.EditResponse)(nil),                   // 26: hackathon.messages.hackathon_svc.EditResponse
-	(*hackathon_svc.SetCapabilitiesResponse)(nil),        // 27: hackathon.messages.hackathon_svc.SetCapabilitiesResponse
-	(*hackathon_svc.SetCurrentPhaseResponse)(nil),        // 28: hackathon.messages.hackathon_svc.SetCurrentPhaseResponse
-	(*hackathon_svc.CreateInviteResponse)(nil),           // 29: hackathon.messages.hackathon_svc.CreateInviteResponse
-	(*hackathon_svc.ListInvitesResponse)(nil),            // 30: hackathon.messages.hackathon_svc.ListInvitesResponse
-	(*hackathon_svc.RevokeInviteResponse)(nil),           // 31: hackathon.messages.hackathon_svc.RevokeInviteResponse
-	(*hackathon_svc.PreviewInviteResponse)(nil),          // 32: hackathon.messages.hackathon_svc.PreviewInviteResponse
-	(*hackathon_svc.JoinResponse)(nil),                   // 33: hackathon.messages.hackathon_svc.JoinResponse
-	(*hackathon_svc.ApproveParticipantResponse)(nil),     // 34: hackathon.messages.hackathon_svc.ApproveParticipantResponse
-	(*hackathon_svc.RemoveParticipantResponse)(nil),      // 35: hackathon.messages.hackathon_svc.RemoveParticipantResponse
-	(*hackathon_svc.AddOwnerResponse)(nil),               // 36: hackathon.messages.hackathon_svc.AddOwnerResponse
-	(*hackathon_svc.RemoveOwnerResponse)(nil),            // 37: hackathon.messages.hackathon_svc.RemoveOwnerResponse
-	(*hackathon_svc.CreateQuestionResponse)(nil),         // 38: hackathon.messages.hackathon_svc.CreateQuestionResponse
-	(*hackathon_svc.EditQuestionResponse)(nil),           // 39: hackathon.messages.hackathon_svc.EditQuestionResponse
-	(*hackathon_svc.RemoveQuestionResponse)(nil),         // 40: hackathon.messages.hackathon_svc.RemoveQuestionResponse
-	(*hackathon_svc.ListQuestionsResponse)(nil),          // 41: hackathon.messages.hackathon_svc.ListQuestionsResponse
-	(*hackathon_svc.SubmitAnswersResponse)(nil),          // 42: hackathon.messages.hackathon_svc.SubmitAnswersResponse
-	(*hackathon_svc.ListParticipantAnswersResponse)(nil), // 43: hackathon.messages.hackathon_svc.ListParticipantAnswersResponse
+	(*hackathon_svc.LeaveRequest)(nil),                   // 14: hackathon.messages.hackathon_svc.LeaveRequest
+	(*hackathon_svc.AddOwnerRequest)(nil),                // 15: hackathon.messages.hackathon_svc.AddOwnerRequest
+	(*hackathon_svc.RemoveOwnerRequest)(nil),             // 16: hackathon.messages.hackathon_svc.RemoveOwnerRequest
+	(*hackathon_svc.CreateQuestionRequest)(nil),          // 17: hackathon.messages.hackathon_svc.CreateQuestionRequest
+	(*hackathon_svc.EditQuestionRequest)(nil),            // 18: hackathon.messages.hackathon_svc.EditQuestionRequest
+	(*hackathon_svc.RemoveQuestionRequest)(nil),          // 19: hackathon.messages.hackathon_svc.RemoveQuestionRequest
+	(*hackathon_svc.ListQuestionsRequest)(nil),           // 20: hackathon.messages.hackathon_svc.ListQuestionsRequest
+	(*hackathon_svc.SubmitAnswersRequest)(nil),           // 21: hackathon.messages.hackathon_svc.SubmitAnswersRequest
+	(*hackathon_svc.ListParticipantAnswersRequest)(nil),  // 22: hackathon.messages.hackathon_svc.ListParticipantAnswersRequest
+	(*hackathon_svc.ListResponse)(nil),                   // 23: hackathon.messages.hackathon_svc.ListResponse
+	(*hackathon_svc.GetResponse)(nil),                    // 24: hackathon.messages.hackathon_svc.GetResponse
+	(*hackathon_svc.CreateResponse)(nil),                 // 25: hackathon.messages.hackathon_svc.CreateResponse
+	(*hackathon_svc.DeleteResponse)(nil),                 // 26: hackathon.messages.hackathon_svc.DeleteResponse
+	(*hackathon_svc.EditResponse)(nil),                   // 27: hackathon.messages.hackathon_svc.EditResponse
+	(*hackathon_svc.SetCapabilitiesResponse)(nil),        // 28: hackathon.messages.hackathon_svc.SetCapabilitiesResponse
+	(*hackathon_svc.SetCurrentPhaseResponse)(nil),        // 29: hackathon.messages.hackathon_svc.SetCurrentPhaseResponse
+	(*hackathon_svc.CreateInviteResponse)(nil),           // 30: hackathon.messages.hackathon_svc.CreateInviteResponse
+	(*hackathon_svc.ListInvitesResponse)(nil),            // 31: hackathon.messages.hackathon_svc.ListInvitesResponse
+	(*hackathon_svc.RevokeInviteResponse)(nil),           // 32: hackathon.messages.hackathon_svc.RevokeInviteResponse
+	(*hackathon_svc.PreviewInviteResponse)(nil),          // 33: hackathon.messages.hackathon_svc.PreviewInviteResponse
+	(*hackathon_svc.JoinResponse)(nil),                   // 34: hackathon.messages.hackathon_svc.JoinResponse
+	(*hackathon_svc.ApproveParticipantResponse)(nil),     // 35: hackathon.messages.hackathon_svc.ApproveParticipantResponse
+	(*hackathon_svc.RemoveParticipantResponse)(nil),      // 36: hackathon.messages.hackathon_svc.RemoveParticipantResponse
+	(*hackathon_svc.LeaveResponse)(nil),                  // 37: hackathon.messages.hackathon_svc.LeaveResponse
+	(*hackathon_svc.AddOwnerResponse)(nil),               // 38: hackathon.messages.hackathon_svc.AddOwnerResponse
+	(*hackathon_svc.RemoveOwnerResponse)(nil),            // 39: hackathon.messages.hackathon_svc.RemoveOwnerResponse
+	(*hackathon_svc.CreateQuestionResponse)(nil),         // 40: hackathon.messages.hackathon_svc.CreateQuestionResponse
+	(*hackathon_svc.EditQuestionResponse)(nil),           // 41: hackathon.messages.hackathon_svc.EditQuestionResponse
+	(*hackathon_svc.RemoveQuestionResponse)(nil),         // 42: hackathon.messages.hackathon_svc.RemoveQuestionResponse
+	(*hackathon_svc.ListQuestionsResponse)(nil),          // 43: hackathon.messages.hackathon_svc.ListQuestionsResponse
+	(*hackathon_svc.SubmitAnswersResponse)(nil),          // 44: hackathon.messages.hackathon_svc.SubmitAnswersResponse
+	(*hackathon_svc.ListParticipantAnswersResponse)(nil), // 45: hackathon.messages.hackathon_svc.ListParticipantAnswersResponse
 }
 var file_hackathon_hackathon_service_proto_depIdxs = []int32{
 	0,  // 0: hackathon.HackathonService.List:input_type -> hackathon.messages.hackathon_svc.ListRequest
@@ -112,38 +114,40 @@ var file_hackathon_hackathon_service_proto_depIdxs = []int32{
 	11, // 11: hackathon.HackathonService.Join:input_type -> hackathon.messages.hackathon_svc.JoinRequest
 	12, // 12: hackathon.HackathonService.ApproveParticipant:input_type -> hackathon.messages.hackathon_svc.ApproveParticipantRequest
 	13, // 13: hackathon.HackathonService.RemoveParticipant:input_type -> hackathon.messages.hackathon_svc.RemoveParticipantRequest
-	14, // 14: hackathon.HackathonService.AddOwner:input_type -> hackathon.messages.hackathon_svc.AddOwnerRequest
-	15, // 15: hackathon.HackathonService.RemoveOwner:input_type -> hackathon.messages.hackathon_svc.RemoveOwnerRequest
-	16, // 16: hackathon.HackathonService.CreateQuestion:input_type -> hackathon.messages.hackathon_svc.CreateQuestionRequest
-	17, // 17: hackathon.HackathonService.EditQuestion:input_type -> hackathon.messages.hackathon_svc.EditQuestionRequest
-	18, // 18: hackathon.HackathonService.RemoveQuestion:input_type -> hackathon.messages.hackathon_svc.RemoveQuestionRequest
-	19, // 19: hackathon.HackathonService.ListQuestions:input_type -> hackathon.messages.hackathon_svc.ListQuestionsRequest
-	20, // 20: hackathon.HackathonService.SubmitAnswers:input_type -> hackathon.messages.hackathon_svc.SubmitAnswersRequest
-	21, // 21: hackathon.HackathonService.ListParticipantAnswers:input_type -> hackathon.messages.hackathon_svc.ListParticipantAnswersRequest
-	22, // 22: hackathon.HackathonService.List:output_type -> hackathon.messages.hackathon_svc.ListResponse
-	23, // 23: hackathon.HackathonService.Get:output_type -> hackathon.messages.hackathon_svc.GetResponse
-	24, // 24: hackathon.HackathonService.Create:output_type -> hackathon.messages.hackathon_svc.CreateResponse
-	25, // 25: hackathon.HackathonService.Delete:output_type -> hackathon.messages.hackathon_svc.DeleteResponse
-	26, // 26: hackathon.HackathonService.Edit:output_type -> hackathon.messages.hackathon_svc.EditResponse
-	27, // 27: hackathon.HackathonService.SetCapabilities:output_type -> hackathon.messages.hackathon_svc.SetCapabilitiesResponse
-	28, // 28: hackathon.HackathonService.SetCurrentPhase:output_type -> hackathon.messages.hackathon_svc.SetCurrentPhaseResponse
-	29, // 29: hackathon.HackathonService.CreateInvite:output_type -> hackathon.messages.hackathon_svc.CreateInviteResponse
-	30, // 30: hackathon.HackathonService.ListInvites:output_type -> hackathon.messages.hackathon_svc.ListInvitesResponse
-	31, // 31: hackathon.HackathonService.RevokeInvite:output_type -> hackathon.messages.hackathon_svc.RevokeInviteResponse
-	32, // 32: hackathon.HackathonService.PreviewInvite:output_type -> hackathon.messages.hackathon_svc.PreviewInviteResponse
-	33, // 33: hackathon.HackathonService.Join:output_type -> hackathon.messages.hackathon_svc.JoinResponse
-	34, // 34: hackathon.HackathonService.ApproveParticipant:output_type -> hackathon.messages.hackathon_svc.ApproveParticipantResponse
-	35, // 35: hackathon.HackathonService.RemoveParticipant:output_type -> hackathon.messages.hackathon_svc.RemoveParticipantResponse
-	36, // 36: hackathon.HackathonService.AddOwner:output_type -> hackathon.messages.hackathon_svc.AddOwnerResponse
-	37, // 37: hackathon.HackathonService.RemoveOwner:output_type -> hackathon.messages.hackathon_svc.RemoveOwnerResponse
-	38, // 38: hackathon.HackathonService.CreateQuestion:output_type -> hackathon.messages.hackathon_svc.CreateQuestionResponse
-	39, // 39: hackathon.HackathonService.EditQuestion:output_type -> hackathon.messages.hackathon_svc.EditQuestionResponse
-	40, // 40: hackathon.HackathonService.RemoveQuestion:output_type -> hackathon.messages.hackathon_svc.RemoveQuestionResponse
-	41, // 41: hackathon.HackathonService.ListQuestions:output_type -> hackathon.messages.hackathon_svc.ListQuestionsResponse
-	42, // 42: hackathon.HackathonService.SubmitAnswers:output_type -> hackathon.messages.hackathon_svc.SubmitAnswersResponse
-	43, // 43: hackathon.HackathonService.ListParticipantAnswers:output_type -> hackathon.messages.hackathon_svc.ListParticipantAnswersResponse
-	22, // [22:44] is the sub-list for method output_type
-	0,  // [0:22] is the sub-list for method input_type
+	14, // 14: hackathon.HackathonService.Leave:input_type -> hackathon.messages.hackathon_svc.LeaveRequest
+	15, // 15: hackathon.HackathonService.AddOwner:input_type -> hackathon.messages.hackathon_svc.AddOwnerRequest
+	16, // 16: hackathon.HackathonService.RemoveOwner:input_type -> hackathon.messages.hackathon_svc.RemoveOwnerRequest
+	17, // 17: hackathon.HackathonService.CreateQuestion:input_type -> hackathon.messages.hackathon_svc.CreateQuestionRequest
+	18, // 18: hackathon.HackathonService.EditQuestion:input_type -> hackathon.messages.hackathon_svc.EditQuestionRequest
+	19, // 19: hackathon.HackathonService.RemoveQuestion:input_type -> hackathon.messages.hackathon_svc.RemoveQuestionRequest
+	20, // 20: hackathon.HackathonService.ListQuestions:input_type -> hackathon.messages.hackathon_svc.ListQuestionsRequest
+	21, // 21: hackathon.HackathonService.SubmitAnswers:input_type -> hackathon.messages.hackathon_svc.SubmitAnswersRequest
+	22, // 22: hackathon.HackathonService.ListParticipantAnswers:input_type -> hackathon.messages.hackathon_svc.ListParticipantAnswersRequest
+	23, // 23: hackathon.HackathonService.List:output_type -> hackathon.messages.hackathon_svc.ListResponse
+	24, // 24: hackathon.HackathonService.Get:output_type -> hackathon.messages.hackathon_svc.GetResponse
+	25, // 25: hackathon.HackathonService.Create:output_type -> hackathon.messages.hackathon_svc.CreateResponse
+	26, // 26: hackathon.HackathonService.Delete:output_type -> hackathon.messages.hackathon_svc.DeleteResponse
+	27, // 27: hackathon.HackathonService.Edit:output_type -> hackathon.messages.hackathon_svc.EditResponse
+	28, // 28: hackathon.HackathonService.SetCapabilities:output_type -> hackathon.messages.hackathon_svc.SetCapabilitiesResponse
+	29, // 29: hackathon.HackathonService.SetCurrentPhase:output_type -> hackathon.messages.hackathon_svc.SetCurrentPhaseResponse
+	30, // 30: hackathon.HackathonService.CreateInvite:output_type -> hackathon.messages.hackathon_svc.CreateInviteResponse
+	31, // 31: hackathon.HackathonService.ListInvites:output_type -> hackathon.messages.hackathon_svc.ListInvitesResponse
+	32, // 32: hackathon.HackathonService.RevokeInvite:output_type -> hackathon.messages.hackathon_svc.RevokeInviteResponse
+	33, // 33: hackathon.HackathonService.PreviewInvite:output_type -> hackathon.messages.hackathon_svc.PreviewInviteResponse
+	34, // 34: hackathon.HackathonService.Join:output_type -> hackathon.messages.hackathon_svc.JoinResponse
+	35, // 35: hackathon.HackathonService.ApproveParticipant:output_type -> hackathon.messages.hackathon_svc.ApproveParticipantResponse
+	36, // 36: hackathon.HackathonService.RemoveParticipant:output_type -> hackathon.messages.hackathon_svc.RemoveParticipantResponse
+	37, // 37: hackathon.HackathonService.Leave:output_type -> hackathon.messages.hackathon_svc.LeaveResponse
+	38, // 38: hackathon.HackathonService.AddOwner:output_type -> hackathon.messages.hackathon_svc.AddOwnerResponse
+	39, // 39: hackathon.HackathonService.RemoveOwner:output_type -> hackathon.messages.hackathon_svc.RemoveOwnerResponse
+	40, // 40: hackathon.HackathonService.CreateQuestion:output_type -> hackathon.messages.hackathon_svc.CreateQuestionResponse
+	41, // 41: hackathon.HackathonService.EditQuestion:output_type -> hackathon.messages.hackathon_svc.EditQuestionResponse
+	42, // 42: hackathon.HackathonService.RemoveQuestion:output_type -> hackathon.messages.hackathon_svc.RemoveQuestionResponse
+	43, // 43: hackathon.HackathonService.ListQuestions:output_type -> hackathon.messages.hackathon_svc.ListQuestionsResponse
+	44, // 44: hackathon.HackathonService.SubmitAnswers:output_type -> hackathon.messages.hackathon_svc.SubmitAnswersResponse
+	45, // 45: hackathon.HackathonService.ListParticipantAnswers:output_type -> hackathon.messages.hackathon_svc.ListParticipantAnswersResponse
+	23, // [23:46] is the sub-list for method output_type
+	0,  // [0:23] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
