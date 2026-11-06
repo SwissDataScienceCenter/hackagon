@@ -61,7 +61,9 @@
             </button>
         </div>
         <div class="font-sans text-sm text-ink-2">
-            <MarkdownContent content={text} />
+            <!-- Breaks off: the help files are wrapped by the formatter, not
+                 by whoever wrote them. -->
+            <MarkdownContent content={text} breaks={false} />
         </div>
         <div class="flex justify-end pt-1">
             <button type="button" onclick={() => dialog.close()} class="btn btn-sm btn-ghost">

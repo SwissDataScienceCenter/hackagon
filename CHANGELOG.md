@@ -102,6 +102,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- The explanations behind an ⓘ button no longer break a line in the middle of a
+  sentence.
 - A team's page always leads back to Teams. Opened from a participant's profile
   while voting was open, it led to the ballot, which no longer links to it.
 - On Submissions, "Last updated" has a space again between the time and who

@@ -37,9 +37,16 @@ export const sanitizeHtml = (html: string): string => DOMPurify.sanitize(html)
  * dates silently reflows into one paragraph, and there is no error to explain
  * why — by far the most common thing to go wrong for someone who has not
  * written markdown before.
+ *
+ * `breaks: false` is for text we write ourselves, such as the help texts: the
+ * formatter wraps those at 80 columns, and every wrap would otherwise show as a
+ * break in the middle of a sentence.
  */
-export const renderMarkdown = (content: string): string =>
-  sanitizeHtml(marked.parse(content, { async: false, gfm: true, breaks: true }))
+export const renderMarkdown = (
+  content: string,
+  { breaks = true }: { breaks?: boolean } = {},
+): string =>
+  sanitizeHtml(marked.parse(content, { async: false, gfm: true, breaks }))
 
 /**
  * The named entities marked and the sanitizer escape on the way out. Numeric
