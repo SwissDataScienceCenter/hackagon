@@ -5,8 +5,8 @@ description:
   or changing hackathons, users, projects, teams, submissions, phases and votes
   through the in-process gRPC harness, the step helpers in steps.go,
   capabilities that must be on when they are used, synthetic users who cannot
-  log in, idempotency and re-seeding (locally and on the dev cluster), and how
-  to verify a change without wiping local state. Use when asked to add or change
+  log in, idempotency and re-seeding (locally and on dev or staging), and how to
+  verify a change without wiping local state. Use when asked to add or change
   dev/test data, make a scenario reproducible locally, pick which seeded
   hackathon to test something in, or fix a seeded hackathon nobody can act in.
 ---
@@ -151,9 +151,12 @@ To use the new fixture locally for real: `just clean::state && just start`,
 policy before the seed wrote any, and until it restarts, owners are refused
 their own hackathons.
 
-On the dev cluster, `just cluster::reseed <context>` backs up, wipes the app
-database, seeds from your checkout and restarts the backend. It refuses unless
-`components/backend` matches `origin/main`, so it runs after merging.
+On the deployed instances, `just cluster::reseed dev` or
+`just cluster::reseed staging` backs up, wipes the app database, seeds and
+restarts the backend. The seed is built from the code the instance serves —
+`origin/main` for dev, the newest `origin/release/*` for staging — not from your
+checkout, so a seed change reaches dev only after merging and staging only once
+it is on a release branch.
 
 ## After changing the seed
 

@@ -4,7 +4,6 @@ set shell := ["bash", "-cue"]
 root_dir := `git rev-parse --show-toplevel`
 
 # Names the chart gives a release called `hackagon` (see helm-chart/templates).
-namespace := "hackagon"
 backend_deploy := "hackagon-backend"
 backend_config := "hackagon-backend-config"
 backend_db_secret := "hackagon-backend-db"
@@ -14,12 +13,27 @@ postgres_svc := "hackagon-postgresql"
 app_db := "hackagon"
 app_db_owner := "hackagon"
 
-# Refuse any cluster whose ingress does not serve this domain, so a recipe
-# pointed at the prod context by mistake stops before touching anything.
-dev_domain := "hackagon-dev.dscompute.ch"
-
 backup_dir := env("HOME") + "/hackagon-backups"
 local_pg_port := "15432"
+
+# Dev and staging share one cluster, reached through the kubeconfig that
+# HACKAGON_KUBECONFIG points at, and its current context. No default: where
+# that file lives is each operator's business, and _guard refuses when unset.
+kubeconfig := env("HACKAGON_KUBECONFIG", "")
+
+# Sourced by every recipe: `resolve_instance <name>` sets the namespace and the
+# host its ingress must serve. Only these two names exist, so a recipe can never
+# be pointed at prod, and the host check catches a kubeconfig that reaches some
+# other cluster.
+instances := '''
+resolve_instance() {
+  case "$1" in
+    dev)     ns=hackagon-dev;     host=hackagon-dev.sck-sit-dev.dscompute.ch ;;
+    staging) ns=hackagon-staging; host=hackagon-staging.sck-sit-dev.dscompute.ch ;;
+    *) echo "✗ Unknown instance '$1': expected dev or staging." >&2; exit 1 ;;
+  esac
+}
+'''
 
 # Runs inside the postgres pod: finds the superuser password the bitnami image
 # was started with (env var or mounted file) so it never leaves the pod.
@@ -45,53 +59,59 @@ help:
     reset="\033[0m"
 
     echo ""
-    echo -e "  ${bold}Dev Cluster Commands${reset}"
-    echo -e "  ${dim}Act on the deployed dev instance. Every recipe takes the kube context${reset}"
-    echo -e "  ${dim}explicitly and refuses a cluster not serving {{dev_domain}}.${reset}"
+    echo -e "  ${bold}Cluster Commands${reset}"
+    echo -e "  ${dim}Act on a deployed instance — dev or staging, never prod — through the${reset}"
+    echo -e "  ${dim}kubeconfig HACKAGON_KUBECONFIG points at.${reset}"
+    echo -e "  ${dim}Every recipe refuses a namespace whose ingress does not serve that instance's host.${reset}"
     echo ""
-    echo -e "  ${cyan}just cluster::backup${reset} <context>"
-    echo -e "  ${dim}pg_dumpall the dev postgres to {{backup_dir}}${reset}"
+    echo -e "  ${cyan}just cluster::backup${reset} <dev|staging>"
+    echo -e "  ${dim}pg_dumpall the instance's postgres to {{backup_dir}}${reset}"
     echo ""
-    echo -e "  ${cyan}just cluster::wipe${reset} <context>"
+    echo -e "  ${cyan}just cluster::wipe${reset} <dev|staging>"
     echo -e "  ${dim}Back up, then drop and recreate the app database. Keycloak is untouched.${reset}"
-    echo -e "  ${dim}The backend recreates the schema on startup, so dev comes back empty.${reset}"
+    echo -e "  ${dim}The backend recreates the schema on startup, so the instance comes back empty.${reset}"
     echo ""
-    echo -e "  ${cyan}just cluster::reseed${reset} <context>"
-    echo -e "  ${dim}Back up, wipe, then run cmd/seed (backend code must match origin/main).${reset}"
+    echo -e "  ${cyan}just cluster::reseed${reset} <dev|staging>"
+    echo -e "  ${dim}Back up, wipe, then run cmd/seed built from the code the instance serves —${reset}"
+    echo -e "  ${dim}origin/main for dev, the newest origin/release/* for staging — whatever is checked out.${reset}"
     echo ""
-    echo -e "  ${dim}e.g. just cluster::wipe sck-sit-dev${reset}"
+    echo -e "  ${dim}e.g. just cluster::reseed staging${reset}"
     echo ""
 
-# pg_dumpall the dev postgres (app and keycloak databases) to ~/hackagon-backups.
+# pg_dumpall the instance's postgres (app and keycloak databases) to ~/hackagon-backups.
 [group('cluster')]
-backup context:
+backup instance:
     #!/usr/bin/env bash
     set -euo pipefail
-    just -f "{{source_file()}}" _guard "{{context}}"
+    {{instances}}
+    resolve_instance "{{instance}}"
+    just -f "{{source_file()}}" _guard "{{instance}}"
     mkdir -p "{{backup_dir}}"
-    out="{{backup_dir}}/{{context}}-$(date +%Y%m%d-%H%M%S).sql"
+    out="{{backup_dir}}/$ns-$(date +%Y%m%d-%H%M%S).sql"
 
     discard_partial() { rm -f "$out.partial"; }
     trap discard_partial EXIT
 
     echo "==> Backing up to $out"
-    kubectl --context "{{context}}" -n "{{namespace}}" exec "sts/{{postgres_sts}}" -- \
+    kubectl --kubeconfig "{{kubeconfig}}" -n "$ns" exec "sts/{{postgres_sts}}" -- \
         sh -c '{{pg_as_superuser}}' sh pg_dumpall -h 127.0.0.1 -U postgres > "$out.partial"
     mv "$out.partial" "$out"
     echo "✓ $(du -h "$out" | cut -f1) written"
 
-# Back up, then drop and recreate the app database; dev restarts empty.
+# Back up, then drop and recreate the app database; the instance restarts empty.
 [group('cluster')]
-wipe context:
+wipe instance:
     #!/usr/bin/env bash
     set -euo pipefail
-    just -f "{{source_file()}}" _confirm "{{context}}" "WIPE the app database"
-    just -f "{{source_file()}}" backup "{{context}}"
+    {{instances}}
+    resolve_instance "{{instance}}"
+    just -f "{{source_file()}}" _confirm "{{instance}}" "WIPE the app database"
+    just -f "{{source_file()}}" backup "{{instance}}"
 
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
     # A backend found at 0 (e.g. left there by an interrupted run) comes back
-    # at 1: both recipes promise a running dev, and wipe needs it to recreate
-    # the schema.
+    # at 1: both recipes promise a running instance, and wipe needs it to
+    # recreate the schema.
     replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
     [ "${replicas:-0}" -gt 0 ] || replicas=1
 
@@ -103,20 +123,22 @@ wipe context:
     # however this ends, including when stopping it or the wipe fails halfway.
     trap restore_backend EXIT
 
-    just -f "{{source_file()}}" _backend-down "{{context}}"
-    just -f "{{source_file()}}" _wipe-db "{{context}}"
+    just -f "{{source_file()}}" _backend-down "{{instance}}"
+    just -f "{{source_file()}}" _wipe-db "{{instance}}"
 
-# Back up, wipe, then seed the dev fixture from this checkout.
+# Back up, wipe, then seed the dev fixture, built from the code the instance serves.
 [group('cluster')]
-reseed context:
+reseed instance:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{instances}}
+    resolve_instance "{{instance}}"
     cd "{{root_dir}}"
 
-    just -f "{{source_file()}}" _backend-matches-main
-    just -f "{{source_file()}}" _guard "{{context}}"
+    ref="$(just -f "{{source_file()}}" _seed-ref "{{instance}}")"
+    just -f "{{source_file()}}" _guard "{{instance}}"
 
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
     tmp="$(mktemp -d)"
     pf_pid=""
     backend_down=""
@@ -126,19 +148,23 @@ reseed context:
         echo "==> Scaling backend back to $replicas"
         "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
     }
-    # However this ends: close the tunnel, delete the temp dir, and bring the
-    # backend back if it was taken down.
+    # However this ends: close the tunnel, delete the temp dir and the worktree
+    # in it, and bring the backend back if it was taken down.
     cleanup() {
         [ -n "$pf_pid" ] && kill "$pf_pid" 2>/dev/null || true
         rm -rf "$tmp"
+        git -C "{{root_dir}}" worktree prune
         [ -z "$backend_down" ] || restore_backend
     }
     trap cleanup EXIT
 
     # Everything that can fail without changing the cluster happens first, so
-    # a failure here leaves dev exactly as it was.
-    echo "==> Building the seed"
-    (cd components/backend && go build -o "$tmp/seed" ./cmd/seed/)
+    # a failure here leaves the instance exactly as it was.
+    # The seed runs the backend's handlers in-process and creates the schema, so
+    # it is built from the code the instance serves, not from this checkout.
+    echo "==> Building the seed from $ref"
+    git worktree add --quiet --detach "$tmp/src" "$ref"
+    (cd "$tmp/src/components/backend" && go build -o "$tmp/seed" ./cmd/seed/)
 
     echo "==> Fetching backend config and database password from the cluster"
     "${kc[@]}" get cm "{{backend_config}}" -o jsonpath='{.data.config\.yaml}' > "$tmp/config.yaml"
@@ -150,17 +176,17 @@ reseed context:
     replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
     [ "${replicas:-0}" -gt 0 ] || replicas=1
 
-    just -f "{{source_file()}}" _confirm "{{context}}" "WIPE and RESEED the app database"
-    just -f "{{source_file()}}" backup "{{context}}"
+    just -f "{{source_file()}}" _confirm "{{instance}}" "WIPE and RESEED the app database"
+    just -f "{{source_file()}}" backup "{{instance}}"
 
     # The backend stays off until the seed is done: started on the empty
     # database it would create the tables at the same time as the seed, and it
     # would load its casbin policy before the seed has written any.
     backend_down=yes
-    just -f "{{source_file()}}" _backend-down "{{context}}"
+    just -f "{{source_file()}}" _backend-down "{{instance}}"
 
     # Wipe the app database, leaving keycloak untouched. The seed creates the schema.
-    just -f "{{source_file()}}" _wipe-db "{{context}}"
+    just -f "{{source_file()}}" _wipe-db "{{instance}}"
 
     echo "==> Port-forwarding postgres to localhost:{{local_pg_port}}"
     "${kc[@]}" port-forward "svc/{{postgres_svc}}" "{{local_pg_port}}:5432" >/dev/null &
@@ -175,7 +201,7 @@ reseed context:
         || { echo "✗ The port-forward to postgres did not open within 10s." >&2; exit 1; }
 
     echo "==> Seeding"
-    cd components/backend
+    cd "$tmp/src/components/backend"
     HACKAGON_DATABASE_HOST=127.0.0.1 \
     HACKAGON_DATABASE_PORT="{{local_pg_port}}" \
     HACKAGON_DATABASE_PASSWORD="$db_password" \
@@ -186,13 +212,15 @@ reseed context:
 # the caller's job, in an EXIT trap set before calling, so it happens even when
 # this or a later step fails halfway.
 [private]
-_backend-down context:
+_backend-down instance:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{instances}}
+    resolve_instance "{{instance}}"
 
-    # Guard the context, so a recipe pointed at the prod context by mistake stops before touching anything.
-    just -f "{{source_file()}}" _guard "{{context}}"
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    # Guard the instance, so a kubeconfig reaching the wrong cluster stops before touching anything.
+    just -f "{{source_file()}}" _guard "{{instance}}"
+    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
 
     backend_pods() { "${kc[@]}" get pods -o name | grep "{{backend_deploy}}-" || true; }
 
@@ -210,13 +238,15 @@ _backend-down context:
 # Drop and recreate the app database and run _backend-down first,
 # so the backend does not try to connect to it while it is being replaced.
 [private]
-_wipe-db context:
+_wipe-db instance:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{instances}}
+    resolve_instance "{{instance}}"
 
-    # Guard the context, so a recipe pointed at the prod context by mistake stops before touching anything.
-    just -f "{{source_file()}}" _guard "{{context}}"
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    # Guard the instance, so a kubeconfig reaching the wrong cluster stops before touching anything.
+    just -f "{{source_file()}}" _guard "{{instance}}"
+    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
 
     echo "==> Recreating database {{app_db}}"
     "${kc[@]}" exec "sts/{{postgres_sts}}" -- sh -c '{{pg_as_superuser}}' sh \
@@ -225,47 +255,57 @@ _wipe-db context:
         -c 'CREATE DATABASE {{app_db}} OWNER {{app_db_owner}};'
     echo "✓ Database {{app_db}} is empty"
 
-# Refuse unless this checkout's backend is the code dev serves.
+# Fetch and print the ref whose code the instance serves: dev follows
+# origin/main, staging the newest origin/release/* branch.
 [private]
-_backend-matches-main:
+_seed-ref instance:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{root_dir}}"
-    git fetch --quiet origin main
-    if ! git merge-base --is-ancestor origin/main HEAD; then
-        echo "✗ This checkout is behind origin/main. Rebase or merge main first." >&2
-        exit 1
-    fi
-    if ! git diff --quiet origin/main -- components/backend; then
-        echo "✗ components/backend differs from origin/main, which dev is serving." >&2
-        exit 1
-    fi
-    if [ -n "$(git status --porcelain components/backend)" ]; then
-        echo "✗ components/backend has uncommitted changes." >&2
-        exit 1
-    fi
-    echo "✓ components/backend matches origin/main"
+    case "{{instance}}" in
+      dev)
+        git fetch --quiet origin main
+        ref=origin/main
+        ;;
+      staging)
+        git fetch --quiet --prune origin '+refs/heads/release/*:refs/remotes/origin/release/*'
+        ref="$(git for-each-ref --sort=-version:refname --count=1 \
+            --format='%(refname:short)' refs/remotes/origin/release/)"
+        [ -n "$ref" ] || { echo "✗ origin has no release/* branch." >&2; exit 1; }
+        ;;
+      *) echo "✗ Unknown instance '{{instance}}': expected dev or staging." >&2; exit 1 ;;
+    esac
+    echo "$ref"
 
-# Refuse a context whose hackagon ingress does not serve the dev domain.
+# Refuse unless the kubeconfig reaches a namespace whose ingress serves the instance's host.
 [private]
-_guard context:
+_guard instance:
     #!/usr/bin/env bash
     set -euo pipefail
-    hosts="$(kubectl --context "{{context}}" -n "{{namespace}}" get ingress \
+    {{instances}}
+    resolve_instance "{{instance}}"
+    [ -n "{{kubeconfig}}" ] \
+        || { echo "✗ HACKAGON_KUBECONFIG is not set. Point it at the kubeconfig for dev and staging." >&2; exit 1; }
+    [ -f "{{kubeconfig}}" ] \
+        || { echo "✗ HACKAGON_KUBECONFIG points at {{kubeconfig}}, which is not a file." >&2; exit 1; }
+    hosts="$(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns" get ingress \
         -o jsonpath='{.items[*].spec.rules[*].host}')"
-    if [[ " $hosts " != *"{{dev_domain}}"* ]]; then
-        echo "✗ Context '{{context}}' does not serve {{dev_domain}} (found: ${hosts:-none})." >&2
-        echo "  Refusing — this does not look like the dev instance." >&2
+    if [[ " $hosts " != *" $host "* ]]; then
+        echo "✗ Namespace $ns via {{kubeconfig}} does not serve $host (found: ${hosts:-none})." >&2
+        echo "  Refusing — this does not look like the {{instance}} instance." >&2
         exit 1
     fi
 
-# Guard, then make the operator type the context name back.
+# Guard, then make the operator type the namespace back, which names the
+# instance; dev and staging share a cluster.
 [private]
-_confirm context action:
+_confirm instance action:
     #!/usr/bin/env bash
     set -euo pipefail
-    just -f "{{source_file()}}" _guard "{{context}}"
-    echo "About to {{action}} on context '{{context}}' (namespace {{namespace}})."
+    {{instances}}
+    resolve_instance "{{instance}}"
+    just -f "{{source_file()}}" _guard "{{instance}}"
+    echo "About to {{action}} in namespace $ns (via {{kubeconfig}})."
     echo "Everything in the app database is lost; a backup is taken first."
-    read -r -p "Type the context name to continue: " answer
-    [ "$answer" = "{{context}}" ] || { echo "Aborted."; exit 1; }
+    read -r -p "Type the namespace to continue: " answer
+    [ "$answer" = "$ns" ] || { echo "Aborted."; exit 1; }

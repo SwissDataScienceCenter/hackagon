@@ -15,7 +15,7 @@ main ──●──●──●──●──●──●──●──●─
           │
           v0.12.1 + its chart bump
           │
-          └── release/0.12 ──●── v0.12.2 ──●── v0.12.3   hotfixes only; prod runs these tags
+          └── release/0.12 ──●── v0.12.2 ──●── v0.12.3   hotfixes only; staging and prod run these tags
                              ▲
                          hotfix/… PRs
 ```
@@ -44,27 +44,21 @@ itself builds nothing; only its tags do.
 
 ## Deployment
 
-Two clusters, both installed from the Helm chart by the GitOps setup in
-`sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-cluster overrides. The
+Three instances, all installed from the Helm chart by the GitOps setup in
+`sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-instance overrides. The
 only thing that differs between them is which images they pull.
 
-| Cluster | Images                                       | Moves when                       |
-| ------- | -------------------------------------------- | -------------------------------- |
-| dev     | `temporary/*:latest`, `pullPolicy: Always`   | anything is merged to `main`     |
-| prod    | chart defaults — `release/*` at `appVersion` | a new chart version is installed |
+| Instance | Images                                       | Moves when                       |
+| -------- | -------------------------------------------- | -------------------------------- |
+| dev      | `temporary/*:latest`, `pullPolicy: Always`   | anything is merged to `main`     |
+| staging  | the latest release, hotfixes included        | a new release or hotfix is out   |
+| prod     | chart defaults — `release/*` at `appVersion` | a new chart version is installed |
 
 ### dev follows `main`
 
 ```
 merge to main ──► CI rebuilds temporary/*:latest ──► next container restart
                                                      serves the new code
-```
-
-A restart is not always something you chose: an eviction or a node drain
-restarts the container too. To restart it on purpose:
-
-```bash
-kubectl rollout restart deploy/hackagon-frontend
 ```
 
 To see which build it is serving, read the version at the bottom of the page.
