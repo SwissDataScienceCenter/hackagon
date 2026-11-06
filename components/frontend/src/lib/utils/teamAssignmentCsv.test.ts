@@ -18,6 +18,7 @@ const row = (over: Partial<AssignmentRow> = {}): AssignmentRow => ({
   project: "1",
   team: "Team VP",
   prefers: ["1"],
+  links: { github: "https://github.com/alice", linkedin: "", renku: "" },
   answers: { experience: "Many", tshirt: "M" },
   ...over,
 })
@@ -45,11 +46,12 @@ const world = (over: Partial<ImportWorld> = {}): ImportWorld => ({
 })
 
 describe("assignmentCsv", () => {
-  it("heads the fixed columns, then one per question", () => {
+  it("heads the fixed columns, the profile links, then one per question", () => {
     const [header] = assignmentCsv([], QUESTIONS).split("\r\n")
 
     expect(header).toBe(
-      "user_id,name,project,team,prefers,How much have you hacked before?,T-shirt size",
+      "user_id,name,project,team,prefers,github,linkedin,renku," +
+        "How much have you hacked before?,T-shirt size",
     )
   })
 
@@ -60,8 +62,11 @@ describe("assignmentCsv", () => {
     ).split("\r\n")
 
     // Unquoted: a semicolon is an ordinary character in a comma-separated
-    // file, and the header is what a reader sniffs the delimiter from.
-    expect(first).toBe("u1,Alice Doe,1,Team VP,1; 2,Many,M")
+    // file, and the header is what a reader sniffs the delimiter from. A link
+    // not set is an empty cell.
+    expect(first).toBe(
+      "u1,Alice Doe,1,Team VP,1; 2,https://github.com/alice,,,Many,M",
+    )
   })
 
   it("leaves an unanswered question's cell empty", () => {
@@ -77,7 +82,7 @@ describe("assignmentCsv", () => {
       "\r\n",
     )
 
-    expect(first).toBe("u1,Alice Doe,,,1")
+    expect(first).toBe("u1,Alice Doe,,,1,https://github.com/alice,,")
   })
 })
 
