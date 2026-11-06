@@ -8,6 +8,10 @@ Everyone taking part in the hackathon. It shows:
 - [A participant's profile](#a-participants-profile): links, shared answers and
   teams
 
+It might also show:
+
+- [Leave the hackathon](#leave-the-hackathon): on your own profile
+
 :::
 
 ![The Participants page of a hackathon, as a participant sees it](../static/screenshots/member-participants.png)
@@ -33,3 +37,13 @@ On your own profile:
 - Click {guilabel}`Edit answers` to change your registration answers.
 - Click {guilabel}`Add your GitHub, LinkedIn or Renku link` to go to your
   account page.
+- Click {guilabel}`Leave hackathon` to stop taking part. See
+  [Leave the hackathon](#leave-the-hackathon).
+
+## Leave the hackathon
+
+- You leave your team and give up the projects you proposed.
+- Your project preferences and registration answers are deleted.
+- Your team keeps its projects and its submission.
+- To come back, you have to register again.
+- Not offered to owners, and not once the hackathon has finished.

@@ -13,6 +13,12 @@
         message: string;
         /** What the confirming button says — the action, never "OK". */
         confirmLabel: string;
+        /**
+         * What the dismissing button says, "Cancel" unless given. Named when the
+         * action is itself a cancel — "Cancel" beside "Cancel registration"
+         * leaves the reader to guess which one keeps things as they are.
+         */
+        cancelLabel?: string;
         /** Red confirm button, for something that cannot simply be undone. */
         danger?: boolean;
     };
@@ -58,7 +64,7 @@
             <div class="flex justify-end gap-2 pt-1">
                 <!-- First, so it has the focus: a slip of Enter cancels. -->
                 <button type="button" class="btn btn-sm btn-ghost" onclick={() => answer(false)}>
-                    Cancel
+                    {current.cancelLabel ?? 'Cancel'}
                 </button>
                 <button
                     type="button"

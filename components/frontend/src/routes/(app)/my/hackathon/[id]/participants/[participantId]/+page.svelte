@@ -4,11 +4,14 @@
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
     import BackLink from '$lib/components/layout/BackLink.svelte';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
 
     const LINK_LABEL = Object.fromEntries(PROFILE_LINK_KINDS.map((k) => [k.key, k.label]));
 
@@ -59,7 +62,8 @@
   a 21px name above an undifferentiated grey field and no rung between them.
 
   Nothing here acts on the person — except, on your own profile, "Save as your
-  GitHub link" beside an answer, which edits only your own links. Approve, Remove and the
+  GitHub link" beside an answer, which edits only your own links, and "Leave this
+  hackathon" at the foot, which removes only you. Approve, Remove and the
   owner controls live on the organizer's own view of this participant,
   `participants/manage/<id>` (see $lib/navigation's manageNav), and duplicating
   them here would mean two surfaces to keep in step with the same casbin rules.
@@ -295,5 +299,40 @@
                 </div>
             {/if}
         </section>
+
+        <!-- Last, and only on your own profile: the way out, below everything it
+             takes away. The sentence says what goes and what stays before the
+             button is pressed, and the dialog says it again before anything
+             happens. -->
+        {#if data.canLeave}
+            <section class="card box-border flex w-full flex-col items-start gap-3 px-5 py-4">
+                <h3 class="m-0 text-section text-ink">Leave this hackathon</h3>
+                <p class="prose m-0 text-sm text-ink-3">
+                    You leave your team and give up the projects you proposed. Your team keeps
+                    its projects and its submission.
+                </p>
+                <form
+                    method="POST"
+                    action="?/leave"
+                    use:enhance={async ({ cancel }) => {
+                        const ok = await confirmDialog.ask({
+                            title: `Leave ${data.hackathon.name}?`,
+                            message:
+                                'You leave your team, give up the projects you proposed, and your project preferences and registration answers are deleted. To come back, you have to register again.',
+                            confirmLabel: 'Leave hackathon',
+                            danger: true,
+                        });
+                        if (!ok) return cancel();
+                    }}
+                >
+                    <button type="submit" class="btn btn-sm btn-danger">Leave hackathon</button>
+                </form>
+                {#if form?.leaveError}
+                    <p class="m-0 text-xs text-danger-ink" role="alert">{form.leaveError}</p>
+                {/if}
+            </section>
+        {/if}
     </div>
 </div>
+
+<ConfirmDialog bind:this={confirmDialog} />
