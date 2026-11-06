@@ -2,10 +2,10 @@
 
 :::{admonition} Owner's Manage Submissions
 
-Every team and where it stands with its work. It shows:
+Every team and whether it has submitted. It shows:
 
 - [Status](#status): whether submitting is open
-- [Teams](#teams): each team's entry and drafts
+- [Teams](#teams): each team's submission in brief
 
 :::
 
@@ -19,12 +19,15 @@ Every team and where it stands with its work. It shows:
 
 ## Teams
 
-- Click the tabs {guilabel}`All`, {guilabel}`No submission`,
-  {guilabel}`Draft only` and {guilabel}`Final` to filter. Search by team,
-  project or person.
+- Teams that have not submitted come first. A team counts as submitted once it
+  has saved its submission.
+- Click the tabs {guilabel}`All`, {guilabel}`No submission` and
+  {guilabel}`Submitted` to filter. Search by team, project or person.
 - Click {guilabel}`Download CSV` to get all teams.
-- Per team: members, the entry, its version and who submitted it. Earlier
-  versions are folded away.
+- Per team: its project, its members, the start of its description, and when it
+  was last updated and by whom.
+- Click {guilabel}`View` to read a team's whole submission on its
+  [submission page](../participant/member-submissions.md#submission-page).
 - Read-only: teams hand in their work themselves on
   [Our submission](../participant/member-our-submission.md).
 - No teams yet: click {guilabel}`Set up teams` to go to
