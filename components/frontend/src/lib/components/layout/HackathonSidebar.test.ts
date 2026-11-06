@@ -45,7 +45,6 @@ async function renderAt(pathname: string, overrides = {}) {
 
   const result = render(HackathonSidebar, {
     hackathonId: "h1",
-    hackathonName: "ORD Hackathon",
     pages: [],
     membership: { role: OWNER, isWaiting: false },
     isGlobalAdmin: false,

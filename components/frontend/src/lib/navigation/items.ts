@@ -578,3 +578,57 @@ export function manageNav(
     },
   ]
 }
+
+/**
+ * Everything one hackathon's two nav lists are built from, as one object.
+ *
+ * The sidebar draws both lists and the breadcrumb names the entry that is lit
+ * in them. Each building its own lists from its own arguments would be two
+ * copies of the gating rules, and the breadcrumb would quietly stop naming an
+ * entry the day one copy grew a parameter the other did not.
+ */
+export interface HackathonNavInput {
+  hackathonId: string
+  pages: HackathonPageRef[]
+  membership?: ViewerMembership | null
+  isGlobalAdmin: boolean
+  votingEnabled?: boolean
+  resultsVisible?: boolean
+  teamCount?: number
+  trackCount?: number
+  phaseCount?: number
+  myProjectCount?: number
+  proposalsOpen?: boolean
+  myTeamCount?: number
+  stateNeedsAttention?: boolean
+  isPrivate?: boolean
+}
+
+/** Both of a hackathon's nav lists — see `memberNav` and `manageNav`. */
+export function hackathonNav(input: HackathonNavInput): {
+  items: NavItem[]
+  manageItems: NavItem[]
+} {
+  return {
+    items: memberNav(
+      input.hackathonId,
+      input.pages,
+      input.votingEnabled,
+      input.resultsVisible,
+      input.teamCount,
+      input.phaseCount,
+      input.myProjectCount,
+      input.myTeamCount,
+      input.proposalsOpen,
+    ),
+    manageItems: manageNav(
+      input.hackathonId,
+      input.membership ?? undefined,
+      input.isGlobalAdmin,
+      input.stateNeedsAttention,
+      input.trackCount,
+      input.isPrivate,
+      input.phaseCount,
+    ),
+  }
+}

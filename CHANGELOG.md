@@ -20,6 +20,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Every page inside a hackathon starts with a breadcrumb: the hackathon's full
+  name and the section you are in. It stays visible when the menu is folded
+  away, and replaces the cut-off name at the top of the menu.
 - Each hackathon has an About page again, first in its menu. It carries the
   hackathon's banner, its phases and the organizers' description, which all used
   to sit on the overview.
