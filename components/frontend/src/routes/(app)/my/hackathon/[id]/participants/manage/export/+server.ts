@@ -6,6 +6,11 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { csvFilename } from "$lib/utils/csv"
 import { rosterCsv, type RosterRow } from "$lib/utils/participantCsv"
 import { viewerMembership } from "$lib/server/hackathon/membership"
+import { listAnswers } from "$lib/server/hackathon/questions"
+import {
+  answerCells,
+  questionRows,
+} from "$lib/server/hackathon/registrationForm"
 import { profileLinksOf } from "$lib/server/user/profileLinks"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -66,6 +71,17 @@ export const GET: RequestHandler = async (event) => {
     error(403, "Only the hackathon organizer can export participants")
   }
 
+  // A column per registration question, as the team assignment file has, and
+  // written the same way through `answerCells`. Fetched the same way too:
+  // `listAnswers` reads a failure as nobody having answered, so the file still
+  // downloads, with those columns empty.
+  const [questions, answers] = await Promise.all([
+    hackathon.listQuestions({ hackathonId: event.params.id }),
+    listAnswers(hackathon, event.params.id),
+  ])
+  const columns = questionRows(questions.questions)
+  const cells = answerCells(columns, answers)
+
   // Waitlisted participants are in the file, labelled — the same call the page
   // itself makes. Dropping them would put the row count at odds with the header
   // and leave no way to reach them at all; the Status column is what keeps them
@@ -82,15 +98,22 @@ export const GET: RequestHandler = async (event) => {
       status: m.isWaiting ? "Waitlisted" : "Approved",
       role: m.role === HackathonRole.HACKATHON_ROLE_OWNER ? "Owner" : "Member",
       links: profileLinksOf(m.user),
+      answers: cells[m.user!.id] ?? {},
     }))
 
-  return new Response(rosterCsv(rows), {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${csvFilename(h.name, "participants")}"`,
-      // The roster changes with every approval and removal; a cached copy of the
-      // one from before them is worse than a second round trip.
-      "Cache-Control": "no-store",
+  return new Response(
+    rosterCsv(
+      rows,
+      columns.map((q) => ({ key: q.key, label: q.label })),
+    ),
+    {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${csvFilename(h.name, "participants")}"`,
+        // The roster changes with every approval and removal; a cached copy of the
+        // one from before them is worse than a second round trip.
+        "Cache-Control": "no-store",
+      },
     },
-  })
+  )
 }

@@ -18,19 +18,26 @@ export interface RosterRow {
   role: "Owner" | "Member"
   /** Their profile links; an empty string for each one not set. */
   links: ProfileLinks
+  /** Their answer, by question key. A question they skipped is absent. */
+  answers: Record<string, string>
 }
 
 /**
- * The file as it goes out: who, where they stand, and the profiles they link
- * to — one column per site, in the order the Account page lists them.
+ * The file as it goes out: who, where they stand, the profiles they link to —
+ * one column per site, in the order the Account page lists them — and then one
+ * column per registration question, headed by its label.
  */
-export function rosterCsv(rows: readonly RosterRow[]): string {
+export function rosterCsv(
+  rows: readonly RosterRow[],
+  questions: readonly { key: string; label: string }[],
+): string {
   const header = [
     "Email Address",
     "Full Name",
     "Status",
     "Role",
     ...PROFILE_LINK_KINDS.map((k) => k.label),
+    ...questions.map((q) => q.label),
   ]
 
   return (
@@ -43,6 +50,7 @@ export function rosterCsv(rows: readonly RosterRow[]): string {
           r.status,
           r.role,
           ...PROFILE_LINK_KINDS.map((k) => r.links[k.key]),
+          ...questions.map((q) => r.answers[q.key] ?? ""),
         ]),
       )
       .join("")
