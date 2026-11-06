@@ -100,17 +100,16 @@ func (s *PhaseService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := phase.Edges.HackathonOrErr()
+	h, err := edgeHackathon(phase.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
 	// Check Phase.Read permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Phase,
 		mw.Read,
 	); err != nil {
@@ -238,17 +237,16 @@ func (s *PhaseService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := phase.Edges.HackathonOrErr()
+	h, err := edgeHackathon(phase.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Phase,
 		mw.Write,
 	); err != nil {
@@ -386,17 +384,15 @@ func (s *PhaseService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := phase.Edges.HackathonOrErr()
+	h, err := edgeHackathon(phase.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Phase,
 		mw.Write,
 	); err != nil {

@@ -47,6 +47,11 @@ Fully-qualified names come from the proto `package`, not the folder — `user.*`
      - Inside a hackathon, call
        `s.enforcer.RequireHackathonPermission(ctx, s.dbClient, hackathonID, mw.Object, mw.Perm)`.
        It also rejects a deleted hackathon.
+     - If the handler already loaded the hackathon (directly, or as an edge via
+       `h, err := edgeHackathon(x.Edges.HackathonOrErr())` or
+       `teamHackathon(t)`), call
+       `s.enforcer.RequirePermissionOn(ctx, h, mw.Object, mw.Perm)` instead: a
+       loaded hackathon is live, so it skips the extra query.
      - Outside any hackathon, call
        `s.enforcer.RequireGlobalPermission(ctx, mw.Object, mw.Perm)`.
      - Both return a gRPC error that you can return as is. Call `Enforce`
