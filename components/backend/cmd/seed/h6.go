@@ -321,12 +321,17 @@ func (h *harness) seedH6(now time.Time, alice, bob, charles *actor) error {
 			})
 		}
 		if s.final {
+			// Written as a team would, since lists show its first lines: a
+			// placeholder there reads as the page's own wording.
+			description := s.desc + "\n\nThe repository has the code and a " +
+				"README on how to run it. The slides and a short demo video are " +
+				"in the attachments folder."
 			subSpecs = append(subSpecs, submissionSpec{
 				by:                  author,
 				team:                s.team,
 				project:             s.title,
 				result:              "https://github.com/open-science-hack/" + s.repo,
-				description:         "Final submission of " + s.title,
+				description:         description,
 				attachmentFolderURL: "https://drive.example.com/open-science-hack/" + s.repo,
 				final:               true,
 			})

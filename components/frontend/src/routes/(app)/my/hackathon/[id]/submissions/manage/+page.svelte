@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { CircleAlert, Download, Search } from 'lucide-svelte';
+    import { CircleAlert, Clock, Download, Search, Users, UsersRound } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import SubmissionStandingTabs from '$lib/components/hackathon/SubmissionStandingTabs.svelte';
     import { nameSegments, type NameSegment } from '$lib/utils/personSearch';
-    import { submissionStatusLabel } from '$lib/utils/submissionStatus';
+    import { avatarInitials } from '$lib/utils/initials';
     import {
         DEFAULT_SUBMISSION_FILTER,
         SUBMISSION_FILTER_LABEL,
@@ -16,7 +17,7 @@
         submissionFilterQuery,
         type SubmissionStanding
     } from '$lib/utils/submissionFilter';
-    import SubmissionContent from '$lib/components/hackathon/SubmissionContent.svelte';
+    import { isHttpUrl } from '$lib/utils/url';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -24,15 +25,12 @@
     // Derived from the load's return shape rather than restated, so the two
     // can't drift.
     type Row = PageData['rows'][number];
-    type Version = NonNullable<Row['latest']>;
 
-    // The badge each standing wears on its row. Draft and final match the
-    // submission status badges; nothing filed is neutral, since it is not a
-    // status a submission can have — there is no submission.
+    // The badge each standing wears on its row. Nothing filed is neutral, since
+    // it is not a status a submission can have — there is no submission.
     const STANDING_BADGE: Record<SubmissionStanding, { label: string; variant: string }> = {
         missing: { label: 'No submission', variant: 'badge-neutral' },
-        draft: { label: 'Draft only', variant: 'badge-warning' },
-        final: { label: 'Final', variant: 'badge-success' }
+        submitted: { label: 'Submitted', variant: 'badge-success' }
     };
 
     // The tab, read here rather than in the load: the load returns every team
@@ -74,20 +72,15 @@
         SUBMISSION_STANDINGS.filter((s) => s !== filter && counts[s] > 0)
     );
 
+    // Date only, as on the Submissions list: the row is scanned, and the
+    // entry's own page has the time.
     function formatDate(d: Date | undefined): string {
         if (!d) return '';
-        return d.toLocaleString('en-US', {
+        return d.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
+            year: 'numeric'
         });
-    }
-
-    /** The version that counts — the final entry if there is one. */
-    function entryOf(row: Row): Version | null {
-        return row.latestFinal ?? row.latest;
     }
 </script>
 
@@ -97,37 +90,49 @@
                 >{:else}{s.text}{/if}{/each}{:else}{text}{/if}
 {/snippet}
 
-{#snippet content(v: Version)}
-    <!-- Description folded: one long one would push every team below it down
-         a page that exists to scan many teams. -->
-    <SubmissionContent
-        repositoryUrl={v.repositoryUrl}
-        attachmentFolderUrl={v.attachmentFolderUrl}
-        description={v.description}
-        collapseDescription
-    />
-{/snippet}
-
-{#snippet versionMeta(v: Version)}
-    <span class="text-xs text-ink-3">
-        Version <span class="tnum">{v.version}</span> · submitted {formatDate(v.createdAt)}{#if v.creator}
-            by {v.creator}{/if}{#if v.finalizedAt}
-            · finalized {formatDate(v.finalizedAt)}{#if v.finalizedBy} by {v.finalizedBy}{/if}{/if}
-    </span>
+{#snippet preview(row: Row)}
+    <!-- Two lines and no more, as on the Submissions list: the load already cut
+         the text, and the clamp is what holds on a narrow screen. A link only
+         when there is no description, so an entry that is nothing but a link
+         still says something on its row. -->
+    {#if row.excerpt}
+        <p class="prose m-0 line-clamp-2 max-w-[52ch] text-xs leading-snug text-ink-2">
+            {row.excerpt}
+        </p>
+    {:else if row.link}
+        <p class="m-0 truncate text-xs leading-snug">
+            {#if isHttpUrl(row.link)}
+                <!-- eslint-disable svelte/no-navigation-without-resolve -- team-provided external URL -->
+                <a
+                    href={row.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-accent-ink hover:underline"
+                >
+                    {row.link}
+                </a>
+                <!-- eslint-enable svelte/no-navigation-without-resolve -->
+            {:else}
+                <!-- Notes typed into the link field before it had to be one. -->
+                <span class="text-ink-2">{row.link}</span>
+            {/if}
+        </p>
+    {/if}
 {/snippet}
 
 <!--
-  Every team in the hackathon and where it stands with its submission: nothing
-  filed, drafts only, or a final entry. Reached from the sidebar's Manage
+  Every team in the hackathon and whether it has submitted. A team holding only
+  drafts has not — the same rule as the ballot. Reached from the sidebar's Manage
   section (see $lib/navigation's manageNav).
 
-  **Read only.** An organiser may read every team's submissions but cannot file
-  or finalize one for a team — those are the team's own (see
+  **Read only.** An organiser may read every team's submission but cannot save
+  one for a team — that is the team's own (see
   `mayViewAllSubmissions`). So every row is information, and chasing a team that
   owes an entry happens outside the app.
 
-  Teams with nothing filed come first, then drafts, then finals, each by name:
-  the page is for finding who still owes an entry.
+  Teams with nothing filed come first, then the rest, each by name: the page is
+  for finding who still owes an entry. Each row is the entry in brief; View
+  opens the team's own submission page, which has all of it.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other manage pages).
 -->
@@ -153,10 +158,9 @@
         />
         <p class="m-0 text-xs text-ink-2">
             {#if data.submissionsOpen}
-                Submissions are open: teams can add new versions and finalize one as their entry.
+                Submissions are open: teams can save and change their submission.
             {:else}
-                Submissions are closed: teams cannot add new versions, but can still finalize a
-                draft they already have.
+                Submissions are closed: teams can no longer change their submission.
             {/if}
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
@@ -254,78 +258,71 @@
             {:else if shown.length === 0}
                 <p class="m-0 py-6 text-center text-sm text-ink-3">
                     {#if filter === 'missing'}
-                        Every team has submitted something.
-                    {:else if filter === 'draft'}
-                        No team is left with only drafts.
+                        Every team has submitted.
                     {:else}
-                        No team has a final entry yet.
+                        No team has submitted yet.
                     {/if}
                 </p>
             {:else}
                 {#each shown as { row, team, project } (row.teamId)}
-                    {@const entry = entryOf(row)}
                     {@const badge = STANDING_BADGE[row.standing]}
-                    <div class="card card-raised box-border flex w-full flex-col gap-2 px-5 py-4">
-                        <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-                            <div class="flex min-w-0 flex-col gap-0.5">
-                                <h3 class="m-0 text-sm leading-snug text-ink">
+                    <!-- The Submissions list's row — media | text | controls —
+                         with what an organiser chases by: the members, and the
+                         standing as a badge. -->
+                    <div class="card card-raised box-border flex w-full items-start gap-4 px-5 py-4">
+                        <RoundMedia src={row.imageUrl} initials={avatarInitials(row.projectTitle)} />
+
+                        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <h3 class="m-0 text-sm leading-snug text-ink">
+                                {@render marked(row.projectTitle, project)}
+                            </h3>
+                            {@render preview(row)}
+                            <div
+                                class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3"
+                            >
+                                <span class="inline-flex items-center gap-1.5">
+                                    <UsersRound class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                     {@render marked(row.teamName, team)}
-                                </h3>
-                                <span class="text-xs text-ink-3">
-                                    {@render marked(row.projectTitle, project)}
                                 </span>
-                                <span class="text-xs text-ink-3">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <Users class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                     {#if row.members.length > 0}
-                                        {#each row.members as m, i (i)}{#if i > 0},
-                                            {/if}{@render marked(m, nameSegments(m, query))}{/each}
+                                        <span>
+                                            {#each row.members as m, i (i)}{#if i > 0},
+                                                {/if}{@render marked(
+                                                    m,
+                                                    nameSegments(m, query)
+                                                )}{/each}
+                                        </span>
                                     {:else}
                                         No members
                                     {/if}
                                 </span>
+                                <span class="inline-flex items-center gap-1.5">
+                                    <Clock class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                    {#if row.updatedAt}
+                                        Updated {formatDate(row.updatedAt)}{#if row.updatedBy}
+                                            by {row.updatedBy}{/if}
+                                    {:else}
+                                        Not submitted yet
+                                    {/if}
+                                </span>
                             </div>
-                            <span class="badge {badge.variant} shrink-0">{badge.label}</span>
                         </div>
 
-                        {#if entry}
-                            <div class="flex flex-col gap-1 border-t border-line pt-2">
-                                {@render content(entry)}
-                                {@render versionMeta(entry)}
-                            </div>
-                        {/if}
-
-                        {#if row.latest && row.latestFinal && row.latest.id !== row.latestFinal.id}
-                            <!-- A draft ahead of the entry. It does not replace the
-                                 entry unless the team finalizes it, which is the
-                                 thing worth knowing about it. -->
-                            <div class="flex flex-col gap-1 border-t border-line pt-2">
-                                <span class="text-xs font-semibold text-warning-ink">
-                                    Newer draft, not finalized
-                                </span>
-                                {@render content(row.latest)}
-                                {@render versionMeta(row.latest)}
-                            </div>
-                        {/if}
-
-                        {#if row.earlier.length > 0}
-                            <details class="border-t border-line pt-2">
-                                <summary class="cursor-pointer text-xs text-ink-3">
-                                    {row.earlier.length === 1
-                                        ? '1 earlier version'
-                                        : `${row.earlier.length} earlier versions`}
-                                </summary>
-                                <div class="mt-2 flex flex-col gap-2">
-                                    {#each row.earlier as v (v.id)}
-                                        <div class="flex flex-col gap-1">
-                                            <span class="text-xs text-ink-2">
-                                                {submissionStatusLabel(v.status) ?? 'Unknown'}
-                                            </span>
-                                            {@render content(v)}
-                                            {@render versionMeta(v)}
-                                        </div>
-                                    {/each}
-                                </div>
-                            </details>
-                        {/if}
+                        <div class="flex shrink-0 flex-col items-end gap-2">
+                            <span class="badge {badge.variant}">{badge.label}</span>
+                            {#if row.standing === 'submitted'}
+                                <a
+                                    href={resolve(
+                                        `/my/hackathon/${data.hackathonId}/submissions/${row.teamId}`
+                                    )}
+                                    class="btn btn-sm btn-ghost no-underline"
+                                >
+                                    View
+                                </a>
+                            {/if}
+                        </div>
                     </div>
                 {/each}
             {/if}

@@ -43,10 +43,10 @@
             class="chip no-underline {active ? 'chip-active' : ''}"
         >
             {SUBMISSION_FILTER_LABEL[filter]}
-            <!-- Warning on the two slices that hold teams still owing an entry —
-                 the ones an organiser came to find. Zero shows as a plain
+            <!-- Warning on the slice that holds teams still owing an entry —
+                 the one an organiser came to find. Zero shows as a plain
                  count: nothing to chase. -->
-            {#if (filter === 'missing' || filter === 'draft') && counts[filter] > 0}
+            {#if filter === 'missing' && counts[filter] > 0}
                 <span class="badge badge-warning tnum">{counts[filter]}</span>
             {:else}
                 <span class="tnum">{counts[filter]}</span>

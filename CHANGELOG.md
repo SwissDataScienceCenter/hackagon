@@ -41,8 +41,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   a folder of attachments, alongside the link to their repository.
 - The Manage Submissions CSV now has an "Attachments" column with each entry's
   attachments link.
-- Manage Submissions now shows each version's attachments link and, folded away
-  until opened, its description.
 - A new Submissions page lists what every team has handed in, with your own
   team's first.
 - Each submission has its own page with the full description, its links, its
@@ -89,6 +87,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   the new "Our submission" page. There are no more drafts, versions or a
   separate finalize step: what the team saved last is its entry. The page shows
   what is not saved yet, and asks before you leave with unsaved changes.
+- Manage Submissions follows the same model. A team has submitted or it has not,
+  with no drafts or versions. The tabs are All, No submission and Submitted.
+  Each row shows the start of the team's entry, with View to read all of it. The
+  CSV has "Last Updated" columns in place of Version, Submitted, Finalized and
+  Newer Draft.
 - A team's page now shows only the team and its project. Its submission is on
   the Submissions page.
 - A proposer can now edit their project after it has been approved or rejected.

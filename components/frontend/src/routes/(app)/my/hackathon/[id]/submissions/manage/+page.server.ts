@@ -9,15 +9,17 @@ import {
   submissionsByTeam,
 } from "$lib/server/hackathon/submissions"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
+import { markdownExcerpt } from "$lib/utils/markdown"
+import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 import { error } from "@sveltejs/kit"
 
 // The organiser's overview: every team, where it stands with its submission,
 // and what it has filed.
 //
-// **Read only.** An owner may read every submission but write none — creating
-// and finalizing are team-scoped and granted to `Member` only (see
-// `mayViewAllSubmissions`) — so the page has no actions. Chasing a team that
-// has not submitted happens outside the app.
+// **Read only.** An owner may read every submission but write none — saving
+// one is team-scoped and granted to `Member` only (see `mayViewAllSubmissions`)
+// — so the page has no actions. Chasing a team that has not submitted happens
+// outside the app.
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership, hackathonState } = await event.parent()
 
@@ -32,9 +34,7 @@ export const load: PageServerLoad = async (event) => {
 
   const { team } = requireGrpc(event.locals.grpc)
 
-  // Whether teams can file new versions right now — the banner's subject. Closing
-  // it does not stop a team finalizing a draft it already holds (see
-  // `mayFinalizeSubmissions`), which is why the banner says so.
+  // Whether teams can save their submission right now — the banner's subject.
   const submissionsOpen = hackathonState.enabled.includes(
     Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   )
@@ -53,10 +53,10 @@ export const load: PageServerLoad = async (event) => {
     }
   }
 
-  // Creators and finalizers come back as bare ids. Owners included, as on the
+  // Who saved each entry comes back as a bare id. Owners included, as on the
   // other manage pages: an organiser who never joined holds no member row.
   const names = namesByUserId(hackathon.members, hackathon.owners)
-  const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
+  const projects = new Map(hackathon.projects.map((p) => [p.id, p]))
 
   // Every team, whichever tab is open. The tab is applied on the page, for two
   // reasons: a search has to see every team to say which tab its matches are
@@ -67,11 +67,28 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: hackathon.id,
     submissionsOpen,
     teamsReadable: true,
+    // What a row shows, as on the Submissions list: the description cut to a
+    // row's worth, or a link when there is none. The whole entry is read on
+    // the team's own submission page, which View opens.
     rows: submissionOverview(
       teams,
       await submissionsByTeam(team, hackathon.id),
-      projectTitles,
+      projects,
       names,
-    ),
+    ).map(({ entry, ...row }) => {
+      const excerpt = entry?.description
+        ? markdownExcerpt(entry.description, PROJECT_EXCERPT_CHARS)
+        : ""
+
+      return {
+        ...row,
+        excerpt: excerpt || undefined,
+        link: excerpt
+          ? undefined
+          : (entry?.repositoryUrl ?? entry?.attachmentFolderUrl),
+        updatedAt: entry?.updatedAt,
+        updatedBy: entry?.updatedBy,
+      }
+    }),
   }
 }

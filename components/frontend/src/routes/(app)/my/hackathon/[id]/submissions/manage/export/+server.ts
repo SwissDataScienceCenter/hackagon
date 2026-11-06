@@ -26,7 +26,7 @@ import { ClientError, Status } from "nice-grpc-common"
  *
  * **Every team, whatever tab the page is on**, in the page's order. A download
  * whose contents depend on which tab was open is a trap, the one the project
- * export refuses too; the Standing column is what keeps the three apart.
+ * export refuses too; the Standing column is what keeps the two apart.
  */
 export const GET: RequestHandler = async (event) => {
   const { hackathon, team } = requireGrpc(event.locals.grpc)
@@ -70,33 +70,20 @@ export const GET: RequestHandler = async (event) => {
   const overview = submissionOverview(
     teams,
     await submissionsByTeam(team, h.id),
-    new Map(h.projects.map((p) => [p.id, p.title])),
+    new Map(h.projects.map((p) => [p.id, p])),
     namesByUserId(h.members, h.owners),
   )
 
-  const rows: SubmissionCsvRow[] = overview.map((r) => {
-    // The page's "entry that counts", and its newer draft when there is one.
-    const entry = r.latestFinal ?? r.latest
-    const newerDraft =
-      r.latestFinal && r.latest && r.latest.id !== r.latestFinal.id
-        ? r.latest.version
-        : undefined
-
-    return {
-      team: r.teamName,
-      project: r.projectTitle,
-      members: r.members,
-      standing: SUBMISSION_FILTER_LABEL[r.standing],
-      version: entry?.version,
-      submittedAt: entry?.createdAt,
-      submittedBy: entry?.creator,
-      finalizedAt: entry?.finalizedAt,
-      finalizedBy: entry?.finalizedBy,
-      newerDraft,
-      attachmentFolderUrl: entry?.attachmentFolderUrl,
-      repositoryUrl: entry?.repositoryUrl,
-    }
-  })
+  const rows: SubmissionCsvRow[] = overview.map((r) => ({
+    team: r.teamName,
+    project: r.projectTitle,
+    members: r.members,
+    standing: SUBMISSION_FILTER_LABEL[r.standing],
+    updatedAt: r.entry?.updatedAt,
+    updatedBy: r.entry?.updatedBy,
+    attachmentFolderUrl: r.entry?.attachmentFolderUrl,
+    repositoryUrl: r.entry?.repositoryUrl,
+  }))
 
   return new Response(submissionCsv(rows), {
     headers: {

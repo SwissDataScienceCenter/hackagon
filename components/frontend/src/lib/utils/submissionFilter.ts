@@ -1,18 +1,16 @@
 // Where a team stands with its submission, and which of those an organiser is
 // looking at on Manage Submissions.
 //
-// Three standings, and every team is in exactly one: nothing filed yet, only
-// drafts, or a final version — the team's actual entry. A final version with a
-// newer draft on top of it is still `final`: the draft does not undo what the
-// team already declared (see `submissionVersions`), so the row shows the draft
-// as a note rather than moving the team back a step.
+// Two standings, and every team is in exactly one: it has an entry, or it has
+// none. A team holding only drafts has none — the same rule the ballot follows,
+// since everything reads the entry through `submissionEntry`.
 //
 // Words rather than numbers, like `projectFilter`: this vocabulary appears in the
-// address bar, where `?standing=draft` says what it means. Nothing here imports
-// the generated enums, so a component may import this file.
+// address bar, where `?standing=missing` says what it means. Nothing here
+// imports the generated enums, so a component may import this file.
 
 /** Every standing, in the order the overview sorts them: the work first. */
-export const SUBMISSION_STANDINGS = ["missing", "draft", "final"] as const
+export const SUBMISSION_STANDINGS = ["missing", "submitted"] as const
 
 export type SubmissionStanding = (typeof SUBMISSION_STANDINGS)[number]
 
@@ -28,12 +26,11 @@ export type SubmissionFilter = (typeof SUBMISSION_FILTERS)[number]
  */
 export const DEFAULT_SUBMISSION_FILTER: SubmissionFilter = "all"
 
-/** Tab labels. "Draft only", since a final team may hold drafts too. */
+/** Tab labels, and the Standing column of the export. */
 export const SUBMISSION_FILTER_LABEL: Record<SubmissionFilter, string> = {
   all: "All",
   missing: "No submission",
-  draft: "Draft only",
-  final: "Final",
+  submitted: "Submitted",
 }
 
 /**

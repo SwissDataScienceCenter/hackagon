@@ -8,8 +8,6 @@ import {
   submissionEntry,
   submissionOverview,
   submissionsByTeam,
-  submissionStanding,
-  submissionVersions,
   teamEntries,
 } from "./submissions"
 
@@ -39,152 +37,6 @@ function sub(fields: Partial<Submission> & { version: number }): Submission {
     ...fields,
   }
 }
-
-describe("submissionVersions", () => {
-  it("reports nothing for a team with no submissions", () => {
-    expect(submissionVersions([], names)).toEqual({
-      latest: null,
-      latestFinal: null,
-      earlier: [],
-    })
-  })
-
-  it("sorts by version rather than trusting the given order", () => {
-    const r = submissionVersions(
-      [sub({ version: 3 }), sub({ version: 1 }), sub({ version: 2 })],
-      names,
-    )
-
-    expect(r.latest?.version).toBe(3)
-    expect(r.earlier.map((v) => v.version)).toEqual([2, 1])
-  })
-
-  it("has no final entry while every version is a draft", () => {
-    const r = submissionVersions([sub({ version: 1 })], names)
-
-    expect(r.latest?.version).toBe(1)
-    expect(r.latestFinal).toBeNull()
-    expect(r.earlier).toEqual([])
-  })
-
-  it("collapses latest and latestFinal when the newest version is final", () => {
-    const r = submissionVersions(
-      [sub({ version: 1, status: FINAL }), sub({ version: 2, status: FINAL })],
-      names,
-    )
-
-    expect(r.latest?.version).toBe(2)
-    expect(r.latestFinal?.version).toBe(2)
-    // Only v1 is left over — v2 is covered by both prominent slots.
-    expect(r.earlier.map((v) => v.version)).toEqual([1])
-  })
-
-  it("keeps a newer draft separate from the final version it sits on", () => {
-    const r = submissionVersions(
-      [
-        sub({ version: 1, status: FINAL }),
-        sub({ version: 2, status: FINAL }),
-        sub({ version: 3, status: DRAFT }),
-      ],
-      names,
-    )
-
-    expect(r.latest?.version).toBe(3)
-    expect(r.latestFinal?.version).toBe(2)
-  })
-
-  it("never repeats a final version pushed out of last place by a draft", () => {
-    const r = submissionVersions(
-      [
-        sub({ version: 1, status: FINAL }),
-        sub({ version: 2, status: FINAL }),
-        sub({ version: 3, status: DRAFT }),
-      ],
-      names,
-    )
-
-    // v2 renders in its own block, so it must not also appear under "earlier" —
-    // `earlier` excluding only `latest` was the original bug.
-    expect(r.earlier.map((v) => v.version)).toEqual([1])
-  })
-
-  it("resolves the creator's display name", () => {
-    const r = submissionVersions([sub({ version: 1, creatorId: BOB })], names)
-
-    expect(r.latest?.creator).toBe("Bob Henderson")
-  })
-
-  it("leaves the creator unresolved when they are no longer a member", () => {
-    const r = submissionVersions(
-      [sub({ version: 1, creatorId: "user-departed" })],
-      names,
-    )
-
-    expect(r.latest?.creator).toBeUndefined()
-  })
-
-  it("reports who finalized a version, which need not be its author", () => {
-    const r = submissionVersions(
-      [
-        sub({
-          version: 1,
-          status: FINAL,
-          creatorId: ALICE,
-          modifierId: BOB,
-          modifiedAt: new Date("2026-08-02T12:00:00Z"),
-        }),
-      ],
-      names,
-    )
-
-    expect(r.latestFinal?.creator).toBe("Alice Wonderland")
-    expect(r.latestFinal?.finalizedBy).toBe("Bob Henderson")
-    expect(r.latestFinal?.finalizedAt).toEqual(new Date("2026-08-02T12:00:00Z"))
-  })
-
-  it("reports no finalization on a draft, whose modifier only echoes creation", () => {
-    const r = submissionVersions(
-      [sub({ version: 1, status: DRAFT, modifierId: ALICE })],
-      names,
-    )
-
-    expect(r.latest?.finalizedAt).toBeUndefined()
-    expect(r.latest?.finalizedBy).toBeUndefined()
-  })
-
-  it("carries the proto's result through as the repository URL", () => {
-    const r = submissionVersions([sub({ version: 1 })], names)
-
-    expect(r.latest?.repositoryUrl).toBe("result-v1")
-  })
-
-  it("carries the attachments link and the description through", () => {
-    const r = submissionVersions(
-      [
-        sub({
-          version: 1,
-          attachmentFolderUrl: "https://drive.example.org/floods",
-          description: "Flood maps for **every** canton.",
-        }),
-      ],
-      names,
-    )
-
-    expect(r.latest?.attachmentFolderUrl).toBe(
-      "https://drive.example.org/floods",
-    )
-    expect(r.latest?.description).toBe("Flood maps for **every** canton.")
-  })
-
-  it("carries an absent result through as undefined", () => {
-    const r = submissionVersions(
-      [sub({ version: 1, result: undefined })],
-      names,
-    )
-
-    expect(r.latest?.repositoryUrl).toBeUndefined()
-  })
-})
 
 describe("submissionEntry", () => {
   it("is null for a team with no submissions", () => {
@@ -278,30 +130,6 @@ describe("submissionEntry", () => {
   })
 })
 
-describe("submissionStanding", () => {
-  it("is missing with nothing filed", () => {
-    expect(submissionStanding(submissionVersions([], names))).toBe("missing")
-  })
-
-  it("is draft while nothing is final", () => {
-    const r = submissionVersions(
-      [sub({ version: 1 }), sub({ version: 2 })],
-      names,
-    )
-
-    expect(submissionStanding(r)).toBe("draft")
-  })
-
-  it("stays final when a newer draft sits on top of the entry", () => {
-    const r = submissionVersions(
-      [sub({ version: 1, status: FINAL }), sub({ version: 2, status: DRAFT })],
-      names,
-    )
-
-    expect(submissionStanding(r)).toBe("final")
-  })
-})
-
 describe("submissionOverview", () => {
   const user = (id: string, displayName: string): User =>
     ({ id, displayName, username: id }) as User
@@ -310,29 +138,56 @@ describe("submissionOverview", () => {
   const team = (id: string, name: string, members: User[] = []): Team =>
     ({ id, name, projectId: "project-1", members }) as unknown as Team
 
-  const titles = new Map([["project-1", "Flood maps"]])
+  const projects = new Map([
+    [
+      "project-1",
+      { title: "Flood maps", image: "https://img.example.org/f.png" },
+    ],
+  ])
 
-  it("puts teams with nothing first, then drafts, then finals, each by name", () => {
+  it("puts teams with no entry first, then those with one, each by name", () => {
     const teams = [
       team("t-final", "Alpha"),
-      team("t-draft-b", "Bravo"),
       team("t-none", "Zulu"),
-      team("t-draft-a", "Able"),
+      team("t-final-b", "Able"),
     ]
     const byTeam = new Map([
       ["t-final", [sub({ version: 1, status: FINAL })]],
-      ["t-draft-b", [sub({ version: 1 })]],
-      ["t-draft-a", [sub({ version: 1 })]],
+      ["t-final-b", [sub({ version: 1, status: FINAL })]],
     ])
 
-    const rows = submissionOverview(teams, byTeam, titles, names)
+    const rows = submissionOverview(teams, byTeam, projects, names)
 
     expect(rows.map((r) => [r.teamName, r.standing])).toEqual([
       ["Zulu", "missing"],
-      ["Able", "draft"],
-      ["Bravo", "draft"],
-      ["Alpha", "final"],
+      ["Able", "submitted"],
+      ["Alpha", "submitted"],
     ])
+  })
+
+  // The same rule as the ballot: drafts are not an entry.
+  it("counts a team holding only drafts as missing", () => {
+    const rows = submissionOverview(
+      [team("t1", "Drafty")],
+      new Map([["t1", [sub({ version: 1 }), sub({ version: 2 })]]]),
+      projects,
+      names,
+    )
+
+    expect(rows[0]?.standing).toBe("missing")
+    expect(rows[0]?.entry).toBeNull()
+  })
+
+  it("carries the entry and who last saved it", () => {
+    const rows = submissionOverview(
+      [team("t1", "Team")],
+      new Map([["t1", [sub({ version: 1, status: FINAL, creatorId: BOB })]]]),
+      projects,
+      names,
+    )
+
+    expect(rows[0]?.entry?.id).toBe("s1")
+    expect(rows[0]?.entry?.updatedBy).toBe("Bob Henderson")
   })
 
   it("names the project, and says so when it cannot", () => {
@@ -342,13 +197,13 @@ describe("submissionOverview", () => {
         { ...team("t2", "Orphan"), projectId: "gone" } as Team,
       ],
       new Map(),
-      titles,
+      projects,
       names,
     )
 
-    expect(rows.map((r) => r.projectTitle)).toEqual([
-      "Flood maps",
-      "Unknown project",
+    expect(rows.map((r) => [r.projectTitle, r.imageUrl])).toEqual([
+      ["Flood maps", "https://img.example.org/f.png"],
+      ["Unknown project", undefined],
     ])
   })
 
@@ -362,7 +217,7 @@ describe("submissionOverview", () => {
         ]),
       ],
       new Map(),
-      titles,
+      projects,
       names,
     )
 
