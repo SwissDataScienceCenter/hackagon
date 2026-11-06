@@ -10,13 +10,9 @@ const row = (over: Partial<SubmissionCsvRow> = {}): SubmissionCsvRow => ({
   team: "Byte Me",
   project: "Flood maps",
   members: ["Alice", "Bob"],
-  standing: "Final",
-  version: 3,
-  submittedAt: new Date("2026-08-01T10:05:42Z"),
-  submittedBy: "Bob",
-  finalizedAt: new Date("2026-08-02T09:00:00Z"),
-  finalizedBy: "Alice",
-  newerDraft: undefined,
+  standing: "Submitted",
+  updatedAt: new Date("2026-08-01T10:05:42Z"),
+  updatedBy: "Bob",
   attachmentFolderUrl: "https://drive.example.org/byte-me",
   repositoryUrl: "https://github.com/byte-me/floods",
   ...over,
@@ -31,12 +27,8 @@ describe("submissionCsv", () => {
       "Project",
       "Members",
       "Standing",
-      "Version",
-      "Submitted (UTC)",
-      "Submitted By",
-      "Finalized (UTC)",
-      "Finalized By",
-      "Newer Draft",
+      "Last Updated (UTC)",
+      "Last Updated By",
       "Attachments",
       "Result",
     ])
@@ -44,13 +36,9 @@ describe("submissionCsv", () => {
       "Byte Me",
       "Flood maps",
       "Alice, Bob",
-      "Final",
-      "3",
+      "Submitted",
       "2026-08-01 10:05",
       "Bob",
-      "2026-08-02 09:00",
-      "Alice",
-      "",
       "https://drive.example.org/byte-me",
       "https://github.com/byte-me/floods",
     ])
@@ -65,34 +53,15 @@ describe("submissionCsv", () => {
       submissionCsv([
         row({
           standing: "No submission",
-          version: undefined,
-          submittedAt: undefined,
-          submittedBy: undefined,
-          finalizedAt: undefined,
-          finalizedBy: undefined,
+          updatedAt: undefined,
+          updatedBy: undefined,
           attachmentFolderUrl: undefined,
           repositoryUrl: undefined,
         }),
       ]),
     )
 
-    expect(parsed[1]?.slice(3)).toEqual([
-      "No submission",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-    ])
-  })
-
-  it("names a newer draft by its version", () => {
-    const parsed = parseCsv(submissionCsv([row({ newerDraft: 4 })]))
-
-    expect(parsed[1]?.[9]).toBe("4")
+    expect(parsed[1]?.slice(3)).toEqual(["No submission", "", "", "", ""])
   })
 
   it("survives notes holding commas, quotes and line breaks", () => {
@@ -100,7 +69,7 @@ describe("submissionCsv", () => {
     const parsed = parseCsv(submissionCsv([row({ repositoryUrl: result })]))
 
     expect(parsed).toHaveLength(2)
-    expect(parsed[1]?.[11]).toBe(result)
+    expect(parsed[1]?.[7]).toBe(result)
   })
 })
 

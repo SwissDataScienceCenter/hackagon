@@ -254,27 +254,18 @@ export async function teamEntries(
   )
 }
 
-/**
- * Where a team stands: nothing filed, only drafts, or a final entry.
- *
- * Read off `latestFinal` rather than `latest`, for the reason `submissionVersions`
- * keeps the two apart — a draft created after finalizing does not take the
- * team's entry back, so that team is still `final`.
- */
-export function submissionStanding(s: TeamSubmissions): SubmissionStanding {
-  if (s.latestFinal) return "final"
-
-  return s.latest ? "draft" : "missing"
-}
-
 /** One team on Manage Submissions — and one line of its export. */
-export interface TeamSubmissionRow extends TeamSubmissions {
+export interface TeamSubmissionRow {
   teamId: string
   teamName: string
   projectTitle: string
+  /** The project's image: a team has none of its own. */
+  imageUrl: string | undefined
   /** Current members by name, sorted — who an organiser would chase. */
   members: string[]
   standing: SubmissionStanding
+  /** As `submissionEntry` reads it; null for a team that has none. */
+  entry: SubmissionEntry | null
 }
 
 /**
@@ -308,39 +299,42 @@ export async function submissionsByTeam(
 
 /**
  * Every team as a row of the organiser's overview, sorted the way it is shown:
- * by standing, the teams with nothing first and the finished ones last, then
- * by name.
+ * the teams with no entry first, then by name.
  *
- * Problems first because the page is for finding who still owes an entry — the
+ * Missing first because the page is for finding who still owes an entry — the
  * teams that are done are the ones nobody has to do anything about. Ties go by
  * team name, not by activity, so a row does not move every time a team saves.
  *
- * @param projectTitles project id → title; a team whose project is missing from
+ * A team holding only drafts has no entry, so it is `missing` — the same as on
+ * the ballot and the Submissions page, which all read `submissionEntry`.
+ *
+ * @param projects project id → project; a team whose project is missing from
  *   it shows "Unknown project" rather than dropping out of the overview.
- * @param memberNames user id → name, for creators and finalizers — see
- *   `submissionVersions`.
+ * @param memberNames user id → name, for who saved each entry.
  */
 export function submissionOverview(
   teams: Team[],
   byTeam: Map<string, Submission[]>,
-  projectTitles: Map<string, string>,
+  projects: Map<string, { title: string; image?: string }>,
   memberNames: Map<string, string>,
 ): TeamSubmissionRow[] {
   const rank = (s: SubmissionStanding) => SUBMISSION_STANDINGS.indexOf(s)
 
   return teams
     .map((t) => {
-      const versions = submissionVersions(byTeam.get(t.id) ?? [], memberNames)
+      const entry = submissionEntry(byTeam.get(t.id) ?? [], memberNames)
+      const project = projects.get(t.projectId)
 
       return {
         teamId: t.id,
         teamName: t.name,
-        projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
+        projectTitle: project?.title ?? "Unknown project",
+        imageUrl: project?.image,
         members: t.members
           .map((m) => m.displayName || m.username)
           .sort((a, b) => a.localeCompare(b)),
-        standing: submissionStanding(versions),
-        ...versions,
+        standing: entry ? ("submitted" as const) : ("missing" as const),
+        entry,
       }
     })
     .sort(

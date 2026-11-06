@@ -13,16 +13,11 @@ export interface SubmissionCsvRow {
   project: string
   /** Current members by name, already sorted. */
   members: string[]
-  /** "No submission", "Draft only" or "Final" — as the page's tabs say it. */
+  /** "No submission" or "Submitted" — as the page's tabs say it. */
   standing: string
-  /** The version that counts: the final entry if there is one. */
-  version: number | undefined
-  submittedAt: Date | undefined
-  submittedBy: string | undefined
-  finalizedAt: Date | undefined
-  finalizedBy: string | undefined
-  /** A draft newer than the final entry, which does not count unless finalized. */
-  newerDraft: number | undefined
+  /** When the team last saved its entry, and who did. */
+  updatedAt: Date | undefined
+  updatedBy: string | undefined
   attachmentFolderUrl: string | undefined
   repositoryUrl: string | undefined
 }
@@ -49,20 +44,14 @@ export function sheetTime(d: Date | undefined): string {
  * meant to be read on the page, not in a cell.
  */
 export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
-  const num = (n: number | undefined) => (n === undefined ? "" : String(n))
-
   return (
     csvRow([
       "Team",
       "Project",
       "Members",
       "Standing",
-      "Version",
-      "Submitted (UTC)",
-      "Submitted By",
-      "Finalized (UTC)",
-      "Finalized By",
-      "Newer Draft",
+      "Last Updated (UTC)",
+      "Last Updated By",
       "Attachments",
       "Result",
     ]) +
@@ -73,12 +62,8 @@ export function submissionCsv(rows: readonly SubmissionCsvRow[]): string {
           r.project,
           r.members.join(", "),
           r.standing,
-          num(r.version),
-          sheetTime(r.submittedAt),
-          r.submittedBy ?? "",
-          sheetTime(r.finalizedAt),
-          r.finalizedBy ?? "",
-          num(r.newerDraft),
+          sheetTime(r.updatedAt),
+          r.updatedBy ?? "",
           r.attachmentFolderUrl ?? "",
           r.repositoryUrl ?? "",
         ]),
