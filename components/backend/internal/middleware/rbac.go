@@ -638,6 +638,20 @@ func (e *Enforcer) RequireHackathonPermission(
 		return err
 	}
 
+	return RequireLiveHackathon(ctx, dbClient, hackathonID)
+}
+
+// RequireLiveHackathon returns NotFound if the hackathon does not exist or was
+// deleted. It checks no permission.
+//
+// RequireHackathonPermission already calls it, so use it on its own only where
+// a handler deliberately skips the permission check, such as a caller reading
+// their own data.
+func RequireLiveHackathon(
+	ctx context.Context,
+	dbClient *ent.Client,
+	hackathonID uuid.UUID,
+) error {
 	// Queries never see deleted hackathons, so this only finds live ones.
 	live, err := dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Exist(ctx)
 	if err != nil {

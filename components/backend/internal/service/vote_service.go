@@ -843,17 +843,20 @@ func (s *VoteService) ListVotes(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	// user can read own votes, otherwise use RBAC
-	if voterID := req.GetVoterId(); voterID == "" || voterID != u.ID.String() {
-		if err := s.enforcer.RequireHackathonPermission(
+	// A caller can always read their own votes; anything else needs Vote.Read.
+	if voterID := req.GetVoterId(); voterID != "" && voterID == u.ID.String() {
+		err = m.RequireLiveHackathon(ctx, s.dbClient, hackathonID)
+	} else {
+		err = s.enforcer.RequireHackathonPermission(
 			ctx,
 			s.dbClient,
 			hackathonID,
 			m.Vote,
 			m.Read,
-		); err != nil {
-			return nil, err
-		}
+		)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	q := s.dbClient.Vote.Query()

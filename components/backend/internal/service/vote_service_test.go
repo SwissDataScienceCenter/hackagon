@@ -4,6 +4,7 @@ package service_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -1216,6 +1218,36 @@ var _ = Describe("VoteService", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.GetVotes()).To(HaveLen(1))
+		})
+
+		It("returns NotFound for own votes once the hackathon is deleted", func() {
+			user, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(userKC)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			voterID := user.ID.String()
+
+			// Updates are not filtered by the deleted-hackathon interceptor.
+			n, err := dbClient.Hackathon.Update().
+				Where(enthackathon.IDEQ(uuid.MustParse(hid))).
+				SetDeletedAt(time.Now()).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			token := testutils.CreateTestJWTToken(userKC)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			_, err = voteClient.ListVotes(
+				ctx,
+				&voteMsgs.ListVotesRequest{
+					HackathonId: hid,
+					VoterId:     &voterID,
+				},
+			)
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
 		})
 
 		It("denies listing other members' votes", func() {
