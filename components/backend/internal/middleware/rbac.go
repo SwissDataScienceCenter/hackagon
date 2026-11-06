@@ -12,7 +12,10 @@ import (
 	"github.com/casbin/casbin/v3/log"
 	"github.com/casbin/casbin/v3/model"
 	entadapter "github.com/casbin/ent-adapter"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
@@ -109,6 +112,7 @@ const (
 	Join
 	// Read is restricted to people who have joined the hackathon, but View is for anyone.
 	View
+	Delete
 )
 
 func (p Permission) String() string {
@@ -125,6 +129,8 @@ func (p Permission) String() string {
 		return "join"
 	case View:
 		return "view"
+	case Delete:
+		return "delete"
 	default:
 		return ""
 	}
@@ -180,6 +186,10 @@ const (
 	anyTeamPath      = "/hackathon/*/team/*"
 )
 
+// globalHackathonID stands in for the hackathon in a global check, giving the
+// domain anyHackathonPath, which every global policy is written against.
+const globalHackathonID = "*"
+
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
@@ -190,6 +200,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), anyHackathonPath, Hackathon.String(), View.String()},
 		// Owner can write owned hackathon
 		{Owner.String(), anyHackathonPath, Hackathon.String(), Write.String()},
+		// Owner can delete owned hackathon
+		{Owner.String(), anyHackathonPath, Hackathon.String(), Delete.String()},
 		// Owner can write owned hackathon pages
 		{Owner.String(), anyHackathonPath, Page.String(), Write.String()},
 		// Owner can write owned hackathon pages
@@ -598,17 +610,90 @@ func globalRolesFromPolicies(policies [][]string) []userEnts.GlobalRole {
 	return roles
 }
 
-// RequirePermission enforces a permission check and returns a gRPC-ready error if denied.
-// Use this in handlers instead of calling Enforce directly.
-// Accepts optional EnforceOption values (e.g. WithDomain) to override the default domain.
-func (e *Enforcer) RequirePermission(
+// RequireHackathonPermission checks that the caller may do something in a hackathon.
+// Every RPC that works on one hackathon must call it.
+//
+// It returns PermissionDenied if the caller lacks the permission.
+// It returns NotFound if the hackathon does not exist or was deleted.
+//
+// The permission check runs first. This way, a caller without access
+// cannot find out whether a hackathon was deleted.
+//
+// Options such as WithDomain change which domain the check uses.
+func (e *Enforcer) RequireHackathonPermission(
+	ctx context.Context,
+	dbClient *ent.Client,
+	hackathonID uuid.UUID,
+	object ObjectType,
+	permission Permission,
+	opts ...EnforceOption,
+) error {
+	if err := e.requirePermission(
+		ctx,
+		hackathonID.String(),
+		object,
+		permission,
+		opts...,
+	); err != nil {
+		return err
+	}
+
+	return RequireLiveHackathon(ctx, dbClient, hackathonID)
+}
+
+// RequireLiveHackathon returns NotFound if the hackathon does not exist or was
+// deleted. It checks no permission.
+//
+// RequireHackathonPermission already calls it, so use it on its own only where
+// a handler deliberately skips the permission check, such as a caller reading
+// their own data.
+func RequireLiveHackathon(
+	ctx context.Context,
+	dbClient *ent.Client,
+	hackathonID uuid.UUID,
+) error {
+	// Queries never see deleted hackathons, so this only finds live ones.
+	live, err := dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Exist(ctx)
+	if err != nil {
+		slog.Error("query hackathon", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if !live {
+		return status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
+	}
+
+	return nil
+}
+
+// requirePermission checks one permission. It returns a gRPC error if the
+// caller doesn't have it.
+//
+// It is private on purpose. Code outside this package must use
+// RequireHackathonPermission instead, which also rejects deleted hackathons.
+func (e *Enforcer) requirePermission(
 	ctx context.Context,
 	hackathonID string,
 	object ObjectType,
 	permission Permission,
 	opts ...EnforceOption,
 ) error {
-	ok, err := e.Enforce(ctx, hackathonID, object, permission, opts...)
+	return permissionError(e.Enforce(ctx, hackathonID, object, permission, opts...))
+}
+
+// RequireGlobalPermission enforces a permission that belongs to no hackathon,
+// such as creating one or listing users, and returns a gRPC-ready error if
+// denied. For a check inside a hackathon, use RequireHackathonPermission.
+func (e *Enforcer) RequireGlobalPermission(
+	ctx context.Context,
+	object ObjectType,
+	permission Permission,
+) error {
+	return permissionError(e.Enforce(ctx, globalHackathonID, object, permission))
+}
+
+// permissionError turns the result of Enforce into a gRPC error.
+func permissionError(ok bool, err error) error {
 	if err != nil {
 		slog.Error("enforce permission", "err", err)
 

@@ -162,26 +162,26 @@ var _ = Describe("RBAC Enforcer", func() {
 
 		It("allows owner to read their hackathon", func() {
 			ctx := CtxWithClaims("uuid-alice")
-			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			err := RequirePermission(enf, ctx, "h1", Hackathon, Read)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("denies unauthorized access", func() {
 			ctx := CtxWithClaims("uuid-nobody")
-			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			err := RequirePermission(enf, ctx, "h1", Hackathon, Read)
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 
 		It("allows admin to bypass", func() {
 			ctx := CtxWithClaims(adminID)
-			err := enf.RequirePermission(ctx, "any", Hackathon, Read)
+			err := RequirePermission(enf, ctx, "any", Hackathon, Read)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns internal error when no JWT claims", func() {
 			ctx := context.Background()
-			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			err := RequirePermission(enf, ctx, "h1", Hackathon, Read)
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.Internal))
 		})
@@ -192,8 +192,58 @@ var _ = Describe("RBAC Enforcer", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			ctx := CtxWithClaims(organizerID)
-			err = enf.RequirePermission(ctx, "h1", Hackathon, Create)
+			err = RequirePermission(enf, ctx, "h1", Hackathon, Create)
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("RequireGlobalPermission", func() {
+		const adminID = "admin-uuid"
+		const organizerID = "uuid-organizer"
+		var enf *Enforcer
+
+		BeforeEach(func() {
+			enf = testutils.NewMockEnforcer(adminID)
+			_, err := enf.AddGlobalRole(organizerID, HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = enf.AddRole("uuid-alice", Owner, "h1")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		// The handlers it replaced passed "" (User) or "*" (Hackathon Create)
+		// as the hackathon; it must decide exactly as both did.
+		DescribeTable(
+			"decides as the placeholder hackathon IDs did",
+			func(user string, object ObjectType, permission Permission, allowed bool) {
+				ctx := CtxWithClaims(user)
+				for _, placeholder := range []string{"", "*"} {
+					was, err := enf.Enforce(ctx, placeholder, object, permission)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(was).To(Equal(allowed), "placeholder %q", placeholder)
+				}
+
+				err := enf.RequireGlobalPermission(ctx, object, permission)
+				if allowed {
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+				}
+			},
+			Entry("admin reads users", adminID, User, Read, true),
+			Entry("admin writes users", adminID, User, Write, true),
+			Entry("admin creates a hackathon", adminID, Hackathon, Create, true),
+			Entry("organizer reads users", organizerID, User, Read, false),
+			Entry("organizer writes users", organizerID, User, Write, false),
+			Entry("organizer creates a hackathon", organizerID, Hackathon, Create, true),
+			Entry("owner reads users", "uuid-alice", User, Read, false),
+			Entry("owner creates a hackathon", "uuid-alice", Hackathon, Create, false),
+			Entry("nobody reads users", "uuid-nobody", User, Read, false),
+			Entry("nobody creates a hackathon", "uuid-nobody", Hackathon, Create, false),
+		)
+
+		It("returns internal error when no JWT claims", func() {
+			err := enf.RequireGlobalPermission(context.Background(), User, Read)
+			Expect(status.Code(err)).To(Equal(codes.Internal))
 		})
 	})
 

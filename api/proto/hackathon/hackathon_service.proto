@@ -12,6 +12,8 @@ import "hackathon/messages/hackathon_svc/create_question_request.proto";
 import "hackathon/messages/hackathon_svc/create_question_response.proto";
 import "hackathon/messages/hackathon_svc/create_request.proto";
 import "hackathon/messages/hackathon_svc/create_response.proto";
+import "hackathon/messages/hackathon_svc/delete_request.proto";
+import "hackathon/messages/hackathon_svc/delete_response.proto";
 import "hackathon/messages/hackathon_svc/edit_question_request.proto";
 import "hackathon/messages/hackathon_svc/edit_question_response.proto";
 import "hackathon/messages/hackathon_svc/edit_request.proto";
@@ -53,6 +55,9 @@ service HackathonService {
   rpc List(hackathon.messages.hackathon_svc.ListRequest) returns (hackathon.messages.hackathon_svc.ListResponse);
   rpc Get(hackathon.messages.hackathon_svc.GetRequest) returns (hackathon.messages.hackathon_svc.GetResponse);
   rpc Create(hackathon.messages.hackathon_svc.CreateRequest) returns (hackathon.messages.hackathon_svc.CreateResponse);
+  // Delete hides a hackathon: it disappears from List, and Get and every
+  // RPC scoped to it return NotFound. Its data and roles are kept.
+  rpc Delete(hackathon.messages.hackathon_svc.DeleteRequest) returns (hackathon.messages.hackathon_svc.DeleteResponse);
   rpc Edit(hackathon.messages.hackathon_svc.EditRequest) returns (hackathon.messages.hackathon_svc.EditResponse);
   rpc SetCapabilities(hackathon.messages.hackathon_svc.SetCapabilitiesRequest) returns (hackathon.messages.hackathon_svc.SetCapabilitiesResponse);
   rpc SetCurrentPhase(hackathon.messages.hackathon_svc.SetCurrentPhaseRequest) returns (hackathon.messages.hackathon_svc.SetCurrentPhaseResponse);

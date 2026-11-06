@@ -44,6 +44,7 @@ type HackathonQuery struct {
 	withOwners             *UserQuery
 	withCreator            *UserQuery
 	withModifier           *UserQuery
+	withDeleter            *UserQuery
 	withParticipants       *ParticipantQuery
 	withFKs                bool
 	// intermediate query (i.e. traversal path).
@@ -324,6 +325,28 @@ func (_q *HackathonQuery) QueryModifier() *UserQuery {
 	return query
 }
 
+// QueryDeleter chains the current query on the "deleter" edge.
+func (_q *HackathonQuery) QueryDeleter() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathon.Table, hackathon.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, hackathon.DeleterTable, hackathon.DeleterColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryParticipants chains the current query on the "participants" edge.
 func (_q *HackathonQuery) QueryParticipants() *ParticipantQuery {
 	query := (&ParticipantClient{config: _q.config}).Query()
@@ -549,6 +572,7 @@ func (_q *HackathonQuery) Clone() *HackathonQuery {
 		withOwners:             _q.withOwners.Clone(),
 		withCreator:            _q.withCreator.Clone(),
 		withModifier:           _q.withModifier.Clone(),
+		withDeleter:            _q.withDeleter.Clone(),
 		withParticipants:       _q.withParticipants.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -677,6 +701,17 @@ func (_q *HackathonQuery) WithModifier(opts ...func(*UserQuery)) *HackathonQuery
 	return _q
 }
 
+// WithDeleter tells the query-builder to eager-load the nodes that are connected to
+// the "deleter" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HackathonQuery) WithDeleter(opts ...func(*UserQuery)) *HackathonQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withDeleter = query
+	return _q
+}
+
 // WithParticipants tells the query-builder to eager-load the nodes that are connected to
 // the "participants" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *HackathonQuery) WithParticipants(opts ...func(*ParticipantQuery)) *HackathonQuery {
@@ -767,7 +802,7 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 		nodes       = []*Hackathon{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [12]bool{
+		loadedTypes = [13]bool{
 			_q.withTracks != nil,
 			_q.withProjects != nil,
 			_q.withParticipatingUsers != nil,
@@ -779,10 +814,11 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 			_q.withOwners != nil,
 			_q.withCreator != nil,
 			_q.withModifier != nil,
+			_q.withDeleter != nil,
 			_q.withParticipants != nil,
 		}
 	)
-	if _q.withCreator != nil || _q.withModifier != nil {
+	if _q.withCreator != nil || _q.withModifier != nil || _q.withDeleter != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -877,6 +913,12 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 	if query := _q.withModifier; query != nil {
 		if err := _q.loadModifier(ctx, query, nodes, nil,
 			func(n *Hackathon, e *User) { n.Edges.Modifier = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withDeleter; query != nil {
+		if err := _q.loadDeleter(ctx, query, nodes, nil,
+			func(n *Hackathon, e *User) { n.Edges.Deleter = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -1283,6 +1325,38 @@ func (_q *HackathonQuery) loadModifier(ctx context.Context, query *UserQuery, no
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "user_modified_hackathons" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *HackathonQuery) loadDeleter(ctx context.Context, query *UserQuery, nodes []*Hackathon, init func(*Hackathon), assign func(*Hackathon, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Hackathon)
+	for i := range nodes {
+		if nodes[i].user_deleted_hackathons == nil {
+			continue
+		}
+		fk := *nodes[i].user_deleted_hackathons
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_deleted_hackathons" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

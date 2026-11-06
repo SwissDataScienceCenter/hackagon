@@ -102,6 +102,12 @@
 - [hackathon/messages/hackathon_svc/create_response.proto](#hackathon_messages_hackathon_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse)
   
+- [hackathon/messages/hackathon_svc/delete_request.proto](#hackathon_messages_hackathon_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-hackathon_svc-DeleteRequest)
+  
+- [hackathon/messages/hackathon_svc/delete_response.proto](#hackathon_messages_hackathon_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-hackathon_svc-DeleteResponse)
+  
 - [hackathon/messages/hackathon_svc/edit_question_request.proto](#hackathon_messages_hackathon_svc_edit_question_request-proto)
     - [EditQuestionRequest](#hackathon-messages-hackathon_svc-EditQuestionRequest)
   
@@ -1797,6 +1803,63 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_edit_question_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2882,6 +2945,7 @@ Removes the caller from the hackathon.
 | List | [messages.hackathon_svc.ListRequest](#hackathon-messages-hackathon_svc-ListRequest) | [messages.hackathon_svc.ListResponse](#hackathon-messages-hackathon_svc-ListResponse) |  |
 | Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
+| Delete | [messages.hackathon_svc.DeleteRequest](#hackathon-messages-hackathon_svc-DeleteRequest) | [messages.hackathon_svc.DeleteResponse](#hackathon-messages-hackathon_svc-DeleteResponse) | Delete hides a hackathon: it disappears from List, and Get and every RPC scoped to it return NotFound. Its data and roles are kept. |
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
 | SetCapabilities | [messages.hackathon_svc.SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest) | [messages.hackathon_svc.SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse) |  |
 | SetCurrentPhase | [messages.hackathon_svc.SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest) | [messages.hackathon_svc.SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse) |  |

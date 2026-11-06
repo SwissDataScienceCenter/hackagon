@@ -20,7 +20,7 @@ type Hackathon struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// Display name of the hackathon, must be unique.
+	// Display name of the hackathon, unique among live hackathons.
 	Name string `json:"name,omitempty"`
 	// Scheduled start time; nil if not yet scheduled.
 	StartsAt *time.Time `json:"starts_at,omitempty"`
@@ -30,6 +30,8 @@ type Hackathon struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last modification.
 	ModifiedAt time.Time `json:"modified_at,omitempty"`
+	// When the hackathon was deleted. It is nil while the hackathon is live.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Controls whether non-participants can discover this hackathon.
 	Visibility hackathon.Visibility `json:"visibility,omitempty"`
 	// Detailed description of the hackathon, supports rich text.
@@ -42,6 +44,7 @@ type Hackathon struct {
 	phase_current_of         *uuid.UUID
 	user_created_hackathons  *uuid.UUID
 	user_modified_hackathons *uuid.UUID
+	user_deleted_hackathons  *uuid.UUID
 	selectValues             sql.SelectValues
 }
 
@@ -69,11 +72,13 @@ type HackathonEdges struct {
 	Creator *User `json:"creator,omitempty"`
 	// The user who last modified this hackathon.
 	Modifier *User `json:"modifier,omitempty"`
+	// The user who deleted this hackathon. It is nil while the hackathon is live.
+	Deleter *User `json:"deleter,omitempty"`
 	// Participants holds the value of the participants edge.
 	Participants []*Participant `json:"participants,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [12]bool
+	loadedTypes [13]bool
 }
 
 // TracksOrErr returns the Tracks value or an error if the edge
@@ -181,10 +186,21 @@ func (e HackathonEdges) ModifierOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "modifier"}
 }
 
+// DeleterOrErr returns the Deleter value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HackathonEdges) DeleterOrErr() (*User, error) {
+	if e.Deleter != nil {
+		return e.Deleter, nil
+	} else if e.loadedTypes[11] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "deleter"}
+}
+
 // ParticipantsOrErr returns the Participants value or an error if the edge
 // was not loaded in eager-loading.
 func (e HackathonEdges) ParticipantsOrErr() ([]*Participant, error) {
-	if e.loadedTypes[11] {
+	if e.loadedTypes[12] {
 		return e.Participants, nil
 	}
 	return nil, &NotLoadedError{edge: "participants"}
@@ -197,7 +213,7 @@ func (*Hackathon) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case hackathon.FieldName, hackathon.FieldVisibility, hackathon.FieldDescription, hackathon.FieldLogo:
 			values[i] = new(sql.NullString)
-		case hackathon.FieldStartsAt, hackathon.FieldEndsAt, hackathon.FieldCreatedAt, hackathon.FieldModifiedAt:
+		case hackathon.FieldStartsAt, hackathon.FieldEndsAt, hackathon.FieldCreatedAt, hackathon.FieldModifiedAt, hackathon.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
 		case hackathon.FieldID:
 			values[i] = new(uuid.UUID)
@@ -206,6 +222,8 @@ func (*Hackathon) scanValues(columns []string) ([]any, error) {
 		case hackathon.ForeignKeys[1]: // user_created_hackathons
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case hackathon.ForeignKeys[2]: // user_modified_hackathons
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case hackathon.ForeignKeys[3]: // user_deleted_hackathons
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -260,6 +278,13 @@ func (_m *Hackathon) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ModifiedAt = value.Time
 			}
+		case hackathon.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				_m.DeletedAt = new(time.Time)
+				*_m.DeletedAt = value.Time
+			}
 		case hackathon.FieldVisibility:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field visibility", values[i])
@@ -298,6 +323,13 @@ func (_m *Hackathon) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.user_modified_hackathons = new(uuid.UUID)
 				*_m.user_modified_hackathons = *value.S.(*uuid.UUID)
+			}
+		case hackathon.ForeignKeys[3]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field user_deleted_hackathons", values[i])
+			} else if value.Valid {
+				_m.user_deleted_hackathons = new(uuid.UUID)
+				*_m.user_deleted_hackathons = *value.S.(*uuid.UUID)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -367,6 +399,11 @@ func (_m *Hackathon) QueryModifier() *UserQuery {
 	return NewHackathonClient(_m.config).QueryModifier(_m)
 }
 
+// QueryDeleter queries the "deleter" edge of the Hackathon entity.
+func (_m *Hackathon) QueryDeleter() *UserQuery {
+	return NewHackathonClient(_m.config).QueryDeleter(_m)
+}
+
 // QueryParticipants queries the "participants" edge of the Hackathon entity.
 func (_m *Hackathon) QueryParticipants() *ParticipantQuery {
 	return NewHackathonClient(_m.config).QueryParticipants(_m)
@@ -413,6 +450,11 @@ func (_m *Hackathon) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("modified_at=")
 	builder.WriteString(_m.ModifiedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("visibility=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Visibility))

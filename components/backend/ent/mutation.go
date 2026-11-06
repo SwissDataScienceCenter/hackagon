@@ -721,6 +721,7 @@ type HackathonMutation struct {
 	ends_at                    *time.Time
 	created_at                 *time.Time
 	modified_at                *time.Time
+	deleted_at                 *time.Time
 	visibility                 *hackathon.Visibility
 	description                *string
 	logo                       *string
@@ -755,6 +756,8 @@ type HackathonMutation struct {
 	clearedcreator             bool
 	modifier                   *uuid.UUID
 	clearedmodifier            bool
+	deleter                    *uuid.UUID
+	cleareddeleter             bool
 	done                       bool
 	oldValue                   func(context.Context) (*Hackathon, error)
 	predicates                 []predicate.Hackathon
@@ -1068,6 +1071,55 @@ func (m *HackathonMutation) OldModifiedAt(ctx context.Context) (v time.Time, err
 // ResetModifiedAt resets all changes to the "modified_at" field.
 func (m *HackathonMutation) ResetModifiedAt() {
 	m.modified_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *HackathonMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *HackathonMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Hackathon entity.
+// If the Hackathon object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *HackathonMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[hackathon.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *HackathonMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[hackathon.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *HackathonMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, hackathon.FieldDeletedAt)
 }
 
 // SetVisibility sets the "visibility" field.
@@ -1753,6 +1805,45 @@ func (m *HackathonMutation) ResetModifier() {
 	m.clearedmodifier = false
 }
 
+// SetDeleterID sets the "deleter" edge to the User entity by id.
+func (m *HackathonMutation) SetDeleterID(id uuid.UUID) {
+	m.deleter = &id
+}
+
+// ClearDeleter clears the "deleter" edge to the User entity.
+func (m *HackathonMutation) ClearDeleter() {
+	m.cleareddeleter = true
+}
+
+// DeleterCleared reports if the "deleter" edge to the User entity was cleared.
+func (m *HackathonMutation) DeleterCleared() bool {
+	return m.cleareddeleter
+}
+
+// DeleterID returns the "deleter" edge ID in the mutation.
+func (m *HackathonMutation) DeleterID() (id uuid.UUID, exists bool) {
+	if m.deleter != nil {
+		return *m.deleter, true
+	}
+	return
+}
+
+// DeleterIDs returns the "deleter" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DeleterID instead. It exists only for internal usage by the builders.
+func (m *HackathonMutation) DeleterIDs() (ids []uuid.UUID) {
+	if id := m.deleter; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDeleter resets all changes to the "deleter" edge.
+func (m *HackathonMutation) ResetDeleter() {
+	m.deleter = nil
+	m.cleareddeleter = false
+}
+
 // Where appends a list predicates to the HackathonMutation builder.
 func (m *HackathonMutation) Where(ps ...predicate.Hackathon) {
 	m.predicates = append(m.predicates, ps...)
@@ -1787,7 +1878,7 @@ func (m *HackathonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HackathonMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.name != nil {
 		fields = append(fields, hackathon.FieldName)
 	}
@@ -1802,6 +1893,9 @@ func (m *HackathonMutation) Fields() []string {
 	}
 	if m.modified_at != nil {
 		fields = append(fields, hackathon.FieldModifiedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, hackathon.FieldDeletedAt)
 	}
 	if m.visibility != nil {
 		fields = append(fields, hackathon.FieldVisibility)
@@ -1830,6 +1924,8 @@ func (m *HackathonMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case hackathon.FieldModifiedAt:
 		return m.ModifiedAt()
+	case hackathon.FieldDeletedAt:
+		return m.DeletedAt()
 	case hackathon.FieldVisibility:
 		return m.Visibility()
 	case hackathon.FieldDescription:
@@ -1855,6 +1951,8 @@ func (m *HackathonMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldCreatedAt(ctx)
 	case hackathon.FieldModifiedAt:
 		return m.OldModifiedAt(ctx)
+	case hackathon.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
 	case hackathon.FieldVisibility:
 		return m.OldVisibility(ctx)
 	case hackathon.FieldDescription:
@@ -1904,6 +2002,13 @@ func (m *HackathonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModifiedAt(v)
+		return nil
+	case hackathon.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
 		return nil
 	case hackathon.FieldVisibility:
 		v, ok := value.(hackathon.Visibility)
@@ -1962,6 +2067,9 @@ func (m *HackathonMutation) ClearedFields() []string {
 	if m.FieldCleared(hackathon.FieldEndsAt) {
 		fields = append(fields, hackathon.FieldEndsAt)
 	}
+	if m.FieldCleared(hackathon.FieldDeletedAt) {
+		fields = append(fields, hackathon.FieldDeletedAt)
+	}
 	if m.FieldCleared(hackathon.FieldDescription) {
 		fields = append(fields, hackathon.FieldDescription)
 	}
@@ -1987,6 +2095,9 @@ func (m *HackathonMutation) ClearField(name string) error {
 		return nil
 	case hackathon.FieldEndsAt:
 		m.ClearEndsAt()
+		return nil
+	case hackathon.FieldDeletedAt:
+		m.ClearDeletedAt()
 		return nil
 	case hackathon.FieldDescription:
 		m.ClearDescription()
@@ -2017,6 +2128,9 @@ func (m *HackathonMutation) ResetField(name string) error {
 	case hackathon.FieldModifiedAt:
 		m.ResetModifiedAt()
 		return nil
+	case hackathon.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
 	case hackathon.FieldVisibility:
 		m.ResetVisibility()
 		return nil
@@ -2032,7 +2146,7 @@ func (m *HackathonMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HackathonMutation) AddedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.tracks != nil {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -2065,6 +2179,9 @@ func (m *HackathonMutation) AddedEdges() []string {
 	}
 	if m.modifier != nil {
 		edges = append(edges, hackathon.EdgeModifier)
+	}
+	if m.deleter != nil {
+		edges = append(edges, hackathon.EdgeDeleter)
 	}
 	return edges
 }
@@ -2133,13 +2250,17 @@ func (m *HackathonMutation) AddedIDs(name string) []ent.Value {
 		if id := m.modifier; id != nil {
 			return []ent.Value{*id}
 		}
+	case hackathon.EdgeDeleter:
+		if id := m.deleter; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HackathonMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.removedtracks != nil {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -2225,7 +2346,7 @@ func (m *HackathonMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HackathonMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 11)
+	edges := make([]string, 0, 12)
 	if m.clearedtracks {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -2259,6 +2380,9 @@ func (m *HackathonMutation) ClearedEdges() []string {
 	if m.clearedmodifier {
 		edges = append(edges, hackathon.EdgeModifier)
 	}
+	if m.cleareddeleter {
+		edges = append(edges, hackathon.EdgeDeleter)
+	}
 	return edges
 }
 
@@ -2288,6 +2412,8 @@ func (m *HackathonMutation) EdgeCleared(name string) bool {
 		return m.clearedcreator
 	case hackathon.EdgeModifier:
 		return m.clearedmodifier
+	case hackathon.EdgeDeleter:
+		return m.cleareddeleter
 	}
 	return false
 }
@@ -2304,6 +2430,9 @@ func (m *HackathonMutation) ClearEdge(name string) error {
 		return nil
 	case hackathon.EdgeModifier:
 		m.ClearModifier()
+		return nil
+	case hackathon.EdgeDeleter:
+		m.ClearDeleter()
 		return nil
 	}
 	return fmt.Errorf("unknown Hackathon unique edge %s", name)
@@ -2345,6 +2474,9 @@ func (m *HackathonMutation) ResetEdge(name string) error {
 		return nil
 	case hackathon.EdgeModifier:
 		m.ResetModifier()
+		return nil
+	case hackathon.EdgeDeleter:
+		m.ResetDeleter()
 		return nil
 	}
 	return fmt.Errorf("unknown Hackathon edge %s", name)
@@ -12644,6 +12776,9 @@ type UserMutation struct {
 	modified_hackathons               map[uuid.UUID]struct{}
 	removedmodified_hackathons        map[uuid.UUID]struct{}
 	clearedmodified_hackathons        bool
+	deleted_hackathons                map[uuid.UUID]struct{}
+	removeddeleted_hackathons         map[uuid.UUID]struct{}
+	cleareddeleted_hackathons         bool
 	created_projects                  map[uuid.UUID]struct{}
 	removedcreated_projects           map[uuid.UUID]struct{}
 	clearedcreated_projects           bool
@@ -13371,6 +13506,60 @@ func (m *UserMutation) ResetModifiedHackathons() {
 	m.modified_hackathons = nil
 	m.clearedmodified_hackathons = false
 	m.removedmodified_hackathons = nil
+}
+
+// AddDeletedHackathonIDs adds the "deleted_hackathons" edge to the Hackathon entity by ids.
+func (m *UserMutation) AddDeletedHackathonIDs(ids ...uuid.UUID) {
+	if m.deleted_hackathons == nil {
+		m.deleted_hackathons = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.deleted_hackathons[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDeletedHackathons clears the "deleted_hackathons" edge to the Hackathon entity.
+func (m *UserMutation) ClearDeletedHackathons() {
+	m.cleareddeleted_hackathons = true
+}
+
+// DeletedHackathonsCleared reports if the "deleted_hackathons" edge to the Hackathon entity was cleared.
+func (m *UserMutation) DeletedHackathonsCleared() bool {
+	return m.cleareddeleted_hackathons
+}
+
+// RemoveDeletedHackathonIDs removes the "deleted_hackathons" edge to the Hackathon entity by IDs.
+func (m *UserMutation) RemoveDeletedHackathonIDs(ids ...uuid.UUID) {
+	if m.removeddeleted_hackathons == nil {
+		m.removeddeleted_hackathons = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.deleted_hackathons, ids[i])
+		m.removeddeleted_hackathons[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDeletedHackathons returns the removed IDs of the "deleted_hackathons" edge to the Hackathon entity.
+func (m *UserMutation) RemovedDeletedHackathonsIDs() (ids []uuid.UUID) {
+	for id := range m.removeddeleted_hackathons {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DeletedHackathonsIDs returns the "deleted_hackathons" edge IDs in the mutation.
+func (m *UserMutation) DeletedHackathonsIDs() (ids []uuid.UUID) {
+	for id := range m.deleted_hackathons {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDeletedHackathons resets all changes to the "deleted_hackathons" edge.
+func (m *UserMutation) ResetDeletedHackathons() {
+	m.deleted_hackathons = nil
+	m.cleareddeleted_hackathons = false
+	m.removeddeleted_hackathons = nil
 }
 
 // AddCreatedProjectIDs adds the "created_projects" edge to the Project entity by ids.
@@ -14917,7 +15106,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 26)
+	edges := make([]string, 0, 27)
 	if m.created_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -14926,6 +15115,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.modified_hackathons != nil {
 		edges = append(edges, user.EdgeModifiedHackathons)
+	}
+	if m.deleted_hackathons != nil {
+		edges = append(edges, user.EdgeDeletedHackathons)
 	}
 	if m.created_projects != nil {
 		edges = append(edges, user.EdgeCreatedProjects)
@@ -15018,6 +15210,12 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	case user.EdgeModifiedHackathons:
 		ids := make([]ent.Value, 0, len(m.modified_hackathons))
 		for id := range m.modified_hackathons {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeDeletedHackathons:
+		ids := make([]ent.Value, 0, len(m.deleted_hackathons))
+		for id := range m.deleted_hackathons {
 			ids = append(ids, id)
 		}
 		return ids
@@ -15165,7 +15363,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 26)
+	edges := make([]string, 0, 27)
 	if m.removedcreated_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -15174,6 +15372,9 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedmodified_hackathons != nil {
 		edges = append(edges, user.EdgeModifiedHackathons)
+	}
+	if m.removeddeleted_hackathons != nil {
+		edges = append(edges, user.EdgeDeletedHackathons)
 	}
 	if m.removedcreated_projects != nil {
 		edges = append(edges, user.EdgeCreatedProjects)
@@ -15266,6 +15467,12 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	case user.EdgeModifiedHackathons:
 		ids := make([]ent.Value, 0, len(m.removedmodified_hackathons))
 		for id := range m.removedmodified_hackathons {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeDeletedHackathons:
+		ids := make([]ent.Value, 0, len(m.removeddeleted_hackathons))
+		for id := range m.removeddeleted_hackathons {
 			ids = append(ids, id)
 		}
 		return ids
@@ -15413,7 +15620,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 26)
+	edges := make([]string, 0, 27)
 	if m.clearedcreated_hackathons {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -15422,6 +15629,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.clearedmodified_hackathons {
 		edges = append(edges, user.EdgeModifiedHackathons)
+	}
+	if m.cleareddeleted_hackathons {
+		edges = append(edges, user.EdgeDeletedHackathons)
 	}
 	if m.clearedcreated_projects {
 		edges = append(edges, user.EdgeCreatedProjects)
@@ -15505,6 +15715,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedcreated_hackathon_invites
 	case user.EdgeModifiedHackathons:
 		return m.clearedmodified_hackathons
+	case user.EdgeDeletedHackathons:
+		return m.cleareddeleted_hackathons
 	case user.EdgeCreatedProjects:
 		return m.clearedcreated_projects
 	case user.EdgeModifiedProjects:
@@ -15575,6 +15787,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeModifiedHackathons:
 		m.ResetModifiedHackathons()
+		return nil
+	case user.EdgeDeletedHackathons:
+		m.ResetDeletedHackathons()
 		return nil
 	case user.EdgeCreatedProjects:
 		m.ResetCreatedProjects()

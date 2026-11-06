@@ -5283,6 +5283,140 @@ var _ = Describe("HackathonService", func() {
 			})
 		})
 	})
+
+	Describe("Delete", func() {
+		var (
+			adminCtx    context.Context
+			hackathonID string
+		)
+
+		ctxFor := func(keycloakID string) context.Context {
+			return metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+testutils.CreateTestJWTToken(keycloakID)),
+			)
+		}
+
+		BeforeEach(func() {
+			adminCtx = ctxFor(testAdmin)
+			created, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Delete Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = created.GetHackathonId()
+		})
+
+		It("hides the hackathon from Get and List, and keeps the row", func() {
+			_, err := client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+
+			listResp, err := client.List(adminCtx, &msgs.ListRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(listResp.GetHackathons()).To(BeEmpty())
+
+			// The row is only hidden. Queries can't see it, but updates aren't
+			// filtered, so a no-op update counts it: description is already nil.
+			n, err := dbClient.Hackathon.Update().
+				Where(
+					enthackathon.IDEQ(uuid.MustParse(hackathonID)),
+					enthackathon.DeletedAtNotNil(),
+					enthackathon.HasDeleterWith(entuser.KeycloakIDEQ(testAdmin)),
+				).
+				ClearDescription().
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("lets an owner delete it", func() {
+			owner, err := dbClient.User.Create().
+				SetKeycloakID("delete-owner").
+				SetUsername("delete-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.AddOwner(adminCtx, &msgs.AddOwnerRequest{
+				HackathonId: hackathonID,
+				UserId:      owner.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Delete(
+				ctxFor("delete-owner"),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("refuses a user who doesn't own it", func() {
+			_, err := dbClient.User.Create().
+				SetKeycloakID("delete-outsider").
+				SetUsername("delete-outsider").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Delete(
+				ctxFor("delete-outsider"),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("refuses an anonymous caller", func() {
+			_, err := client.Delete(
+				context.Background(),
+				&msgs.DeleteRequest{HackathonId: hackathonID},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("is NotFound for an unknown or already deleted hackathon", func() {
+			_, err := client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: uuid.NewString()})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+
+			_, err = client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: hackathonID})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("frees the name for a new hackathon, but not while it is live", func() {
+			_, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Delete Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).To(HaveOccurred())
+
+			_, err = client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Delete Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("makes its children NotFound", func() {
+			phase, err := phaseClient.Create(adminCtx, &phaseMsgs.CreateRequest{
+				HackathonId: hackathonID,
+				Name:        "Hacking",
+				Description: "Where the work happens",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Delete(adminCtx, &msgs.DeleteRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = phaseClient.Get(adminCtx, &phaseMsgs.GetRequest{PhaseId: phase.GetPhaseId()})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+			_, err = phaseClient.List(adminCtx, &phaseMsgs.ListRequest{HackathonId: hackathonID})
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+	})
 })
 
 // teamedParticipant is a participant who proposed a project, is on a team

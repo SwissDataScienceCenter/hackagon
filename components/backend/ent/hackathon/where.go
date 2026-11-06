@@ -81,6 +81,11 @@ func ModifiedAt(v time.Time) predicate.Hackathon {
 	return predicate.Hackathon(sql.FieldEQ(FieldModifiedAt, v))
 }
 
+// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
+func DeletedAt(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldEQ(FieldDeletedAt, v))
+}
+
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.Hackathon {
 	return predicate.Hackathon(sql.FieldEQ(FieldDescription, v))
@@ -334,6 +339,56 @@ func ModifiedAtLT(v time.Time) predicate.Hackathon {
 // ModifiedAtLTE applies the LTE predicate on the "modified_at" field.
 func ModifiedAtLTE(v time.Time) predicate.Hackathon {
 	return predicate.Hackathon(sql.FieldLTE(FieldModifiedAt, v))
+}
+
+// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
+func DeletedAtEQ(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
+func DeletedAtNEQ(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldNEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtIn applies the In predicate on the "deleted_at" field.
+func DeletedAtIn(vs ...time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
+func DeletedAtNotIn(vs ...time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldNotIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtGT applies the GT predicate on the "deleted_at" field.
+func DeletedAtGT(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldGT(FieldDeletedAt, v))
+}
+
+// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
+func DeletedAtGTE(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldGTE(FieldDeletedAt, v))
+}
+
+// DeletedAtLT applies the LT predicate on the "deleted_at" field.
+func DeletedAtLT(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldLT(FieldDeletedAt, v))
+}
+
+// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
+func DeletedAtLTE(v time.Time) predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldLTE(FieldDeletedAt, v))
+}
+
+// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
+func DeletedAtIsNil() predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldIsNull(FieldDeletedAt))
+}
+
+// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
+func DeletedAtNotNil() predicate.Hackathon {
+	return predicate.Hackathon(sql.FieldNotNull(FieldDeletedAt))
 }
 
 // VisibilityEQ applies the EQ predicate on the "visibility" field.
@@ -751,6 +806,29 @@ func HasModifier() predicate.Hackathon {
 func HasModifierWith(preds ...predicate.User) predicate.Hackathon {
 	return predicate.Hackathon(func(s *sql.Selector) {
 		step := newModifierStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDeleter applies the HasEdge predicate on the "deleter" edge.
+func HasDeleter() predicate.Hackathon {
+	return predicate.Hackathon(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DeleterTable, DeleterColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDeleterWith applies the HasEdge predicate on the "deleter" edge with a given conditions (other predicates).
+func HasDeleterWith(preds ...predicate.User) predicate.Hackathon {
+	return predicate.Hackathon(func(s *sql.Selector) {
+		step := newDeleterStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

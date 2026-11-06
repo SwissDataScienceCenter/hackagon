@@ -65,7 +65,9 @@ func run(rootDir string) error {
 		"entgo.io/ent/cmd/ent",
 		"generate",
 		"--feature",
-		"sql/upsert",
+		// intercept: the Hackathon schema hides deleted hackathons from every query.
+		// schema/snapshot: lets codegen run although that schema imports ent/intercept.
+		"sql/upsert,intercept,schema/snapshot",
 		"--target",
 		"./ent",
 		"./db/schema/",

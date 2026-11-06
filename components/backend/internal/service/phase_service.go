@@ -42,28 +42,14 @@ func (s *PhaseService) List(
 	}
 
 	// Check Phase.Read permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Phase,
 		mw.Read,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Query phases ordered by starts_at, then ends_at
@@ -114,12 +100,17 @@ func (s *PhaseService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := phase.Edges.Hackathon.ID
+	h, err := phase.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Phase.Read permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Phase,
 		mw.Read,
 	); err != nil {
@@ -146,28 +137,14 @@ func (s *PhaseService) Create(
 	}
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Phase,
 		mw.Write,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Ensure user exists and get their entity ID
@@ -261,12 +238,17 @@ func (s *PhaseService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := phase.Edges.Hackathon.ID
+	h, err := phase.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Phase,
 		mw.Write,
 	); err != nil {
@@ -404,12 +386,17 @@ func (s *PhaseService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := phase.Edges.Hackathon.ID
+	h, err := phase.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Phase,
 		mw.Write,
 	); err != nil {
@@ -547,7 +534,8 @@ func (s *PhaseService) handlePhasePageLinkage(
 		return status.Error(codes.Internal, "couldn't query page")
 	}
 
-	if page.Edges.Hackathon.ID != hackathonID {
+	// A page of a deleted hackathon has no hackathon, so it belongs elsewhere.
+	if ph, err := page.Edges.HackathonOrErr(); err != nil || ph.ID != hackathonID {
 		return status.Errorf(
 			codes.InvalidArgument,
 			"page %s does not belong to hackathon %s",

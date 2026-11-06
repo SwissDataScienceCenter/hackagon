@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -26,6 +27,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldModifiedAt holds the string denoting the modified_at field in the database.
 	FieldModifiedAt = "modified_at"
+	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
+	FieldDeletedAt = "deleted_at"
 	// FieldVisibility holds the string denoting the visibility field in the database.
 	FieldVisibility = "visibility"
 	// FieldDescription holds the string denoting the description field in the database.
@@ -54,6 +57,8 @@ const (
 	EdgeCreator = "creator"
 	// EdgeModifier holds the string denoting the modifier edge name in mutations.
 	EdgeModifier = "modifier"
+	// EdgeDeleter holds the string denoting the deleter edge name in mutations.
+	EdgeDeleter = "deleter"
 	// EdgeParticipants holds the string denoting the participants edge name in mutations.
 	EdgeParticipants = "participants"
 	// Table holds the table name of the hackathon in the database.
@@ -131,6 +136,13 @@ const (
 	ModifierInverseTable = "users"
 	// ModifierColumn is the table column denoting the modifier relation/edge.
 	ModifierColumn = "user_modified_hackathons"
+	// DeleterTable is the table that holds the deleter relation/edge.
+	DeleterTable = "hackathons"
+	// DeleterInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	DeleterInverseTable = "users"
+	// DeleterColumn is the table column denoting the deleter relation/edge.
+	DeleterColumn = "user_deleted_hackathons"
 	// ParticipantsTable is the table that holds the participants relation/edge.
 	ParticipantsTable = "participants"
 	// ParticipantsInverseTable is the table name for the Participant entity.
@@ -148,6 +160,7 @@ var Columns = []string{
 	FieldEndsAt,
 	FieldCreatedAt,
 	FieldModifiedAt,
+	FieldDeletedAt,
 	FieldVisibility,
 	FieldDescription,
 	FieldLogo,
@@ -159,6 +172,7 @@ var ForeignKeys = []string{
 	"phase_current_of",
 	"user_created_hackathons",
 	"user_modified_hackathons",
+	"user_deleted_hackathons",
 }
 
 var (
@@ -185,7 +199,13 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime"
 var (
+	Interceptors [1]ent.Interceptor
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -252,6 +272,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByModifiedAt orders the results by the modified_at field.
 func ByModifiedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModifiedAt, opts...).ToFunc()
+}
+
+// ByDeletedAt orders the results by the deleted_at field.
+func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
 // ByVisibility orders the results by the visibility field.
@@ -402,6 +427,13 @@ func ByModifierField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByDeleterField orders the results by deleter field.
+func ByDeleterField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDeleterStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByParticipantsCount orders the results by participants count.
 func ByParticipantsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -490,6 +522,13 @@ func newModifierStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ModifierInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ModifierTable, ModifierColumn),
+	)
+}
+func newDeleterStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DeleterInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, DeleterTable, DeleterColumn),
 	)
 }
 func newParticipantsStep() *sqlgraph.Step {

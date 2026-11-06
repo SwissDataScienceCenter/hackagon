@@ -144,6 +144,15 @@ linters:
         - "^github\\.com/swissdatasciencecenter/hackagon/components/backend/internal/config\\."
         - "^github\\.com/swissdatasciencecenter/hackagon/components/backend/internal/logx\\."
 
+    forbidigo:
+      analyze-types: true
+      forbid:
+        # forbidigo's default, restated because a custom list replaces it.
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+        # A deleted hackathon leaves this edge nil; HackathonOrErr says so.
+        - pattern: ^ent\.\w+Edges\.Hackathon$
+          pkg: ^github\.com/swissdatasciencecenter/hackagon/components/backend/ent$
+          msg: use Edges.HackathonOrErr() and pass its error to edgeError(), a deleted hackathon leaves this nil
     funlen:
       lines: 200
       statements: 200
@@ -229,6 +238,14 @@ linters:
         path: _test\.go$
       - linters: [forbidigo]
         path: cmd/schemadoc/
+      # The HackathonOrErr rule above only applies to request handlers.
+      # Other code and tests are exempt.
+      - linters: [forbidigo]
+        path-except: components/backend/internal/service/
+        text: "HackathonOrErr"
+      - linters: [forbidigo]
+        path: _test\.go$
+        text: "HackathonOrErr"
       - linters: [lll, gocognit, cyclop, mnd, funlen, goconst]
         path: cmd/seed/
       - linters: [gochecknoglobals]

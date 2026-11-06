@@ -16,6 +16,8 @@ import { CreateQuestionRequest } from "./messages/hackathon_svc/create_question_
 import { CreateQuestionResponse } from "./messages/hackathon_svc/create_question_response";
 import { CreateRequest } from "./messages/hackathon_svc/create_request";
 import { CreateResponse } from "./messages/hackathon_svc/create_response";
+import { DeleteRequest } from "./messages/hackathon_svc/delete_request";
+import { DeleteResponse } from "./messages/hackathon_svc/delete_response";
 import { EditQuestionRequest } from "./messages/hackathon_svc/edit_question_request";
 import { EditQuestionResponse } from "./messages/hackathon_svc/edit_question_response";
 import { EditRequest } from "./messages/hackathon_svc/edit_request";
@@ -79,6 +81,18 @@ export const HackathonServiceDefinition = {
       requestType: CreateRequest as typeof CreateRequest,
       requestStream: false,
       responseType: CreateResponse as typeof CreateResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * Delete hides a hackathon: it disappears from List, and Get and every
+     * RPC scoped to it return NotFound. Its data and roles are kept.
+     */
+    delete: {
+      name: "Delete",
+      requestType: DeleteRequest as typeof DeleteRequest,
+      requestStream: false,
+      responseType: DeleteResponse as typeof DeleteResponse,
       responseStream: false,
       options: {},
     },
@@ -242,6 +256,11 @@ export interface HackathonServiceImplementation<CallContextExt = {}> {
   list(request: ListRequest, context: CallContext & CallContextExt): Promise<DeepPartial<ListResponse>>;
   get(request: GetRequest, context: CallContext & CallContextExt): Promise<DeepPartial<GetResponse>>;
   create(request: CreateRequest, context: CallContext & CallContextExt): Promise<DeepPartial<CreateResponse>>;
+  /**
+   * Delete hides a hackathon: it disappears from List, and Get and every
+   * RPC scoped to it return NotFound. Its data and roles are kept.
+   */
+  delete(request: DeleteRequest, context: CallContext & CallContextExt): Promise<DeepPartial<DeleteResponse>>;
   edit(request: EditRequest, context: CallContext & CallContextExt): Promise<DeepPartial<EditResponse>>;
   setCapabilities(
     request: SetCapabilitiesRequest,
@@ -313,6 +332,11 @@ export interface HackathonServiceClient<CallOptionsExt = {}> {
   list(request: DeepPartial<ListRequest>, options?: CallOptions & CallOptionsExt): Promise<ListResponse>;
   get(request: DeepPartial<GetRequest>, options?: CallOptions & CallOptionsExt): Promise<GetResponse>;
   create(request: DeepPartial<CreateRequest>, options?: CallOptions & CallOptionsExt): Promise<CreateResponse>;
+  /**
+   * Delete hides a hackathon: it disappears from List, and Get and every
+   * RPC scoped to it return NotFound. Its data and roles are kept.
+   */
+  delete(request: DeepPartial<DeleteRequest>, options?: CallOptions & CallOptionsExt): Promise<DeleteResponse>;
   edit(request: DeepPartial<EditRequest>, options?: CallOptions & CallOptionsExt): Promise<EditResponse>;
   setCapabilities(
     request: DeepPartial<SetCapabilitiesRequest>,

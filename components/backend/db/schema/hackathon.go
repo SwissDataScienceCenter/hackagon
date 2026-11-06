@@ -1,13 +1,17 @@
 package schema
 
 import (
+	"context"
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/intercept"
 )
 
 // Hackathon holds the schema definition for the Hackathon entity.
@@ -25,8 +29,8 @@ func (Hackathon) Annotations() []schema.Annotation {
 func (Hackathon) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
-			NotEmpty().Unique().
-			Comment("Display name of the hackathon, must be unique."),
+			NotEmpty().
+			Comment("Display name of the hackathon, unique among live hackathons."),
 		field.Time("starts_at").Optional().Nillable().
 			Comment("Scheduled start time; nil if not yet scheduled."),
 		field.Time("ends_at").Optional().Nillable().
@@ -38,6 +42,9 @@ func (Hackathon) Fields() []ent.Field {
 		field.Time("modified_at").
 			Default(time.Now).UpdateDefault(time.Now).
 			Comment("Timestamp of the last modification."),
+		field.Time("deleted_at").
+			Optional().Nillable().
+			Comment("When the hackathon was deleted. It is nil while the hackathon is live."),
 		field.Enum("visibility").
 			Values("public", "private").
 			Comment("Controls whether non-participants can discover this hackathon."),
@@ -79,16 +86,43 @@ func (Hackathon) Edges() []ent.Edge {
 		edge.From("modifier", User.Type).
 			Ref("modified_hackathons").Unique().Required().
 			Comment("The user who last modified this hackathon."),
+		edge.From("deleter", User.Type).
+			Ref("deleted_hackathons").Unique().
+			Comment("The user who deleted this hackathon. It is nil while the hackathon is live."),
 	}
 }
 
 // Indexes of the Hackathon.
 func (Hackathon) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("name"),
+		// Names must be unique for live hackathons only. A deleted hackathon's
+		// name can be reused.
+		//
+		// As there was already an existing index for the name, we hardcode the
+		// storage key "hackathons_name_key" to make sure Ent overwrites the
+		// previous one instead of creating a new one, which would keep the old
+		// index and prevent us from reusing the name of a deleted hackathon.
+		index.Fields("name").
+			Unique().
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")).
+			StorageKey("hackathons_name_key"),
 		index.Fields("starts_at"),
 		index.Fields("ends_at"),
 		index.Fields("visibility"),
+	}
+}
+
+// Interceptors of the Hackathon.
+func (Hackathon) Interceptors() []ent.Interceptor {
+	return []ent.Interceptor{
+		// Hides deleted hackathons from every query, including the ones behind
+		// WithHackathon() and QueryHackathon(). A child whose hackathon is
+		// deleted then has no hackathon: use Edges.HackathonOrErr().
+		intercept.TraverseFunc(func(_ context.Context, q intercept.Query) error {
+			q.WhereP(sql.FieldIsNull("deleted_at"))
+
+			return nil
+		}),
 	}
 }
 

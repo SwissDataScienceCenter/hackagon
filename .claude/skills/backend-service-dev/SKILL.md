@@ -43,10 +43,15 @@ Fully-qualified names come from the proto `package`, not the folder — `user.*`
 1. Edit/create `internal/service/<name>_service.go`, following
    `user_service.go`:
    - `NewXService(dbClient *ent.Client, enf *mw.Enforcer) *XService` constructor
-   - per-RPC permission check — prefer
-     `s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Object, mw.Perm)`,
-     which returns the gRPC error directly; raw `Enforce` only when you need the
-     bool. Skip only for genuinely public reads.
+   - a permission check in every RPC:
+     - Inside a hackathon, call
+       `s.enforcer.RequireHackathonPermission(ctx, s.dbClient, hackathonID, mw.Object, mw.Perm)`.
+       It also rejects a deleted hackathon.
+     - Outside any hackathon, call
+       `s.enforcer.RequireGlobalPermission(ctx, mw.Object, mw.Perm)`.
+     - Both return a gRPC error that you can return as is. Call `Enforce`
+       directly only when you need a true/false answer. Skip the check only for
+       reads that are truly public.
    - ent query with `With*()` to eager-load relations in `Get`
    - a private `entryFromEnt(*ent.X) *ents.X` mapper, shared across List/Get —
      the server decides depth, not the mapper

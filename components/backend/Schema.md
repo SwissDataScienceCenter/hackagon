@@ -33,11 +33,12 @@ A hackathon event containing tracks, projects, phases, and participants.
 
 | Column | Type | Required | Unique | Immutable | Default | Description |
 |--------|------|----------|--------|-----------|---------|-------------|
-| `name` | string | yes | yes | no | no | Display name of the hackathon, must be unique. |
+| `name` | string | yes | no | no | no | Display name of the hackathon, unique among live hackathons. |
 | `starts_at` | time.Time | no | no | no | no | Scheduled start time; nil if not yet scheduled. |
 | `ends_at` | time.Time | no | no | no | no | Scheduled end time; nil if not yet scheduled. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the hackathon was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `deleted_at` | time.Time | no | no | no | no | When the hackathon was deleted. It is nil while the hackathon is live. |
 | `visibility` | enum(public, private) | yes | no | no | no | Controls whether non-participants can discover this hackathon. |
 | `description` | string | no | no | no | no | Detailed description of the hackathon, supports rich text. |
 | `logo` | string | no | no | no | no | URL or path to the hackathon logo image. |
@@ -57,11 +58,12 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `owners` | User | M2M | no | no | Users who are owners of this hackathon (in addition to the creator). |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
+| `deleter` | User | M2O | yes | no | The user who deleted this hackathon. It is nil while the hackathon is live. |
 | `participants` | Participant | O2M | yes | no |  |
 
 ### Indexes
 
-- `name`
+- `name` *(unique)*
 - `starts_at`
 - `ends_at`
 - `visibility`
@@ -409,6 +411,7 @@ An authenticated user, synced from Keycloak on first login.
 | `created_hackathons` | Hackathon | O2M | no | no | Hackathons this user created. |
 | `created_hackathon_invites` | HackathonInvite | O2M | no | no | Invites this user created. |
 | `modified_hackathons` | Hackathon | O2M | no | no | Hackathons this user last modified. |
+| `deleted_hackathons` | Hackathon | O2M | no | no | Hackathons this user deleted. |
 | `created_projects` | Project | O2M | no | no | Projects this user created. |
 | `modified_projects` | Project | O2M | no | no | Projects this user last modified. |
 | `participates_in_hackathons` | Hackathon | M2M | no | no | Hackathons this user participates in. |

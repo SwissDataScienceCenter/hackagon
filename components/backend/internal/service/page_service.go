@@ -42,36 +42,23 @@ func (s *PageService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Read,
 	); err != nil {
 		return nil, err
 	}
 
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
-	}
-
 	// Query pages ordered by order field with creator and modifier
 	pageQuery := s.dbClient.Page.Query().
 		Where(entpage.HasHackathonWith(enthackathon.IDEQ(hackathonID)))
-	if err = s.enforcer.RequirePermission(
+	if err = s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
@@ -124,19 +111,25 @@ func (s *PageService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := page.Edges.Hackathon.ID
+	h, err := page.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Read,
 	); err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil &&
@@ -165,28 +158,14 @@ func (s *PageService) Create(
 	}
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Ensure user exists and get their entity ID
@@ -262,12 +241,17 @@ func (s *PageService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := page.Edges.Hackathon.ID
+	h, err := page.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
@@ -353,12 +337,17 @@ func (s *PageService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := page.Edges.Hackathon.ID
+	h, err := page.Edges.HackathonOrErr()
+	if err != nil {
+		return nil, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
@@ -503,12 +492,17 @@ func (s *PageService) movePages(
 		return 0, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	hackathonID := page.Edges.Hackathon.ID
+	h, err := page.Edges.HackathonOrErr()
+	if err != nil {
+		return 0, edgeError(err, "hackathon not found")
+	}
+	hackathonID := h.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
@@ -614,27 +608,14 @@ func (s *PageService) SetOrder(
 	}
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(
+	if err := s.enforcer.RequireHackathonPermission(
 		ctx,
-		hackathonID.String(),
+		s.dbClient,
+		hackathonID,
 		mw.Page,
 		mw.Write,
 	); err != nil {
 		return nil, err
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	// Get all pages in the hackathon
