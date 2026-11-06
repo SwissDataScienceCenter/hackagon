@@ -4,6 +4,7 @@
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ResultsList from '$lib/components/hackathon/ResultsList.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -25,7 +26,10 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-0.5">
             <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Voting</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="m-0 text-title text-ink">Manage Voting</h2>
+                <InfoButton topic="voting-manage" title="How voting works" />
+            </div>
             <span class="text-xs text-ink-3">
                 {data.voterTotal === 0 ? 'Nobody has voted yet' : `${people(data.voterTotal)} voted`}
             </span>
@@ -47,73 +51,42 @@
         <p class="m-0 text-xs text-danger-ink" role="alert">{topMessage}</p>
     {/if}
 
-    <!-- The round in order, each step with where it stands. Voting and results
+    <!-- Where the round stands. The steps themselves are behind the ⓘ; what
+         is left here is state, which help texts never hold. Voting and results
          visibility are hackathon capabilities, switched in Settings so that
          every switch stays in one place; this page only links there. -->
-    <section class="card box-border w-full px-5 py-4">
-        <h3 class="m-0 mb-3 text-sm font-semibold text-ink">How voting works</h3>
-        <ol class="m-0 flex list-none flex-col gap-3 p-0">
-            <li class="flex flex-col gap-0.5">
-                <span class="text-sm text-ink">1. Set up categories</span>
-                <span class="text-xs text-ink-3">
-                    A category is one question people vote on, such as "Best Demo". Once
-                    anyone has voted in it, it is locked and can no longer be changed.
-                </span>
-            </li>
-            <li class="flex flex-col gap-0.5">
-                <span class="flex flex-wrap items-center gap-2 text-sm text-ink">
-                    2. Open voting, then close it
-                    {#if data.votingOpen}
-                        <span class="badge badge-success">Open</span>
-                    {:else}
-                        <span class="badge badge-neutral">Closed</span>
-                    {/if}
-                </span>
-                <span class="text-xs text-ink-3">
-                    Participants can vote while it is open. Switch
-                    <a
-                        href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
-                        class="font-semibold text-accent-ink no-underline hover:underline"
-                    >
-                        "Vote" in Settings</a
-                    >.
-                </span>
-            </li>
-            <li class="flex flex-col gap-0.5">
-                <span class="flex flex-wrap items-center gap-2 text-sm text-ink">
-                    3. Make the results final
-                    {#if data.resultsFinal}
-                        <span class="badge badge-success">Final</span>
-                    {:else}
-                        <span class="badge badge-neutral">Not yet</span>
-                    {/if}
-                </span>
-                <span class="text-xs text-ink-3">
-                    Once voting is closed, below. Done once, for every category.
-                </span>
-            </li>
-            <li class="flex flex-col gap-0.5">
-                <span class="flex flex-wrap items-center gap-2 text-sm text-ink">
-                    4. Publish the results
-                    {#if data.resultsVisible}
-                        <span class="badge badge-success">Visible</span>
-                    {:else}
-                        <span class="badge badge-neutral">Hidden</span>
-                    {/if}
-                </span>
-                <span class="text-xs text-ink-3">
-                    Shows participants the final results of every category — possible
-                    once they are final. Switch
-                    <a
-                        href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
-                        class="font-semibold text-accent-ink no-underline hover:underline"
-                    >
-                        "View results" in Settings</a
-                    >.
-                </span>
-            </li>
-        </ol>
-    </section>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-3">
+        <span class="flex items-center gap-1.5">
+            Voting
+            {#if data.votingOpen}
+                <span class="badge badge-success">Open</span>
+            {:else}
+                <span class="badge badge-neutral">Closed</span>
+            {/if}
+        </span>
+        <span class="flex items-center gap-1.5">
+            Results
+            {#if data.resultsFinal}
+                <span class="badge badge-success">Final</span>
+            {:else}
+                <span class="badge badge-neutral">Not final</span>
+            {/if}
+        </span>
+        <span class="flex items-center gap-1.5">
+            For participants
+            {#if data.resultsVisible}
+                <span class="badge badge-success">Visible</span>
+            {:else}
+                <span class="badge badge-neutral">Hidden</span>
+            {/if}
+        </span>
+        <a
+            href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
+            class="font-semibold text-accent-ink no-underline hover:underline"
+        >
+            Switch in Settings &rarr;
+        </a>
+    </div>
 
     <!-- Categories -->
     <section class="flex flex-col gap-3">

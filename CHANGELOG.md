@@ -81,6 +81,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   Answers, Invitations, Waitlist and Manage Tracks keep their explanations
   behind an ⓘ button beside the heading. Counts and messages about the current
   state stay on the page.
+- The organizer forms to add or edit a question, track, phase, voting category
+  or project do the same. "How assignment works" on Manage Teams and "How voting
+  works" on Manage Voting move behind an ⓘ too. Manage Voting keeps a row that
+  shows whether voting is open and whether results are final and visible.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.

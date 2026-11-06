@@ -7,7 +7,6 @@
         Check,
         ChevronDown,
         ChevronUp,
-        CircleHelp,
         Download,
         Eraser,
         GripVertical,
@@ -20,6 +19,7 @@
     } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { nameSegments, stepMatch, type NameSegment } from '$lib/utils/personSearch';
     import { initialsOf } from '$lib/utils/teamDistribution';
@@ -319,10 +319,6 @@
 
     /** What the last uploaded file did, until it is dismissed or superseded. */
     let importResult: ImportResult | null = $state(null);
-
-    // "How assignment works". Closed by default: whoever needs the rules asks
-    // for them, and everyone else should not have to read past them.
-    let helpOpen = $state(false);
 
     // Only one team's name is editable at a time.
     let editingKey: string | null = $state(null);
@@ -840,7 +836,14 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
     <div class="flex flex-col gap-1">
         <ManageHubBackLink {hackathonId} />
-        <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+        <!-- The ⓘ holds the rules of the page in one place: what Save does
+             (see the `save` action), when it locks (`assignmentLockReasons`),
+             and what an upload does (`applyAssignmentCsv`). Change them
+             together. -->
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+            <InfoButton topic="team-assignment" title="How team assignment works" />
+        </div>
     </div>
 
     <!-- Save lives here, always, and sticks below the nav bar (its `h-14` row
@@ -967,90 +970,7 @@
                 />
             </label>
         </div>
-
-        <!-- Outside the Spreadsheet group: it explains assigning teams as a
-             whole, dragging and saving included, not only the file. -->
-        <button
-            type="button"
-            class="btn btn-sm btn-quiet"
-            aria-expanded={helpOpen}
-            aria-controls="assignment-help"
-            onclick={() => (helpOpen = !helpOpen)}
-        >
-            <CircleHelp class="size-3" />
-            How assignment works
-        </button>
-
     </div>
-
-    <!-- The rules of the page in one place: what Save does (see the `save`
-         action), when it locks (`assignmentLockReasons`), and what an upload
-         does (`applyAssignmentCsv`). Change them together. -->
-    {#if helpOpen}
-        <section id="assignment-help" class="card card-raised flex flex-col gap-3 p-3 text-xs">
-            <div class="flex items-start gap-3">
-                <h3 class="m-0 flex-1 meta">How team assignment works</h3>
-                <button
-                    type="button"
-                    class="shrink-0 text-ink-3 hover:text-ink"
-                    aria-label="Close"
-                    onclick={() => (helpOpen = false)}
-                >
-                    <X class="size-3" />
-                </button>
-            </div>
-
-            <div class="flex flex-col gap-1 text-ink-2">
-                <p class="m-0">
-                    Drag people from Unassigned onto a team, or plan in the spreadsheet.
-                </p>
-                <p class="m-0">
-                    Nothing changes until you Save; Save deletes teams with nobody in them.
-                </p>
-                <p class="m-0">
-                    Once a team has a submission or teams are published, teams are fixed: no
-                    upload, no deleting teams. Moving people, renaming and adding teams still work.
-                </p>
-            </div>
-
-            <h4 class="m-0 border-t border-line pt-3 meta">Spreadsheet</h4>
-            <ol class="m-0 flex list-decimal flex-col gap-1 pl-4 text-ink-2">
-                <li>
-                    <strong class="text-ink">Download CSV.</strong> One row per participant, with
-                    their current project and team, or empty if they have no team yet.
-                </li>
-                <li>
-                    <strong class="text-ink">Correct the <code>project</code> and <code>team</code>
-                        columns.</strong>
-                    Keep every row and leave <code>user_id</code> as it is; other columns are ignored.
-                </li>
-                <li>
-                    <strong class="text-ink">Upload CSV.</strong> Replaces all teams. Check, then
-                    Save.
-                </li>
-            </ol>
-
-            <dl class="m-0 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-ink-3">
-                <dt class="text-ink-2"><code>project</code></dt>
-                <dd class="m-0">
-                    a project number as shown here and in the prefers column; anything else is
-                    an incomplete assignment
-                </dd>
-
-                <dt class="text-ink-2"><code>team</code></dt>
-                <dd class="m-0">any name, even a single character; can be renamed after upload</dd>
-
-                <dt class="text-ink-2">both empty</dt>
-                <dd class="m-0">the person ends up unassigned</dd>
-
-                <dt class="text-ink-2">incomplete assignment</dt>
-                <dd class="m-0">a warning, and the person ends up unassigned</dd>
-
-                <dt class="text-ink-2">a row missing</dt>
-                <dd class="m-0">a warning, and the person ends up unassigned</dd>
-            </dl>
-        </section>
-    {/if}
 
     {#if importResult}
         {@const bad = importResult.refused || importResult.warnings.length > 0}
@@ -1085,15 +1005,10 @@
                         <li>and {importResult.problems.length - 5} more.</li>
                     {/if}
                 </ul>
-                {#if !helpOpen}
-                    <button
-                        type="button"
-                        class="self-start text-ink-2 underline hover:text-ink"
-                        onclick={() => (helpOpen = true)}
-                    >
-                        How assignment works
-                    </button>
-                {/if}
+                <!-- A pointer, not a link: the ⓘ opens only from where it sits. -->
+                <p class="m-0 text-ink-2">
+                    The ⓘ beside Manage Teams explains what each column accepts.
+                </p>
             {/if}
             {#if importResult.warnings.length > 0}
                 <!-- Capped like the problems above: the first few say what kind

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ProjectEditForm from '$lib/components/hackathon/ProjectEditForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -26,11 +27,10 @@
         >
             &larr; Back to Manage Projects
         </a>
-        <h1 class="m-0 text-title text-ink">New Project</h1>
-        <p class="m-0 text-xs text-ink-3">
-            It joins the queue awaiting review, like any proposal — approve it there and it
-            appears on the participants' Projects page.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">New Project</h1>
+            <InfoButton topic="project-new-organizer" title="A new project" />
+        </div>
     </div>
 
     <ProjectEditForm
