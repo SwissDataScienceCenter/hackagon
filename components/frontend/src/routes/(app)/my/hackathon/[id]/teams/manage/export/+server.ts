@@ -9,7 +9,9 @@ import {
   answerCells,
   questionRows,
 } from "$lib/server/hackathon/registrationForm"
+import { profileLinksOf } from "$lib/server/user/profileLinks"
 import { csvFilename } from "$lib/utils/csv"
+import type { ProfileLinks } from "$lib/utils/profileLinks"
 import { assignmentCsv, type AssignmentRow } from "$lib/utils/teamAssignmentCsv"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -110,12 +112,14 @@ export const GET: RequestHandler = async (event) => {
     name: string,
     project: { number: number; title: string } | undefined,
     teamName: string,
+    links: ProfileLinks,
   ): AssignmentRow => ({
     userId: id,
     name,
     project: project ? String(project.number) : "",
     team: teamName,
     prefers: prefersByUser.get(id) ?? [],
+    links,
     answers: cells[id] ?? {},
   })
 
@@ -139,7 +143,15 @@ export const GET: RequestHandler = async (event) => {
       (a.displayName || a.username).localeCompare(b.displayName || b.username),
     )
     for (const m of members) {
-      rows.push(person(m.id, m.displayName || m.username, t.project, t.name))
+      rows.push(
+        person(
+          m.id,
+          m.displayName || m.username,
+          t.project,
+          t.name,
+          profileLinksOf(m),
+        ),
+      )
     }
   }
 
@@ -151,9 +163,12 @@ export const GET: RequestHandler = async (event) => {
     .map((m) => ({
       id: m.user!.id,
       name: m.user!.displayName || m.user!.username,
+      links: profileLinksOf(m.user),
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
-  for (const p of pool) rows.push(person(p.id, p.name, undefined, ""))
+  for (const p of pool) {
+    rows.push(person(p.id, p.name, undefined, "", p.links))
+  }
 
   return new Response(
     assignmentCsv(

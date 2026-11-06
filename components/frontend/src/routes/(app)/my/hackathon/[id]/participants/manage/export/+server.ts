@@ -3,8 +3,10 @@ import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hac
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
-import { csvFilename, csvRow } from "$lib/utils/csv"
+import { csvFilename } from "$lib/utils/csv"
+import { rosterCsv, type RosterRow } from "$lib/utils/participantCsv"
 import { viewerMembership } from "$lib/server/hackathon/membership"
+import { profileLinksOf } from "$lib/server/user/profileLinks"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -72,20 +74,17 @@ export const GET: RequestHandler = async (event) => {
   // A member with no address is skipped instead: `User.email` is optional and
   // defaults to empty, and a blank address is a row a mailing tool rejects. The
   // page reports how many were left out so a short file is not a silent one.
-  const rows = h.members
+  const rows: RosterRow[] = h.members
     .filter((m) => m.user !== undefined && m.user.email !== "")
-    .map((m) => [
-      m.user!.email,
-      m.user!.displayName || m.user!.username,
-      m.isWaiting ? "Waitlisted" : "Approved",
-      m.role === HackathonRole.HACKATHON_ROLE_OWNER ? "Owner" : "Member",
-    ])
+    .map((m) => ({
+      email: m.user!.email,
+      name: m.user!.displayName || m.user!.username,
+      status: m.isWaiting ? "Waitlisted" : "Approved",
+      role: m.role === HackathonRole.HACKATHON_ROLE_OWNER ? "Owner" : "Member",
+      links: profileLinksOf(m.user),
+    }))
 
-  const csv =
-    csvRow(["Email Address", "Full Name", "Status", "Role"]) +
-    rows.map(csvRow).join("")
-
-  return new Response(csv, {
+  return new Response(rosterCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${csvFilename(h.name, "participants")}"`,

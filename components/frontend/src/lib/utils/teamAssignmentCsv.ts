@@ -1,4 +1,5 @@
 import { csvRow, parseCsv } from "./csv"
+import { PROFILE_LINK_KINDS, type ProfileLinks } from "./profileLinks"
 import type { PlannedTeam } from "./teamDistribution"
 
 /**
@@ -47,6 +48,8 @@ export interface AssignmentRow {
   team: string
   /** The projects they said they wanted, as the page's numbers. */
   prefers: string[]
+  /** Their profile links; an empty string for each one not set. */
+  links: ProfileLinks
   /** Their answer, by question key. A question they skipped is absent. */
   answers: Record<string, string>
 }
@@ -65,6 +68,9 @@ export interface AssignmentRow {
  *
  * `prefers` joins with `; ` rather than `, ` so the cell stays legible in a
  * spreadsheet that has just been told the file is comma-separated.
+ *
+ * Profile links follow, one column per site, headed by its lower-case key like
+ * the fixed columns. Context only, like the answers: nothing reads them back.
  */
 export function assignmentCsv(
   rows: readonly AssignmentRow[],
@@ -76,6 +82,7 @@ export function assignmentCsv(
     COLUMNS.project,
     COLUMNS.team,
     COLUMNS.prefers,
+    ...PROFILE_LINK_KINDS.map((k) => k.key),
     ...questions.map((q) => q.label),
   ]
 
@@ -89,6 +96,7 @@ export function assignmentCsv(
           r.project,
           r.team,
           r.prefers.join("; "),
+          ...PROFILE_LINK_KINDS.map((k) => r.links[k.key]),
           ...questions.map((q) => r.answers[q.key] ?? ""),
         ]),
       )
