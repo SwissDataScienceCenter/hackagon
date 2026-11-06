@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { questionKindLabel } from '$lib/utils/question';
     import type { PageData } from './$types';
 
@@ -36,11 +37,11 @@
         >
             &larr; Registration Form
         </a>
-        <h2 class="m-0 text-title text-ink">Registration Answers</h2>
-        <p class="m-0 text-xs text-ink-3">
-            What {people} said when they signed up. Organizers only — this includes the
-            answers to questions you have not shared with participants.
-        </p>
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-title text-ink">Registration Answers</h2>
+            <InfoButton topic="registration-answers-all" title="Registration answers" />
+        </div>
+        <p class="m-0 text-xs text-ink-3">{people}</p>
     </div>
 
     {#if data.questions.length === 0}

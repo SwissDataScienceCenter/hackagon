@@ -60,6 +60,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   hackathon's menu, at any status, also after proposals have closed.
 - Backend: An owner or an admin can now delete a hackathon. It disappears for
   everyone, with its tracks, teams, projects and pages, but nothing is erased.
+- The participant list's "Download CSV" includes each person's answers to the
+  registration questions. Both "Download CSV" files, on Manage Participants and
+  on Manage Teams, include each person's GitHub, LinkedIn and Renku links.
 
 ### Changed
 
@@ -76,6 +79,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   heading. On your profile, the button to edit your answers sits under the
   heading, on the left. Voting no longer repeats under every ballot that a vote
   is final.
+- For organizers, Settings, Public page, Registration Form, Registration
+  Answers, Invitations, Waitlist and Manage Tracks keep their explanations
+  behind an ⓘ button beside the heading. Counts and messages about the current
+  state stay on the page.
+- The organizer forms to add or edit a question, track, phase, voting category
+  or project do the same. "How assignment works" on Manage Teams and "How voting
+  works" on Manage Voting move behind an ⓘ too. Manage Voting keeps a row that
+  shows whether voting is open and whether results are final and visible.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.

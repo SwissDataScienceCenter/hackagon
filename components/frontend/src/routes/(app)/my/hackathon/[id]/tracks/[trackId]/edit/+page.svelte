@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import TrackForm from '$lib/components/hackathon/TrackForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -23,10 +24,10 @@
         >
             &larr; Back to tracks
         </a>
-        <h1 class="m-0 text-title text-ink">Edit Track</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Changes are visible to participants immediately.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">Edit Track</h1>
+            <InfoButton topic="edit-live" title="Saving changes" />
+        </div>
     </div>
 
     <TrackForm track={data.track} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />

@@ -2,6 +2,7 @@
     import Ban from 'lucide-svelte/icons/ban';
     import Plus from 'lucide-svelte/icons/plus';
     import CopyField from '$lib/components/forms/CopyField.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -32,13 +33,9 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other manage pages).
 -->
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
+    <div class="flex items-center gap-2">
         <h1 class="m-0 text-title text-ink">Invitations</h1>
-        <p class="m-0 text-xs text-ink-3">
-            {data.hackathonName} is private, so it appears on no list and nobody can find
-            it. A link is the way in — mail one out yourself, from wherever you send your
-            invitations.
-        </p>
+        <InfoButton topic="invites" title="Invitation links" />
     </div>
 
     <!-- Said once, at the top, because it is the thing an organiser most needs to

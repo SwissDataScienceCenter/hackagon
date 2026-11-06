@@ -2,6 +2,7 @@
     import { Pencil, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -12,7 +13,10 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-0.5">
             <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Manage Tracks</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="m-0 text-title text-ink">Manage Tracks</h2>
+                <InfoButton topic="tracks" title="Tracks" />
+            </div>
             <span class="text-xs text-ink-3">
                 {data.tracks.length === 1 ? '1 track' : `${data.tracks.length} tracks`}
             </span>
@@ -25,11 +29,6 @@
             New track
         </a>
     </div>
-
-    <p class="m-0 text-xs text-ink-3">
-        Tracks are optional. When a hackathon has none, participants propose and browse
-        projects with no track picker at all.
-    </p>
 
     {#if data.tracks.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">

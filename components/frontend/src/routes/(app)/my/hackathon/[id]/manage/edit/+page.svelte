@@ -3,6 +3,7 @@
     import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import PublicHackathonView from '$lib/components/hackathon/PublicHackathonView.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -73,11 +74,10 @@
         >
             &larr; Back to Settings
         </a>
-        <h1 class="m-0 text-title text-ink">Public page</h1>
-        <p class="m-0 text-xs text-ink-3">
-            The name, dates, picture and description everyone sees — visitors on the
-            hackathon's public page, and members on About.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">Public page</h1>
+            <InfoButton topic="hackathon-edit" title="The public page" />
+        </div>
     </div>
 
     <div class="grid gap-8 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:items-start">

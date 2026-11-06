@@ -28,6 +28,7 @@ cannot log in — see [Users](#users).
 | ------------------------------------------------------ | -------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Approving a waitlisted participant                     | H1, H5         | alice                | charles waits in H1, dana in H5                                                                                                         |
 | What a waitlisted participant sees                     | H1             | charles              |                                                                                                                                         |
+| Participant downloads: profile links and answers       | H1             | alice                | Manage Participants and Manage Teams; bob has GitHub only, dana all three links, alice none; bob skipped one question                   |
 | Joining a public hackathon with its form               | H1             | hackagon-admin       | The only login not already in H1. Mandatory questions refuse an empty sign-up                                                           |
 | Joining refused because sign-up closed                 | H4             | hackagon-admin       | `register` is off                                                                                                                       |
 | Invitation links: redeem, revoked, expired             | H5             | bob or charles       | Links are printed at the end of the seed log; see [H5](#h5--partner-data-sprint-2026)                                                   |
@@ -193,6 +194,11 @@ they run.
 nobody can sign in as them — same as [the hundred in H4](#the-hundred-in-h4).
 They hold the team seats `hackagon-admin` used to, so every team keeps its size
 and H3 keeps two voters. Drive the app as `alice`, `bob` or `charles`.
+
+**Profile links are mixed on purpose.** `bob` has a GitHub link only, `charles`
+and `dana` have all three, and `alice` and `hackagon-admin` have none, so a
+participant card and the CSV downloads show every state. The handles
+(`hackagon-bob`, …) are the fixture's own, not a real person's.
 
 ### The hundred in H4
 

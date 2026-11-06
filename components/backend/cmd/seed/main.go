@@ -186,6 +186,35 @@ func seedAll(
 		return err
 	}
 
+	// Profile links, mixed on purpose so every state shows on a participant
+	// card and in the CSV downloads: bob has GitHub only, charles and dana all
+	// three, alice none. The handles are the fixture's own rather than a real
+	// person's guessable name.
+	for _, l := range []struct {
+		who   *actor
+		links profileLinks
+	}{
+		{bob, profileLinks{
+			github:   "https://github.com/hackagon-bob",
+			linkedin: "",
+			renku:    "",
+		}},
+		{charles, profileLinks{
+			github:   "https://github.com/hackagon-charles",
+			linkedin: "https://linkedin.com/in/hackagon-charles",
+			renku:    "https://renkulab.io/u/hackagon-charles",
+		}},
+		{dana, profileLinks{
+			github:   "https://github.com/hackagon-dana",
+			linkedin: "https://linkedin.com/in/hackagon-dana",
+			renku:    "https://renkulab.io/u/hackagon-dana",
+		}},
+	} {
+		if err := h.setLinks(l.who, l.links); err != nil {
+			return err
+		}
+	}
+
 	now := time.Now()
 
 	// hackagon-admin takes part in none of these. He is the platform operator:

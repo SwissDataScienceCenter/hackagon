@@ -3,6 +3,7 @@
     import { beforeNavigate, goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { capabilityDescription, capabilityLabel } from '$lib/utils/phase';
 
     let {
@@ -328,17 +329,14 @@
                 };
             }}
         >
-            <div class="flex flex-col gap-1">
+            <!-- "Participants", never "you": capabilities grant to the Member
+                 role and casbin has no inheritance, so an owner holds none of
+                 them and is refused the very actions they switch on here. -->
+            <div class="flex items-center gap-2">
                 <h3 id="capabilities-heading" class="m-0 text-section text-ink">
                     What participants can do
                 </h3>
-                <!-- "Participants", never "you": capabilities grant to the Member
-                     role and casbin has no inheritance, so an owner holds none of
-                     them and is refused the very actions they switch on here. -->
-                <p class="m-0 text-xs text-ink-3">
-                    These switches decide what participants can do, and this is the only
-                    place to change them. Moving between phases never does.
-                </p>
+                <InfoButton topic="settings-capabilities" title="What participants can do" />
             </div>
 
             <!-- Save lives here, and sticks below the nav bar (its `h-14` row plus

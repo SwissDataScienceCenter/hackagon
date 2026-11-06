@@ -537,6 +537,34 @@ export function answersByParticipant(
   return grouped
 }
 
+/**
+ * The cohort's answers as spreadsheet cells: by participant, then by question
+ * key.
+ *
+ * What the CSV downloads write, so the same answer reads the same in each. A
+ * tick-box reads as Yes or No, which is what a person editing a spreadsheet
+ * expects to see in a column; text and fixed-list answers go out as stored. A
+ * question somebody skipped has no key — the caller writes an empty cell.
+ */
+export function answerCells(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+): Record<string, Record<string, string>> {
+  const cells: Record<string, Record<string, string>> = {}
+  for (const [userId, filed] of Object.entries(
+    answersByParticipant(questions, answers),
+  )) {
+    const row: Record<string, string> = {}
+    for (const a of filed) {
+      row[a.key] =
+        typeof a.value === "boolean" ? (a.value ? "Yes" : "No") : a.value
+    }
+    cells[userId] = row
+  }
+
+  return cells
+}
+
 /** One person's answer to one question, for the organizer's answers view. */
 export interface QuestionAnswer {
   participantId: string

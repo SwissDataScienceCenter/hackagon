@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import PhaseForm from '$lib/components/hackathon/PhaseForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -26,12 +27,10 @@
         >
             &larr; Back to Manage Timeline
         </a>
-        <h1 class="m-0 text-title text-ink">Add Phase</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Participants see the phase as soon as it is saved, and the next step is
-            scheduling it — this form hands straight over to it. Undated phases sort to
-            the top of the timeline until they are scheduled.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">Add Phase</h1>
+            <InfoButton topic="phase-new" title="A new phase" />
+        </div>
     </div>
 
     <PhaseForm

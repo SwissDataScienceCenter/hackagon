@@ -42,8 +42,8 @@ It might also show:
 
 ## Spreadsheet
 
-- Click {guilabel}`Download CSV` to get everyone with their preferences and
-  answers.
+- Click {guilabel}`Download CSV` to get everyone with their preferences, profile
+  links and answers.
 - Edit the `project` and `team` columns, then click {guilabel}`Upload CSV`. It
   replaces all teams.
 - Click {guilabel}`How assignment works` for the format.

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import TrackForm from '$lib/components/hackathon/TrackForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -21,10 +22,10 @@
         >
             &larr; Back to tracks
         </a>
-        <h1 class="m-0 text-title text-ink">New Track</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Participants can pick it when proposing or editing a project.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">New Track</h1>
+            <InfoButton topic="track-new" title="A new track" />
+        </div>
     </div>
 
     <TrackForm track={blank} cancelHref={backHref} submitLabel="Create track" message={form?.message} />
