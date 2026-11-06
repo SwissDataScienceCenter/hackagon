@@ -18,7 +18,7 @@ import { ClientError, Status } from "nice-grpc-common"
 // "not here", the same answer the profile above gives for an unknown id.
 
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, myMembership } = await event.parent()
+  const { myMembership } = await event.parent()
   if (myMembership?.user?.id !== event.params.participantId) {
     error(404, "That participant is not in this hackathon.")
   }
@@ -40,7 +40,6 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId,
     participantId: event.params.participantId,
-    name: hackathon.name,
     questions: questionRows(questions.questions),
     values: answerValues(answers.answers),
   }

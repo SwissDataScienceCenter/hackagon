@@ -4,6 +4,7 @@
     import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import ProfileLinks from '$lib/components/hackathon/ProfileLinks.svelte';
     import BackLink from '$lib/components/layout/BackLink.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { PROFILE_LINK_KINDS } from '$lib/utils/profileLinks';
     import type { ActionData, PageData } from './$types';
 
@@ -134,13 +135,28 @@
 
         {#if answersSection}
             <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
-                <!-- The edit control in the heading row, not in the footnote: it
+                <!-- The edit control under the heading, not in the footnote: it
                      was a link at the end of the small print, and the one action
-                     this section offers was the last thing on it anyone read. -->
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h3 class="m-0 text-section text-ink">
-                        {data.answerScope === 'mine' ? 'Registration answers' : 'Shared answers'}
-                    </h3>
+                     this section offers was the last thing on it anyone read.
+
+                     Who can see these answers is behind the ⓘ: on your own
+                     profile because you may reasonably wonder, and on anyone
+                     else's because "shared" is a claim worth attributing to the
+                     event rather than to the person. Two buttons rather than one
+                     with a computed topic, so help.test.ts can see both. -->
+                <div class="flex flex-col items-start gap-2">
+                    <div class="flex items-center gap-2">
+                        {#if data.answerScope === 'mine'}
+                            <h3 class="m-0 text-section text-ink">Registration answers</h3>
+                            <InfoButton
+                                topic="registration-answers-mine"
+                                title="Who sees your answers"
+                            />
+                        {:else}
+                            <h3 class="m-0 text-section text-ink">Shared answers</h3>
+                            <InfoButton topic="registration-answers-shared" title="Shared answers" />
+                        {/if}
+                    </div>
                     {#if data.answerScope === 'mine'}
                         <!-- The in-hackathon answers page, not /register: that one
                              is for signing up and sits outside the hackathon, so
@@ -232,28 +248,6 @@
                         sees it on your profile.
                     </p>
                 {/if}
-
-                <!-- Who can see this, said on the page rather than left to be
-                     assumed: on your own profile because you are looking at your own
-                     answers and may reasonably wonder, and on anyone else's because
-                     "shared" is a claim worth attributing to the event rather than
-                     to the person.
-
-                     Below the answers and set smaller than them, because it is a
-                     footnote about them. Above them it was two lines of caveat
-                     outweighing the two lines of content they qualified, which is
-                     the wrong way round on a page whose reason to exist is the
-                     answers. -->
-                <p class="prose m-0 border-t border-line pt-3 text-xs text-ink-3">
-                    {#if data.answerScope === 'mine'}
-                        The hackathon's organizers see all of these. The ones marked
-                        <span class="font-semibold text-ink-3">Shared</span>
-                        are also visible to everyone in the hackathon.
-                    {:else}
-                        Answers this event shares with everyone taking part. The rest of
-                        {data.participant.name}'s form is between them and the organizers.
-                    {/if}
-                </p>
             </section>
         {/if}
 

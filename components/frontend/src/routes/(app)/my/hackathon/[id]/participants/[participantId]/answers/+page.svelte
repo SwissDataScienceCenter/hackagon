@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import RegistrationForm from '$lib/components/hackathon/RegistrationForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -19,10 +20,10 @@
             >
                 &larr; Back to your profile
             </a>
-            <h2 class="m-0 text-title text-ink">Your registration answers</h2>
-            <p class="m-0 text-xs text-ink-3">
-                Your answers for {data.name}. You can change them at any time.
-            </p>
+            <div class="flex items-center gap-2">
+                <h2 class="m-0 text-title text-ink">Your registration answers</h2>
+                <InfoButton topic="registration-answers-edit" title="Your registration answers" />
+            </div>
         </div>
 
         {#if form?.message}

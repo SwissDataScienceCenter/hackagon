@@ -66,6 +66,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   button beside the heading.
 - A hackathon's own pages show their text straight on the page, without a box
   around it.
+- Propose a Project, your registration answers and the answers on a
+  participant's profile keep their explanations behind an ⓘ button beside the
+  heading. On your profile, the button to edit your answers sits under the
+  heading, on the left. Voting no longer repeats under every ballot that a vote
+  is final.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.
