@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import FormsManageTabs from '$lib/components/hackathon/FormsManageTabs.svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { questionKindLabel } from '$lib/utils/question';
     import type { ActionData, PageData } from './$types';
 
@@ -27,12 +28,10 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-1">
             <ManageHubBackLink hackathonId={data.hackathonId} />
-            <h2 class="m-0 text-title text-ink">Registration Form</h2>
-            <p class="m-0 text-xs text-ink-3">
-                What this event asks people when they sign up. Questions marked required
-                have to be answered before someone can join, and answers are for
-                organizers only unless you choose to show them to participants.
-            </p>
+            <div class="flex items-center gap-2">
+                <h2 class="m-0 text-title text-ink">Registration Form</h2>
+                <InfoButton topic="registration-form" title="The registration form" />
+            </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <!-- Only once something has been answered: before that it leads to a

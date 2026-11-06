@@ -77,6 +77,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   heading. On your profile, the button to edit your answers sits under the
   heading, on the left. Voting no longer repeats under every ballot that a vote
   is final.
+- For organizers, Settings, Public page, Registration Form, Registration
+  Answers, Invitations, Waitlist and Manage Tracks keep their explanations
+  behind an ⓘ button beside the heading. Counts and messages about the current
+  state stay on the page.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.
