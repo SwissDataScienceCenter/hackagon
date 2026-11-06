@@ -306,10 +306,6 @@
                                 <p class="m-0 text-xs text-danger-ink" role="alert">
                                     {result.message}
                                 </p>
-                            {:else}
-                                <p class="m-0 text-xs text-ink-3">
-                                    Your vote is final once submitted.
-                                </p>
                             {/if}
                         </div>
                     </form>

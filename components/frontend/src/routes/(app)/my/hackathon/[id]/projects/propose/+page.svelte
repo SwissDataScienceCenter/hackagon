@@ -2,6 +2,7 @@
     import { resolve } from '$app/paths';
     import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -16,16 +17,20 @@
         >
             &larr; Back to my projects
         </a>
-        <h1 class="m-0 text-title text-ink">Propose a Project</h1>
-        <p class="m-0 text-xs text-ink-3">
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">Propose a Project</h1>
             {#if data.mayPropose}
-                An organizer reviews it before it appears on the Projects page. You can keep
-                editing it in the meantime.
-            {:else}
+                <InfoButton topic="project-propose" title="Proposing a project" />
+            {/if}
+        </div>
+        <!-- Said on the page, not behind the ⓘ: it explains why there is no
+             form, which nobody should have to open a box to find out. -->
+        {#if !data.mayPropose}
+            <p class="m-0 text-xs text-ink-3">
                 This hackathon does not take project proposals — its organizers put the projects
                 up themselves.
-            {/if}
-        </p>
+            </p>
+        {/if}
     </div>
 
     <!-- Server-side validation only: every rule here is one the action repeats,
