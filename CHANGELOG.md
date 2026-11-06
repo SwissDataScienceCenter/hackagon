@@ -64,6 +64,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Our submission and Voting start with the page itself. Their explanations,
   including that submissions close and that a vote is final, are behind an ⓘ
   button beside the heading.
+- A hackathon's own pages show their text straight on the page, without a box
+  around it.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.

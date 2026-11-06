@@ -11,10 +11,7 @@
         <h2 class="m-0 text-title text-ink">{data.page.title}</h2>
     </div>
 
-    <div
-        class="card card-raised box-border w-full px-5 py-4
-               text-sm leading-relaxed text-ink-2"
-    >
+    <div class="w-full text-sm leading-relaxed text-ink-2">
         {#if data.page.content.trim()}
             <MarkdownContent content={data.page.content} />
         {:else}
