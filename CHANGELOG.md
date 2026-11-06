@@ -58,6 +58,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- On All Participants, My projects and a team's submission, the search box and
+  the main button sit on the left, under the heading. The button to propose your
+  first project lines up on the left too.
+- Our submission and Voting start with the page itself. Their explanations,
+  including that submissions close and that a vote is final, are behind an ⓘ
+  button beside the heading.
+- A hackathon's own pages show their text straight on the page, without a box
+  around it.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.
@@ -99,6 +107,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- The explanations behind an ⓘ button no longer break a line in the middle of a
+  sentence.
 - A team's page always leads back to Teams. Opened from a participant's profile
   while voting was open, it led to the ballot, which no longer links to it.
 - On Submissions, "Last updated" has a space again between the time and who

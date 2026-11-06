@@ -53,7 +53,7 @@
             track?: string;
             imageUrl?: string;
         };
-        /** Controls beside the heading, e.g. Edit on the viewer's own team. */
+        /** Controls under the heading, e.g. Edit on the viewer's own team. */
         actions?: Snippet;
     } = $props();
 
@@ -81,13 +81,13 @@
     <!-- The project is the heading, as on the list's card; the team that
          handed it in is the first thing under it, since one project can have
          several teams. -->
-    <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+    <div class="flex flex-col items-start gap-3">
         <div class="flex min-w-0 flex-col gap-1">
             <h2 class="m-0 text-title text-ink">{projectTitle}</h2>
             <span class="text-xs text-ink-3">{teamName} &middot; {status}</span>
         </div>
         {#if actions}
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex items-center gap-2">
                 {@render actions()}
             </div>
         {/if}

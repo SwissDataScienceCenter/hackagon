@@ -1,9 +1,16 @@
 <script lang="ts">
     import { renderMarkdown } from '$lib/utils/markdown';
 
-    let { content }: { content: string } = $props();
+    let {
+        content,
+        breaks = true,
+    }: {
+        content: string;
+        /** Off for text we write ourselves; see `renderMarkdown`. */
+        breaks?: boolean;
+    } = $props();
 
-    const html = $derived(renderMarkdown(content));
+    const html = $derived(renderMarkdown(content, { breaks }));
 </script>
 
 <!-- `.markdown-body` lives in the theme, not here: the editor's preview pane

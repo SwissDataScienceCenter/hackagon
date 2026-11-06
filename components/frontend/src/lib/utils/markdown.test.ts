@@ -17,6 +17,17 @@ describe("renderMarkdown", () => {
     )
   })
 
+  it("reflows a single newline with breaks off, for text the formatter wrapped", () => {
+    expect(
+      renderMarkdown(
+        "Open an entry to see the project and what it\nsubmitted.",
+        {
+          breaks: false,
+        },
+      ),
+    ).not.toContain("<br>")
+  })
+
   it("still starts a new paragraph on a blank line", () => {
     const html = renderMarkdown("First.\n\nSecond.")
     expect(html).toContain("<p>First.</p>")

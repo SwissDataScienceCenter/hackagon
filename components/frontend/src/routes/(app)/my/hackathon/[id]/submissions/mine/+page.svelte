@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import SubmissionDetail from '$lib/components/hackathon/SubmissionDetail.svelte';
     import SubmissionForm from '$lib/components/hackathon/SubmissionForm.svelte';
     import type { ActionData, PageData } from './$types';
@@ -26,12 +27,9 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <!-- A label rather than a heading: each team's project title below is the
          heading, as on the submission's own page, so this reads the same. -->
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 items-center gap-2">
         <span class="meta">Our submission</span>
-        <span class="text-xs text-ink-3">
-            Your team's entry, as everyone sees it. Saving replaces it for everyone who
-            reads it.
-        </span>
+        <InfoButton topic="submission-mine" title="Your team's submission" />
     </div>
 
     <!-- A failure that never reached a team (a malformed form) has no card to
@@ -113,12 +111,6 @@
                     {:else if data.unchangedTeamId === g.teamId}
                         <p class="m-0 text-xs text-ink-3" role="status">
                             Nothing changed, so nothing was saved.
-                        </p>
-                    {/if}
-                    {#if !data.maySubmit}
-                        <p class="m-0 text-xs text-ink-3">
-                            Submissions are closed for this hackathon, so this can no longer be
-                            changed.
                         </p>
                     {/if}
 
