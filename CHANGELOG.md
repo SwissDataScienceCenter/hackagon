@@ -58,6 +58,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- On All Participants, My projects and a team's submission, the search box and
+  the main button sit on the left, under the heading. The button to propose your
+  first project lines up on the left too.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.

@@ -34,15 +34,12 @@
   up with.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-4">
         <div class="flex min-w-0 flex-col gap-1">
             <h2 class="m-0 text-title text-ink">All Participants</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
-        <div
-            class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
-                   sm:justify-end"
-        >
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
             <div class="relative w-full sm:w-72">
                 <Search
                     class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
