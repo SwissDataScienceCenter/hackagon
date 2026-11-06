@@ -100,17 +100,16 @@ func (s *ProjectService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
 	// Check Project.Read permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Read,
 	); err != nil {
@@ -266,17 +265,15 @@ func (s *ProjectService) Reject(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
 
 	// Check Project.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Write,
 	); err != nil {
@@ -357,17 +354,15 @@ func (s *ProjectService) setApproval(
 		return status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return edgeError(err, "hackathon not found")
+		return err
 	}
-	hackathonID := h.ID
 
 	// Check Project.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Write,
 	); err != nil {
@@ -416,17 +411,15 @@ func (s *ProjectService) SetPreference(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
 
 	// Check set_team_preferences capability (Join on Project)
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Join,
 	); err != nil {
@@ -539,17 +532,15 @@ func (s *ProjectService) RemovePreference(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
 
 	// Check set_team_preferences capability (Join on Project)
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Join,
 	); err != nil {
@@ -654,25 +645,23 @@ func (s *ProjectService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
-	err = s.enforcer.RequireHackathonPermission(
+	err = s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Write,
 		mw.WithProject(projectID.String()),
 	)
 	if err != nil {
-		err = s.enforcer.RequireHackathonPermission(
+		err = s.enforcer.RequirePermissionOn(
 			ctx,
-			s.dbClient,
-			hackathonID,
+			h,
 			mw.Project,
 			mw.Write,
 		)
@@ -778,25 +767,23 @@ func (s *ProjectService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
-	err = s.enforcer.RequireHackathonPermission(
+	err = s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Project,
 		mw.Write,
 		mw.WithProject(projectID.String()),
 	)
 	if err != nil {
-		err = s.enforcer.RequireHackathonPermission(
+		err = s.enforcer.RequirePermissionOn(
 			ctx,
-			s.dbClient,
-			hackathonID,
+			h,
 			mw.Project,
 			mw.Write,
 		)

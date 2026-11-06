@@ -369,15 +369,13 @@ func (s *HackathonService) RevokeInvite(
 	}
 
 	// Check write permission on the invite's hackathon
-	h, err := invite.Edges.HackathonOrErr()
+	h, err := edgeHackathon(invite.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackID,
+		h,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -572,10 +570,9 @@ func (s *HackathonService) Join(
 	// a hackathon need to have join permission enabled(== registration phase open), and
 	// the user needs to either be able to view the hackathon (a public one is
 	// viewable by anyone) or have a valid invite to join
-	if err = s.enforcer.RequireHackathonPermission(
+	if err = s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		id,
+		h,
 		mw.Hackathon,
 		mw.Join,
 	); err != nil {
@@ -1057,10 +1054,9 @@ func (s *HackathonService) Edit(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		mw.Hackathon,
 		mw.Write,
 	); err != nil {
@@ -2275,14 +2271,8 @@ func (s *HackathonService) ListParticipantAnswers(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackID)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
+	if err := mw.RequireLiveHackathon(ctx, s.dbClient, hackID); err != nil {
+		return nil, err
 	}
 
 	// Check if user has write access

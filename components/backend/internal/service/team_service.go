@@ -42,20 +42,6 @@ func (s *TeamService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"hackathon %s not found",
-				req.GetHackathonId(),
-			)
-		}
-		slog.Error("query hackathon", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query database")
-	}
-
 	if err = s.enforcer.RequireHackathonPermission(
 		ctx,
 		s.dbClient,
@@ -63,7 +49,7 @@ func (s *TeamService) List(
 		m.Team,
 		m.Read,
 	); err != nil {
-		return nil, status.Error(codes.PermissionDenied, "can't get teams")
+		return nil, err
 	}
 
 	teams, err := s.dbClient.Team.Query().
@@ -114,17 +100,13 @@ func (s *TeamService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query team")
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err = s.enforcer.RequireHackathonPermission(
+	if err = s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.Team,
 		m.Read,
 	); err != nil {
@@ -173,10 +155,9 @@ func (s *TeamService) Create(
 		)
 	}
 
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathon.ID,
+		hackathon,
 		m.Team,
 		m.Create,
 	); err != nil {
@@ -216,28 +197,21 @@ func (s *TeamService) Edit(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
-	hackathonID := h.ID
-
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Team,
 		m.Write,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
-		if err := s.enforcer.RequireHackathonPermission(
+		if err := s.enforcer.RequirePermissionOn(
 			ctx,
-			s.dbClient,
-			hackathonID,
+			h,
 			m.Team,
 			m.Write,
 		); err != nil {
@@ -305,20 +279,14 @@ func (s *TeamService) Delete(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
-	hackathonID := h.ID
-
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Team,
 		m.Write,
 	); err != nil {
@@ -366,19 +334,15 @@ func (s *TeamService) AssignUser(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
 	hackathonID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Team,
 		m.Write,
 	); err != nil {
@@ -435,19 +399,15 @@ func (s *TeamService) RemoveUser(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
 	hackathonID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Team,
 		m.Write,
 	); err != nil {
@@ -1060,19 +1020,14 @@ func (s *TeamService) CreateSubmission(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
-	hackathonID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Submission,
 		m.Create,
 		m.WithTeam(t.ID.String()),
@@ -1127,27 +1082,21 @@ func (s *TeamService) GetSubmission(
 		return nil, err
 	}
 
-	if t.Edges.Project == nil {
-		return nil, status.Error(codes.Internal, "team project not found")
-	}
-	h, err := t.Edges.Project.Edges.HackathonOrErr()
+	h, err := teamHackathon(t)
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 
-	hackathonID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Submission,
 		m.Read,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
-		if err := s.enforcer.RequireHackathonPermission(
+		if err := s.enforcer.RequirePermissionOn(
 			ctx,
-			s.dbClient,
-			hackathonID,
+			h,
 			m.Submission,
 			m.Read,
 		); err != nil {
@@ -1196,29 +1145,23 @@ func (s *TeamService) ListSubmissions(
 			return nil, err
 		}
 
-		if t.Edges.Project == nil {
-			return nil, status.Error(codes.Internal, "team project not found")
-		}
-		h, err := t.Edges.Project.Edges.HackathonOrErr()
+		h, err := teamHackathon(t)
 		if err != nil {
-			return nil, edgeError(err, "hackathon not found")
+			return nil, err
 		}
 
 		// Team members read their own team; owners hold submission:read
 		// hackathon-wide.
-		hackathonID := h.ID
-		if err := s.enforcer.RequireHackathonPermission(
+		if err := s.enforcer.RequirePermissionOn(
 			ctx,
-			s.dbClient,
-			hackathonID,
+			h,
 			m.Submission,
 			m.Read,
 			m.WithTeam(t.ID.String()),
 		); err != nil {
-			if err := s.enforcer.RequireHackathonPermission(
+			if err := s.enforcer.RequirePermissionOn(
 				ctx,
-				s.dbClient,
-				hackathonID,
+				h,
 				m.Submission,
 				m.Read,
 			); err != nil {
@@ -1234,8 +1177,6 @@ func (s *TeamService) ListSubmissions(
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 		}
 
-		// If the hackathon doesn't exist we still return access denied. We do this
-		// to avoid giving unnecessary information to unauthorized users.
 		if err := s.enforcer.RequireHackathonPermission(
 			ctx,
 			s.dbClient,
@@ -1244,16 +1185,6 @@ func (s *TeamService) ListSubmissions(
 			m.Read,
 		); err != nil {
 			return nil, err
-		}
-
-		exists, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Exist(ctx)
-		if err != nil {
-			slog.Error("query hackathon", "err", err)
-
-			return nil, status.Error(codes.Internal, "couldn't query database")
-		}
-		if !exists {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
 		}
 
 		query = query.Where(entsubmission.HasTeamWith(
@@ -1332,15 +1263,13 @@ func (s *TeamService) FinalizeSubmission(
 	if subm.Edges.Team.Edges.Project == nil {
 		return nil, status.Error(codes.Internal, "submission team project")
 	}
-	h, err := subm.Edges.Team.Edges.Project.Edges.HackathonOrErr()
+	h, err := edgeHackathon(subm.Edges.Team.Edges.Project.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		m.Submission,
 		m.Write,
 		m.WithTeam(subm.Edges.Team.ID.String()),

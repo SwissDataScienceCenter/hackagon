@@ -93,17 +93,16 @@ func (s *TrackService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := track.Edges.HackathonOrErr()
+	h, err := edgeHackathon(track.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
 	// Check Track.Read permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Track,
 		mw.Read,
 	); err != nil {
@@ -194,17 +193,16 @@ func (s *TrackService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := track.Edges.HackathonOrErr()
+	h, err := edgeHackathon(track.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
 	hackathonID := h.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Track,
 		mw.Write,
 	); err != nil {
@@ -284,17 +282,15 @@ func (s *TrackService) Delete(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	h, err := track.Edges.HackathonOrErr()
+	h, err := edgeHackathon(track.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	hackathonID := h.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		hackathonID,
+		h,
 		mw.Track,
 		mw.Write,
 	); err != nil {
