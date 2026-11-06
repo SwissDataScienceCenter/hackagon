@@ -58,6 +58,9 @@ describe("backFor", () => {
       `${H}/projects/propose`,
       `${H}/pages/new`,
       "/(app)/hackathons/create",
+      `${H}/participants/[participantId]/answers`,
+      "/(app)/register/[id]",
+      "/(public)/invite/[token]",
     ]) {
       expect(
         backFor(
