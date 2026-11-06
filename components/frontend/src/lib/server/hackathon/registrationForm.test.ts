@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   answerValues,
+  answerCells,
   answeredParticipantIds,
   answersByParticipant,
   missingMandatory,
@@ -715,6 +716,19 @@ describe("answersByParticipant", () => {
     // Absence is the signal an organizer chases; an empty list per person would
     // make "has not answered" indistinguishable from "answered blankly".
     expect(answersByParticipant(rows, [])).toEqual({})
+  })
+
+  it("as cells: keyed by question, a tick-box as Yes or No", () => {
+    expect(
+      answerCells(rows, [
+        { questionId: "q1", participantId: "u1", textValue: "ETH" },
+        { questionId: "q2", participantId: "u1", boolValue: true },
+        { questionId: "q2", participantId: "u2", boolValue: false },
+      ]),
+    ).toEqual({
+      u1: { affiliation: "ETH", conduct: "Yes" },
+      u2: { conduct: "No" },
+    })
   })
 
   it("drops an answer whose question has since been deleted", () => {

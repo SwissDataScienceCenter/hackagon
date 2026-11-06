@@ -6,7 +6,7 @@ import { viewerMembership } from "$lib/server/hackathon/membership"
 import { numberedProjects } from "$lib/server/hackathon/projectNumbers"
 import { listAnswers } from "$lib/server/hackathon/questions"
 import {
-  answersByParticipant,
+  answerCells,
   questionRows,
 } from "$lib/server/hackathon/registrationForm"
 import { csvFilename } from "$lib/utils/csv"
@@ -98,23 +98,12 @@ export const GET: RequestHandler = async (event) => {
   // A column per question, free text included: the spreadsheet is where teams
   // are planned, and "which university" or "what can you do" is often exactly
   // what decides who goes together. A long answer stays in its one cell — the
-  // writer quotes line breaks. A tick-box reads as Yes or No, which is what a
-  // person editing a spreadsheet expects to see in a column.
+  // writer quotes line breaks.
   //
   // Written as stored, with no apostrophe in front of an answer starting `=`,
   // the same choice `csvRow` makes for names; see there.
   const columns = questionRows(questions.questions)
-  const answersByUser = answersByParticipant(columns, answers)
-  const answersFor = (userId: string): Record<string, string> => {
-    const filed = answersByUser[userId] ?? []
-    const out: Record<string, string> = {}
-    for (const a of filed) {
-      out[a.key] =
-        typeof a.value === "boolean" ? (a.value ? "Yes" : "No") : a.value
-    }
-
-    return out
-  }
+  const cells = answerCells(columns, answers)
 
   const person = (
     id: string,
@@ -127,7 +116,7 @@ export const GET: RequestHandler = async (event) => {
     project: project ? String(project.number) : "",
     team: teamName,
     prefers: prefersByUser.get(id) ?? [],
-    answers: answersFor(id),
+    answers: cells[id] ?? {},
   })
 
   // Grouped the way the screen is — by project number, then by team — because
