@@ -61,6 +61,9 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - On All Participants, My projects and a team's submission, the search box and
   the main button sit on the left, under the heading. The button to propose your
   first project lines up on the left too.
+- Our submission and Voting start with the page itself. Their explanations,
+  including that submissions close and that a vote is final, are behind an ⓘ
+  button beside the heading.
 - A hackathon's Projects page lists only approved projects. Participants find
   their own proposals, and the button to propose one, on My projects, which is
   in the menu whenever proposing is open.
