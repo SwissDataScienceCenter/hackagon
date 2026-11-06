@@ -5,6 +5,8 @@ import {
   questionRows,
   type ParticipantAnswer,
 } from "$lib/server/hackathon/registrationForm"
+import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
+import { leaveHackathon } from "$lib/server/hackathon/leave"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import {
   editRequestFor,
@@ -12,12 +14,13 @@ import {
   profileLinksOf,
 } from "$lib/server/user/profileLinks"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
+import { isFinished } from "$lib/utils/hackathonStatus"
 import { linkify } from "$lib/utils/linkify"
 import {
   PROFILE_LINK_KINDS,
   profileLinkSuggestion,
 } from "$lib/utils/profileLinks"
-import { error, fail } from "@sveltejs/kit"
+import { error, fail, redirect } from "@sveltejs/kit"
 
 /**
  * Who is reading this profile, which decides both how the answers are asked for
@@ -216,6 +219,20 @@ export const load: PageServerLoad = async (event) => {
     teams,
     teamsPublished,
     teamsFailed,
+    // Whether to offer "Leave this hackathon" — only an offer, `Leave` decides.
+    //
+    // Never to an owner. `Leave` removes the participant row and the `Member`
+    // role but leaves the `Owner` role alone (`hackathon_service.go:886`), so an
+    // organizer pressing it would still run the hackathon and still see every
+    // page, and "you left" would be untrue in every way that shows. Giving up
+    // ownership is Remove owner, on Manage Participants.
+    //
+    // Not once it is finished: `Leave` refuses that, because the roster is the
+    // record of the event.
+    canLeave:
+      isMe &&
+      member.role !== HackathonRole.HACKATHON_ROLE_OWNER &&
+      !isFinished(hackathon.status),
   }
 }
 
@@ -257,5 +274,23 @@ export const actions: Actions = {
     // The load reruns after this, and `hackathon.get` brings back the link as
     // the backend now renders it — which is what retires the offer.
     return { savedLink: kind.label }
+  },
+
+  /**
+   * Takes the caller out of this hackathon — "Leave this hackathon" on their own
+   * profile. Like `saveLink`, it acts on the caller whatever profile the post
+   * came from: `Leave` takes no user, so there is nobody else it could remove.
+   *
+   * To the dashboard on success, because every page under this hackathon now
+   * answers 403. `leaveError` rather than `message`, so a refusal shows beside
+   * the Leave button and not under the answers, where `saveLink`'s goes.
+   */
+  leave: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const refused = await leaveHackathon(hackathon, event.params.id)
+    if (refused) return fail(refused.status, { leaveError: refused.message })
+
+    redirect(303, "/dashboard")
   },
 }

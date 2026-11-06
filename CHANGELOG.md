@@ -20,6 +20,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Participants can leave a hackathon from their own profile in it. They leave
+  their team and give up the projects they proposed, and their team keeps its
+  projects and submission. Somebody still on the waitlist can cancel their
+  registration from the hackathon's public page instead.
+
 - Every page inside a hackathon starts with a breadcrumb: the hackathon's full
   name and the section you are in. It stays visible when the menu is folded
   away, and replaces the cut-off name at the top of the menu.

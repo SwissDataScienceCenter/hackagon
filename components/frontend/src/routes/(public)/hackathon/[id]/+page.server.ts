@@ -1,5 +1,6 @@
-import { error } from "@sveltejs/kit"
-import type { PageServerLoad } from "./$types"
+import { error, fail } from "@sveltejs/kit"
+import type { Actions, PageServerLoad } from "./$types"
+import { leaveHackathon } from "$lib/server/hackathon/leave"
 import {
   createAuthorizedGrpc,
   publicHackathonClient,
@@ -165,4 +166,34 @@ export const load: PageServerLoad = async (event) => {
       participantCount: hackathon.participantCount || undefined,
     },
   }
+}
+
+export const actions: Actions = {
+  /**
+   * Takes somebody off the waitlist at their own request. Offered only to the
+   * `waiting` standing — a confirmed participant leaves from their profile
+   * inside the hackathon, where the page can say what leaving costs them.
+   *
+   * Its own authorized client, for the reason `membership` builds one: the hook
+   * leaves `locals.grpc` unset on public routes.
+   *
+   * No redirect: the load reruns, the standing comes back `none`, and the bar
+   * offers Register again, which is the proof that it worked.
+   */
+  cancel: async (event) => {
+    const session = (await event.locals.auth()) as CustomSession | null
+    if (!usableSession(session) || !session?.accessToken) {
+      return fail(401, {
+        message: "Your session has expired. Sign in again and try once more.",
+      })
+    }
+
+    const refused = await leaveHackathon(
+      createAuthorizedGrpc(session.accessToken).hackathon,
+      event.params.id,
+    )
+    if (refused) return fail(refused.status, { message: refused.message })
+
+    return { cancelled: true }
+  },
 }

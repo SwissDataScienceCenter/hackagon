@@ -4,7 +4,9 @@
     import { UserPlus } from 'lucide-svelte';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import { signIn } from '@auth/sveltekit/client';
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import { isFinished } from '$lib/utils/hackathonStatus';
     import MembershipBadge from './MembershipBadge.svelte';
 
@@ -42,7 +44,18 @@
     // their hackathon does not stop being theirs when it ends.
     const canGoIn = $derived(standing === 'member' || standing === 'admin');
     const show = $derived(canGoIn || !isFinished(status));
+
+    // Kept here rather than read off the page's `form`: this bar is the only
+    // thing on the page that posts, and threading `form` through
+    // PublicHackathonView would hand the organiser's preview a prop it never uses.
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
+    let cancelError: string | null = $state(null);
+    // Once the load reruns the standing is `none` and the bar offers Register,
+    // which on its own reads as though nothing had happened.
+    let cancelled = $state(false);
 </script>
+
+<ConfirmDialog bind:this={confirmDialog} />
 
 <!--
   One bar, directly under the hero, whatever the reader's standing.
@@ -90,9 +103,48 @@
             >
                 Review your answers
             </a>
+            <!-- Quieter still: the way off the list, for somebody who cannot
+                 come after all. Only while waiting — a confirmed participant
+                 leaves from their profile inside the hackathon, where it can be
+                 said what they lose. -->
+            <form
+                method="POST"
+                action="?/cancel"
+                use:enhance={async ({ cancel }) => {
+                    const ok = await confirmDialog.ask({
+                        title: 'Cancel your registration?',
+                        message:
+                            "You come off the organizers' list and your answers are deleted. You can register again while registration is open.",
+                        confirmLabel: 'Cancel registration',
+                        cancelLabel: 'Keep registration',
+                        danger: true,
+                    });
+                    if (!ok) return cancel();
+                    cancelError = null;
+                    return async ({ result, update }) => {
+                        if (result.type === 'failure') {
+                            cancelError =
+                                typeof result.data?.message === 'string'
+                                    ? result.data.message
+                                    : 'Your registration could not be cancelled. Try again.';
+                        }
+                        if (result.type === 'success') cancelled = true;
+                        await update();
+                    };
+                }}
+            >
+                <button type="submit" class="btn btn-sm btn-quiet">Cancel registration</button>
+            </form>
+            {#if cancelError}
+                <p class="m-0 w-full text-center font-sans text-xs text-danger-ink" role="alert">
+                    {cancelError}
+                </p>
+            {/if}
         {:else if signedIn}
             <p class="m-0 font-sans text-sm text-ink-2">
-                Registering puts you on the organizers' list.
+                {cancelled
+                    ? 'Your registration is cancelled. Registering again puts you back on the list.'
+                    : "Registering puts you on the organizers' list."}
             </p>
             <!-- Straight to the registration form rather than joining from here.
                  That page is the one place that knows both halves of signing up:
