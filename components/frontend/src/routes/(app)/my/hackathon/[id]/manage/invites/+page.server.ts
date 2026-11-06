@@ -68,7 +68,6 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     hackathonId: hackathon.id,
-    hackathonName: hackathon.name,
     live: liveInvites(rows),
     dead: deadInvites(rows),
   }

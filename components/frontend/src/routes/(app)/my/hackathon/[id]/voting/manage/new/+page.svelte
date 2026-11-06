@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import VoteCategoryForm from '$lib/components/hackathon/VoteCategoryForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -26,10 +27,10 @@
         >
             &larr; Back to voting
         </a>
-        <h1 class="m-0 text-title text-ink">New Voting Category</h1>
-        <p class="m-0 text-xs text-ink-3">
-            Participants vote on submissions, one vote per category.
-        </p>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">New Voting Category</h1>
+            <InfoButton topic="voting-category-new" title="A new voting category" />
+        </div>
     </div>
 
     {#if data.resultsFinal}

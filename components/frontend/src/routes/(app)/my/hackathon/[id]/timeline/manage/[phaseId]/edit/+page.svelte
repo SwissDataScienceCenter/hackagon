@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import PhaseForm from '$lib/components/hackathon/PhaseForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -24,20 +25,23 @@
         >
             &larr; Back to Manage Timeline
         </a>
-        <h1 class="m-0 text-title text-ink">Edit Phase</h1>
+        <div class="flex items-center gap-2">
+            <h1 class="m-0 text-title text-ink">Edit Phase</h1>
+            <InfoButton topic="edit-live" title="Saving changes" />
+        </div>
         <!-- Says why they are here when they did not choose to be: Add Phase
              redirects onto this form because creating a phase cannot store its
              dates. Without the line, an organizer who clicked "Add phase" lands on
-             a page titled "Edit Phase" and has to work out what happened. -->
-        <p class="m-0 text-xs text-ink-3">
-            {#if data.justAdded}
+             a page titled "Edit Phase" and has to work out what happened. On the
+             page rather than behind the ⓘ, because it reports what just
+             happened. -->
+        {#if data.justAdded}
+            <p class="m-0 text-xs text-ink-3">
                 <strong class="text-ink">{data.phase.name} was added.</strong>
                 Give it a start and an end to place it on the timeline — or save it as
                 it is and schedule it later.
-            {:else}
-                Changes are visible to participants immediately.
-            {/if}
-        </p>
+            </p>
+        {/if}
     </div>
 
     <PhaseForm

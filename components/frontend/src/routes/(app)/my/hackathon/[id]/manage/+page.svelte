@@ -2,6 +2,7 @@
     import { ArrowRight, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import { manageNav } from '$lib/navigation/items';
     import { isPrivate } from '$lib/utils/hackathonStatus';
     import { formatPhaseRange } from '$lib/utils/phase';
@@ -105,12 +106,9 @@
          a heading reads as a correction to that heading, and this is a page an
          organiser goes back to. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-1">
+        <div class="flex min-w-0 items-center gap-2">
             <h2 class="m-0 text-title text-ink">Settings</h2>
-            <span class="text-xs text-ink-3">
-                What participants may do, where the hackathon is now, and how its
-                projects are grouped.
-            </span>
+            <InfoButton topic="settings" title="Settings" />
         </div>
     </div>
 
@@ -122,20 +120,21 @@
          left box to the right one — its label used to name a phase that appeared
          nowhere else on the page. -->
     <section class="card flex flex-col gap-3 border-line-strong px-5 py-4">
-        <span class="meta">Where the hackathon is</span>
+        <!-- The ⓘ says phases are optional and that advancing only moves the
+             marker: the most surprising thing about this screen, kept one
+             click away rather than spelt out under the buttons. -->
+        <div class="flex items-center gap-2">
+            <span class="meta">Where the hackathon is</span>
+            <InfoButton topic="settings-phases" title="Phases" />
+        </div>
 
         <!-- With no phases at all this card is the only way to the first one:
              Manage Timeline is not in the sidebar until a phase exists, exactly
-             as Manage Tracks waits for a track. So this says phases are optional
-             and links straight to the form, rather than naming a screen that
-             cannot be reached. Now and Next are not drawn — two empty boxes above
-             an "add one" button say nothing the button does not. -->
+             as Manage Tracks waits for a track. So this links straight to the
+             form, rather than naming a screen that cannot be reached. Now and
+             Next are not drawn — two empty boxes above an "add one" button say
+             nothing the button does not. -->
         {#if data.phaseCount === 0}
-            <p class="m-0 text-sm text-ink-3">
-                An optional way to divide the hackathon into stretches of time, each with
-                its own dates and description. A hackathon runs perfectly well without
-                any.
-            </p>
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage/new`)}
                 class="btn btn-sm btn-outline w-fit no-underline"
@@ -227,11 +226,6 @@
                 All phases →
             </a>
         </div>
-
-        <p class="m-0 text-xs text-ink-3">
-            This only moves the marker. What participants are allowed to do is the panel
-            below, and it never changes on its own.
-        </p>
         {/if}
     </section>
 
@@ -249,22 +243,17 @@
     <!-- Tracks. They are optional, which is the whole reason they are settled
          here rather than behind a permanent sidebar entry: with none defined,
          Manage Tracks is not offered at all (see `manageNav`), so this card is
-         the only way to the first one — and a hackathon that never wants any
-         reads that as a line of prose instead of an empty list it has to go and
-         look at. Once a track exists the sidebar entry appears and this card
-         steps back to a summary. -->
+         the only way to the first one. Once a track exists the sidebar entry
+         appears and this card steps back to a summary. -->
     <section class="card flex flex-col gap-3 border-line-strong px-5 py-4">
-        <!-- The heading says what tracks are for and that they are optional,
-             because that is the decision being offered here — with none defined
-             there is otherwise nothing on the page to say what the button would
-             even get you. -->
+        <!-- The ⓘ says what tracks are for and that they are optional, because
+             that is the decision being offered here — with none defined there is
+             otherwise nothing on the page to say what the button would even get
+             you. Same text as on Manage Tracks. -->
         <div class="flex flex-wrap items-start justify-between gap-2">
-            <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex min-w-0 items-center gap-2">
                 <span class="meta">Tracks</span>
-                <p class="m-0 text-sm text-ink-3">
-                    An optional way to group projects. A hackathon runs perfectly well
-                    without any.
-                </p>
+                <InfoButton topic="tracks" title="Tracks" />
             </div>
             {#if data.tracks.length > 0}
                 <a
@@ -291,10 +280,6 @@
                     <span class="badge badge-neutral">{track.name}</span>
                 {/each}
             </div>
-            <p class="m-0 text-xs text-ink-3">
-                Each project's track is optional too: one without a track is not a
-                project missing something.
-            </p>
         {/if}
     </section>
 

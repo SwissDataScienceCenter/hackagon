@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import QuestionRowForm from '$lib/components/hackathon/QuestionRowForm.svelte';
+    import InfoButton from '$lib/components/layout/InfoButton.svelte';
     import type { QuestionKind } from '$lib/utils/question';
     import type { ActionData, PageData } from './$types';
 
@@ -36,11 +37,10 @@
         >
             &larr; Registration Form
         </a>
-        <h2 class="m-0 text-title text-ink">New Question</h2>
-        <p class="m-0 text-xs text-ink-3">
-            One question on the sign-up form. Its key names the answers and cannot be
-            changed afterwards, so it is the one field worth pausing over.
-        </p>
+        <div class="flex items-center gap-2">
+            <h2 class="m-0 text-title text-ink">New Question</h2>
+            <InfoButton topic="registration-question-new" title="A new question" />
+        </div>
     </div>
 
     {#if form?.message}
