@@ -28,6 +28,7 @@ It might also show:
 
 ## Unassigned
 
+- People are listed alphabetically by name.
 - Filter by registration answer or preferred project. Click
   {guilabel}`Reset filters` to clear them.
 
