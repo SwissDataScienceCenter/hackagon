@@ -20,6 +20,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.13.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.12.1...v0.13.0) - 2026-11-16
+
+### Added
+
 - Participants can leave a hackathon from their own profile in it. They leave
   their team and give up the projects they proposed, and their team keeps its
   projects and submission. Somebody still on the waitlist can cancel their
