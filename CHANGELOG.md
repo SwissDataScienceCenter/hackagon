@@ -24,7 +24,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   their team and give up the projects they proposed, and their team keeps its
   projects and submission. Somebody still on the waitlist can cancel their
   registration from the hackathon's public page instead.
-
 - Every page inside a hackathon starts with a breadcrumb: the hackathon's full
   name and the section you are in. It stays visible when the menu is folded
   away, and replaces the cut-off name at the top of the menu.
@@ -117,7 +116,7 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   the Submissions page.
 - A proposer can now edit their project after it has been approved or rejected.
 - Every project in a list, and every project page, now names who proposed it,
-  also when an organiser proposed it without joining the hackathon.
+  also when an organizer proposed it without joining the hackathon.
 - The button that opens a project from a list now reads "View" instead of "More
   Info".
 - Project lists no longer show a number beside each project. It was only the
@@ -129,7 +128,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - A team's page is now headed by the team's name. It shows the members, the
   project as a card like on the projects list, and when the team last handed in
   its work, with a link to its entry on Submissions.
-
 - The repository link and the attachments link on a submission must now start
   with `https://`. The box that used to take a link or free-text notes now takes
   a link only, and notes go in the description.
