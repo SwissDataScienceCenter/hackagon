@@ -345,10 +345,20 @@
         return byProject;
     });
 
+    // Alphabetical by the name on the card, sorted here rather than on the
+    // server so someone dragged back from a team lands in their place, not at
+    // the bottom. `matchesFirst` keeps this order within both of its groups.
+    // The ⓘ beside the column's heading (team-unassigned.md) says so.
     const unassigned = $derived.by(() => {
         const placed = new Set(teams.flatMap((t) => t.memberIds));
 
-        return [...peopleById.values()].filter((p) => !placed.has(p.id));
+        return [...peopleById.values()]
+            .filter((p) => !placed.has(p.id))
+            .sort(
+                (a, b) =>
+                    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) ||
+                    a.id.localeCompare(b.id)
+            );
     });
 
     /** The pool with whoever matches the filters on top. */
@@ -1435,11 +1445,14 @@
                    lg:top-4"
             class:border-accent={dropTarget === POOL}
         >
-            <h3 class="m-0 meta tnum">
-                Unassigned ({unassigned.length}){filtering
-                    ? ` · ${pool.matching.length} match`
-                    : ''}
-            </h3>
+            <div class="flex items-center gap-1">
+                <h3 class="m-0 meta tnum">
+                    Unassigned ({unassigned.length}){filtering
+                        ? ` · ${pool.matching.length} match`
+                        : ''}
+                </h3>
+                <InfoButton topic="team-unassigned" title="How Unassigned is sorted" />
+            </div>
             {#if filtering}
                 <div class="flex flex-wrap items-center gap-1.5">
                     {#each activeFilters as f (f.key)}
