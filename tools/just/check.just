@@ -59,10 +59,16 @@ e2e *args:
     #!/usr/bin/env bash
     set -eu
     cd "{{root_dir}}"
-    if ! curl -sf -o /dev/null http://localhost:8081; then
-        echo "Nothing answers on http://localhost:8081. Start the stack first: just start" >&2
-        exit 1
-    fi
+    # `deploy::up` returns once the backend is ready, which can be before the
+    # frontend answers. Give it a while before calling the stack missing.
+    for i in $(seq 1 60); do
+        curl -sf -o /dev/null http://localhost:8081 && break
+        if [ "$i" -eq 60 ]; then
+            echo "Nothing answered on http://localhost:8081 within 2 minutes. Start the stack first: just start" >&2
+            exit 1
+        fi
+        sleep 2
+    done
     # Playwright refuses browsers built for another version, and the browsers
     # come from Nix. Say so plainly instead of its "Executable doesn't exist".
     just nix::develop test-e2e bash -c '
