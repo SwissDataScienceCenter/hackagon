@@ -109,6 +109,11 @@ jobs:
              components/frontend/data/test/config/secrets.yaml
           just ci::run just deploy::up
           just ci::run just db::seed
+          # The backend loads its permission rules once, at startup, and the
+          # seed writes them behind its back. Restart it so it sees them.
+          # See "Restart the backend after seeding" in cmd/seed/README.md.
+          just ci::run just deploy::down
+          just ci::run just deploy::up
       # Browser tests (Playwright) against the stack the step above started:
       # real Keycloak logins, the frontend served the way `just start` serves it.
       - name: Browser tests
