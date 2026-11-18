@@ -51,6 +51,33 @@ test *args:
     rm -rf .output/*/coverage/data
     just quitsh test "$@"
 
+# Run the browser tests (Playwright) against the running stack on :8081.
+# Start it first with `just start`. Arguments go to `playwright test`,
+# e.g. `just check::e2e --headed` or `just check::e2e --ui`.
+[group('checks')]
+e2e *args:
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}"
+    if ! curl -sf -o /dev/null http://localhost:8081; then
+        echo "Nothing answers on http://localhost:8081. Start the stack first: just start" >&2
+        exit 1
+    fi
+    # Playwright refuses browsers built for another version, and the browsers
+    # come from Nix. Say so plainly instead of its "Executable doesn't exist".
+    just nix::develop test-e2e bash -c '
+        set -eu
+        cd components/frontend
+        pinned=$(node -p "require(\"./package.json\").devDependencies[\"@playwright/test\"]")
+        if [ "$pinned" != "$HACKAGON_PLAYWRIGHT_VERSION" ]; then
+            echo "@playwright/test is $pinned, but Nix ships browsers for $HACKAGON_PLAYWRIGHT_VERSION." >&2
+            echo "Pin it to exactly $HACKAGON_PLAYWRIGHT_VERSION in components/frontend/package.json." >&2
+            exit 1
+        fi
+        pnpm install --frozen-lockfile
+        pnpm exec playwright test "$@"
+    ' _ "$@"
+
 # Lint a component. Usage: just check::lint -c backend
 [group('checks')]
 lint *args:
