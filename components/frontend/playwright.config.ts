@@ -5,6 +5,11 @@ import { outDir } from "./tests/e2e/paths"
 // `just deploy::up` + `just db::seed` in CI. Run them with `just check::e2e`,
 // which also supplies the browsers from Nix — see the `test-e2e` toolchain in
 // tools/nix/hackagon/lib/toolchain.nix.
+//
+// They test the whole stack (frontend, backend, Postgres, Keycloak), yet live
+// here: they are written against the frontend's pages, so a change to a page
+// and to its test land together. A system test lives in the component whose
+// interface it drives.
 export default defineConfig({
   testDir: "./tests/e2e",
   outputDir: `${outDir}/results`,
