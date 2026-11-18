@@ -31,7 +31,11 @@ export default defineConfig({
     // otherwise picks for headless runs. This channel runs the full browser
     // headless instead.
     channel: "chromium",
-    trace: "on-first-retry",
+    // What the report shows for a failed test, in CI as locally (where nothing
+    // is retried): the page as it was when it failed, and a trace to step back
+    // through the steps before. Passing tests keep neither.
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
   },
 
   projects: [

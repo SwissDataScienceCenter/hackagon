@@ -54,6 +54,7 @@ test *args:
 # Run the browser tests (Playwright) against the running stack on :8081.
 # Start it first with `just start`. Arguments go to `playwright test`,
 # e.g. `just check::e2e --headed` or `just check::e2e --ui`.
+[doc('Run the browser tests (Playwright) against the running stack')]
 [group('checks')]
 e2e *args:
     #!/usr/bin/env bash
@@ -95,6 +96,35 @@ e2e *args:
         fi
         pnpm install --frozen-lockfile
         pnpm exec playwright test "$@"
+    ' _ "$@" || {
+        rc=$?
+        # A report exists only if Playwright ran, as the old one is gone.
+        if [ -f .output/e2e/report/index.html ]; then
+            if [ -n "${CI:-}" ]; then
+                echo "See what failed: download this run's e2e-report artifact." >&2
+            else
+                echo "See what failed: just check::e2e-report" >&2
+            fi
+        fi
+        exit "$rc"
+    }
+
+# Open the report of the last browser test run: what failed, with a screenshot
+# and a trace of each failure. Arguments go to `playwright show-report`,
+# e.g. `just check::e2e-report --port 9400`.
+[doc('Open the last browser test report, with screenshots and traces')]
+[group('checks')]
+e2e-report *args:
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}"
+    if [ ! -f .output/e2e/report/index.html ]; then
+        echo "No report yet. Run the browser tests first: just check::e2e" >&2
+        exit 1
+    fi
+    just nix::develop test-e2e bash -c '
+        cd components/frontend
+        pnpm exec playwright show-report ../../.output/e2e/report "$@"
     ' _ "$@"
 
 # Lint a component. Usage: just check::lint -c backend
