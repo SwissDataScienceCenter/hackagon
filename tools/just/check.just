@@ -59,12 +59,25 @@ e2e *args:
     #!/usr/bin/env bash
     set -eu
     cd "{{root_dir}}"
+    # A run that stops before Playwright starts would otherwise leave the
+    # previous run's report in place, where it reads as this run's result.
+    rm -rf .output/e2e/report .output/e2e/results
     # `deploy::up` returns once the backend is ready, which can be before the
-    # frontend answers. Give it a while before calling the stack missing.
+    # frontend answers. Give it a while, and tell a stack that is not running
+    # apart from a frontend that answers with an error.
     for i in $(seq 1 60); do
-        curl -sf -o /dev/null http://localhost:8081 && break
+        status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:8081 || true)
+        case "$status" in 2??|3??) break ;; esac
+        if [ "$i" -eq 1 ]; then
+            echo "Waiting up to 2 minutes for http://localhost:8081 ..." >&2
+        fi
         if [ "$i" -eq 60 ]; then
-            echo "Nothing answered on http://localhost:8081 within 2 minutes. Start the stack first: just start" >&2
+            if [ "$status" = "000" ]; then
+                echo "Nothing answered on http://localhost:8081. Start the stack first: just start" >&2
+            else
+                echo "http://localhost:8081 answers with HTTP $status: the frontend runs, but fails behind it." >&2
+                echo "Is the backend on :3000 healthy? See .output/run/process-compose/frontend-log" >&2
+            fi
             exit 1
         fi
         sleep 2
