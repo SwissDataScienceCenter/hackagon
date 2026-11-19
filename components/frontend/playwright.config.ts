@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test"
 import { outDir } from "./tests/e2e/paths"
 
 // Browser tests against a stack that is already running: `just start` locally,
-// `just deploy::up` + `just db::seed` in CI. Run them with `just check::e2e`,
+// in CI the seeded stack, restarted after seeding so the backend sees the
+// seed's roles (see .github/workflows/ci.yml). Run them with `just check::e2e`,
 // which also supplies the browsers from Nix — see the `test-e2e` toolchain in
 // tools/nix/hackagon/lib/toolchain.nix.
 //
