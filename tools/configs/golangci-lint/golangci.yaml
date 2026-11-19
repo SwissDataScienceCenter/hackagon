@@ -152,7 +152,7 @@ linters:
         # A deleted hackathon leaves this edge nil; HackathonOrErr says so.
         - pattern: ^ent\.\w+Edges\.Hackathon$
           pkg: ^github\.com/swissdatasciencecenter/hackagon/components/backend/ent$
-          msg: use Edges.HackathonOrErr() and pass its error to edgeError(), a deleted hackathon leaves this nil
+          msg: use edgeHackathon(Edges.HackathonOrErr()) or teamHackathon(), a deleted hackathon leaves this nil
     funlen:
       lines: 200
       statements: 200
