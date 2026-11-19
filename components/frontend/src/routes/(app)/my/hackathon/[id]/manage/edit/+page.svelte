@@ -4,6 +4,7 @@
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import PublicHackathonView from '$lib/components/hackathon/PublicHackathonView.svelte';
     import InfoButton from '$lib/components/layout/InfoButton.svelte';
+    import { fromEventDateTime, toEventDateTime } from '$lib/utils/eventTime';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -12,21 +13,10 @@
     // Visibility numeric values: PUBLIC=1, PRIVATE=2.
     const PRIVATE = 2;
 
-    function toDateInputValue(d: Date | undefined): string {
-        if (!d) return '';
-        const date = new Date(d);
-        const offset = date.getTimezoneOffset();
-        return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
-    }
-
-    // Built as a local date rather than through `new Date('2026-10-24')`, which
-    // parses as UTC midnight and can render as the day before in a western
-    // timezone. The preview would then show a date the form does not.
-    function fromDateInputValue(v: string): Date | undefined {
-        const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!m) return undefined;
-        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    }
+    // Start and end are entered on Zurich's clock whatever the browser's zone,
+    // and read back on it too, so saving the form unchanged keeps the same
+    // instants. The preview gets the instant the server will store.
+    const fromDateInputValue = (v: string): Date | undefined => fromEventDateTime(v) ?? undefined;
 
     // TODO(backend: hackathon-edit-clear-dates): once a hackathon has dates,
     // emptying both fields is silently ignored rather than clearing them — see
@@ -42,8 +32,8 @@
     let draft = $state({
         name: hackathon.name,
         visibility: hackathon.visibility === PRIVATE ? 'private' : 'public',
-        startsAt: toDateInputValue(hackathon.startsAt),
-        endsAt: toDateInputValue(hackathon.endsAt),
+        startsAt: toEventDateTime(hackathon.startsAt),
+        endsAt: toEventDateTime(hackathon.endsAt),
         logo: hackathon.logo ?? '',
         description: hackathon.description ?? '',
     });
@@ -125,13 +115,23 @@
                 </fieldset>
 
                 <label class="field-label">
-                    Starts at (optional)
-                    <input type="date" name="startsAt" bind:value={draft.startsAt} class="field" />
+                    Starts at, Zurich time (optional)
+                    <input
+                        type="datetime-local"
+                        name="startsAt"
+                        bind:value={draft.startsAt}
+                        class="field"
+                    />
                 </label>
 
                 <label class="field-label">
-                    Ends at (optional)
-                    <input type="date" name="endsAt" bind:value={draft.endsAt} class="field" />
+                    Ends at, Zurich time (optional)
+                    <input
+                        type="datetime-local"
+                        name="endsAt"
+                        bind:value={draft.endsAt}
+                        class="field"
+                    />
                 </label>
 
                 {#if hasDates}
