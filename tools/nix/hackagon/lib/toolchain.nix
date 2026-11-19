@@ -431,6 +431,9 @@ let
                 # Psql
                 pkgs.postgresql_18
 
+                # YAML queries (Mike Farah's yq, binary `yq`).
+                pkgs.yq-go
+
                 # Grpc
                 pkgs.grpcurl
                 pkgs.protobuf
