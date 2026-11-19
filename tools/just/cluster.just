@@ -15,7 +15,9 @@ local_pg_port := "15432"
 
 # Dev and staging share one cluster, reached through the kubeconfig that
 # HACKAGON_KUBECONFIG points at, and its current context. No default: where
-# that file lives is each operator's business, and _guard refuses when unset.
+# that file lives is each operator's business, and pin_context refuses when
+# unset. The context is read once per run, see pin_context; setting
+# HACKAGON_KUBE_CONTEXT picks one without switching to it.
 kubeconfig := env("HACKAGON_KUBECONFIG", "")
 
 # Pasted into every recipe: `resolve_instance <name>` sets the namespace and the
@@ -30,10 +32,31 @@ resolve_instance() {
     *) echo "✗ Unknown instance '$1': expected dev or staging." >&2; exit 1 ;;
   esac
 }
+
+# Sets `kc`, the kubectl command for the instance's namespace, on one context
+# for the whole run. The first recipe reads the kubeconfig's current context and
+# exports it, and every recipe it calls inherits that one, so switching contexts
+# in another terminal mid-run cannot send the rest of it elsewhere. Call after
+# resolve_instance, with the kubeconfig ($1).
+pin_context() {
+  local kubeconfig="$1"
+  [ -n "$kubeconfig" ] \
+    || { echo "✗ HACKAGON_KUBECONFIG is not set. Point it at the kubeconfig for dev and staging." >&2; exit 1; }
+  [ -f "$kubeconfig" ] \
+    || { echo "✗ HACKAGON_KUBECONFIG points at $kubeconfig, which is not a file." >&2; exit 1; }
+  if [ -z "${HACKAGON_KUBE_CONTEXT:-}" ]; then
+    HACKAGON_KUBE_CONTEXT="$(kubectl --kubeconfig "$kubeconfig" config current-context)"
+    export HACKAGON_KUBE_CONTEXT
+  fi
+  # An empty --context means the current one, which is what this rules out.
+  [ -n "$HACKAGON_KUBE_CONTEXT" ] \
+    || { echo "✗ $kubeconfig has no current context. Set one, or set HACKAGON_KUBE_CONTEXT." >&2; exit 1; }
+  kc=(kubectl --kubeconfig "$kubeconfig" --context "$HACKAGON_KUBE_CONTEXT" -n "$ns")
+}
 '''
 
 # Pasted into every recipe that touches the app database. The recipe must first
-# set `kc`, the kubectl command for the instance's namespace.
+# call pin_context, which sets `kc`.
 #
 # The chart's bundled postgres and an external one (dev and staging run
 # CloudNativePG) differ in Service name, in which Secret holds the password, and
@@ -242,9 +265,9 @@ _backup instance:
     {{instances}}
     {{db_access}}
     resolve_instance "{{instance}}"
+    pin_context "{{kubeconfig}}"
     just -f "{{source_file()}}" _guard "{{instance}}"
 
-    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
     pf_pid=""
     trap close_tunnel EXIT
 
@@ -259,9 +282,9 @@ _wipe instance:
     {{instances}}
     {{db_access}}
     resolve_instance "{{instance}}"
+    pin_context "{{kubeconfig}}"
     just -f "{{source_file()}}" _guard "{{instance}}"
 
-    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
     pf_pid=""
     backend_down=""
 
@@ -307,9 +330,9 @@ _reseed instance:
     cd "{{root_dir}}"
 
     ref="$(just -f "{{source_file()}}" _seed-ref "{{instance}}")"
+    pin_context "{{kubeconfig}}"
     just -f "{{source_file()}}" _guard "{{instance}}"
 
-    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
     tmp="$(mktemp -d)"
     pf_pid=""
     backend_down=""
@@ -379,8 +402,8 @@ _backend-down instance:
     resolve_instance "{{instance}}"
 
     # Guard the instance, so a kubeconfig reaching the wrong cluster stops before touching anything.
+    pin_context "{{kubeconfig}}"
     just -f "{{source_file()}}" _guard "{{instance}}"
-    kc=(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns")
 
     backend_pods() { "${kc[@]}" get pods -o name | grep "{{backend_deploy}}-" || true; }
 
@@ -424,14 +447,10 @@ _guard instance:
     set -euo pipefail
     {{instances}}
     resolve_instance "{{instance}}"
-    [ -n "{{kubeconfig}}" ] \
-        || { echo "✗ HACKAGON_KUBECONFIG is not set. Point it at the kubeconfig for dev and staging." >&2; exit 1; }
-    [ -f "{{kubeconfig}}" ] \
-        || { echo "✗ HACKAGON_KUBECONFIG points at {{kubeconfig}}, which is not a file." >&2; exit 1; }
-    hosts="$(kubectl --kubeconfig "{{kubeconfig}}" -n "$ns" get ingress \
-        -o jsonpath='{.items[*].spec.rules[*].host}')"
+    pin_context "{{kubeconfig}}"
+    hosts="$("${kc[@]}" get ingress -o jsonpath='{.items[*].spec.rules[*].host}')"
     if [[ " $hosts " != *" $host "* ]]; then
-        echo "✗ Namespace $ns via {{kubeconfig}} does not serve $host (found: ${hosts:-none})." >&2
+        echo "✗ Namespace $ns in context $HACKAGON_KUBE_CONTEXT of {{kubeconfig}} does not serve $host (found: ${hosts:-none})." >&2
         echo "  Refusing — this does not look like the {{instance}} instance." >&2
         exit 1
     fi
@@ -444,8 +463,9 @@ _confirm instance action:
     set -euo pipefail
     {{instances}}
     resolve_instance "{{instance}}"
+    pin_context "{{kubeconfig}}"
     just -f "{{source_file()}}" _guard "{{instance}}"
-    echo "About to {{action}} in namespace $ns (via {{kubeconfig}})."
+    echo "About to {{action}} in namespace $ns (context $HACKAGON_KUBE_CONTEXT of {{kubeconfig}})."
     echo "Everything in the app database is lost; a backup is taken first."
     read -r -p "Type the namespace to continue: " answer
     [ "$answer" = "$ns" ] || { echo "Aborted."; exit 1; }
