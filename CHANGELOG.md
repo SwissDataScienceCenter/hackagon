@@ -24,6 +24,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A hackathon's start and end are now a date and a time in Zurich time, and the
+  hackathon closes exactly then. Before, only a date could be picked, and the
+  hackathon closed at 01:00 on its last day: nobody could join, invite links
+  stopped working, and a one-day hackathon showed as finished all day.
+
 ## [0.13.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.12.1...v0.13.0) - 2026-11-16
 
 ### Added

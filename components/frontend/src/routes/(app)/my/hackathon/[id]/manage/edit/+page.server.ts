@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { readEventDateTime } from "$lib/utils/eventTime"
 import { canEditHackathon } from "$lib/utils/hackathonRole"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -23,8 +24,8 @@ export const actions: Actions = {
     const name = form.get("name")
     const visibility = form.get("visibility")
     const description = form.get("description")
-    const startsAt = form.get("startsAt")
-    const endsAt = form.get("endsAt")
+    const startsAt = readEventDateTime(form.get("startsAt"))
+    const endsAt = readEventDateTime(form.get("endsAt"))
     const logo = form.get("logo")
 
     if (typeof name !== "string" || name.trim().length < 3) {
@@ -34,21 +35,20 @@ export const actions: Actions = {
       return fail(400, { message: "Visibility is required" })
     }
 
+    if (startsAt === null || endsAt === null) {
+      return fail(400, {
+        message: "Start and end must each be a date and a time",
+      })
+    }
     // Status is computed server-side from both dates, so one without the other
     // leaves a hackathon that can never be anything but PENDING.
-    const hasStartsAt = typeof startsAt === "string" && startsAt !== ""
-    const hasEndsAt = typeof endsAt === "string" && endsAt !== ""
-    if (hasStartsAt !== hasEndsAt) {
+    if ((startsAt === undefined) !== (endsAt === undefined)) {
       return fail(400, {
         message: "Start and end date must be set together",
       })
     }
-    if (
-      hasStartsAt &&
-      hasEndsAt &&
-      new Date(endsAt as string) < new Date(startsAt as string)
-    ) {
-      return fail(400, { message: "End date must not precede the start date" })
+    if (startsAt && endsAt && endsAt <= startsAt) {
+      return fail(400, { message: "The end must be after the start" })
     }
 
     try {
@@ -64,13 +64,13 @@ export const actions: Actions = {
         // clearing the field on purpose and must reach the backend as "".
         description: typeof description === "string" ? description : undefined,
         logo: typeof logo === "string" ? logo : undefined,
-        // TODO(backend: hackathon-edit-clear-dates): `hasStartsAt === hasEndsAt
-        // === false` sends both as `undefined`, which `Edit` reads as "leave
+        // TODO(backend: hackathon-edit-clear-dates): two empty fields send
+        // both as `undefined`, which `Edit` reads as "leave
         // unchanged" rather than "clear them" — there is no request that
         // returns an already-dated hackathon to dateless. Harmless here: dates
         // can still be *changed* freely, only full removal silently no-ops.
-        startsAt: hasStartsAt ? new Date(startsAt as string) : undefined,
-        endsAt: hasEndsAt ? new Date(endsAt as string) : undefined,
+        startsAt,
+        endsAt,
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
