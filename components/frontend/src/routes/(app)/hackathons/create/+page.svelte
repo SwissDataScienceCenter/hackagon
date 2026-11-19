@@ -60,13 +60,13 @@
             </fieldset>
 
             <label class="field-label">
-                Starts at (optional)
-                <input type="date" name="startsAt" class="field" />
+                Starts at, Zurich time (optional)
+                <input type="datetime-local" name="startsAt" class="field" />
             </label>
 
             <label class="field-label">
-                Ends at (optional)
-                <input type="date" name="endsAt" class="field" />
+                Ends at, Zurich time (optional)
+                <input type="datetime-local" name="endsAt" class="field" />
             </label>
 
             <ImageUrlField name="logo" label="Logo URL (optional)" class="sm:col-span-2" />
