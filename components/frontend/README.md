@@ -68,6 +68,20 @@ nix run ./tools/nix#treefmt -- <path>        # write
 nix run ./tools/nix#treefmt -- <path> --ci   # check
 ```
 
+### Adding or updating a package
+
+The frontend image is built by Nix without network access. Its npm packages are
+fetched up front and pinned by `vendorHash` in
+`tools/nix/pkgs/service/default.nix`. After any change to `pnpm-lock.yaml`,
+update that hash from the repo root, in the dev shell:
+
+```bash
+just nix::fix
+```
+
+Otherwise the image build fails in CI with `ERR_PNPM_NO_OFFLINE_TARBALL`, after
+every other check has passed.
+
 ### Configuration
 
 Copy the example secrets file and fill in real values:

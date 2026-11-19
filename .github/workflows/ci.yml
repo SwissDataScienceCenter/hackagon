@@ -102,8 +102,34 @@ jobs:
           just ci::run just check::test -c frontend
       - name: Seed
         run: |
+          # Git-ignored, so a fresh checkout has none, and without it every
+          # page answers 500. The example's values do for a throwaway stack.
+          # Locally, see components/frontend/README.md.
+          cp components/frontend/data/test/config/secrets.yaml.example \
+             components/frontend/data/test/config/secrets.yaml
           just ci::run just deploy::up
           just ci::run just db::seed
+          # The backend loads its permission rules once, at startup, and the
+          # seed writes them behind its back. Restart it so it sees them.
+          # See "Restart the backend after seeding" in cmd/seed/README.md.
+          just ci::run just deploy::down
+          just ci::run just deploy::up
+      # Browser tests (Playwright) against the stack the step above started:
+      # real Keycloak logins, the frontend served the way `just start` serves it.
+      - name: Browser tests
+        run: just ci::run just check::e2e
+      - name: Upload browser test report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report
+          # The report with its screenshots and traces, and the stack's logs
+          # for when the tests could not run at all. Not the saved logins.
+          path: |
+            .output/e2e
+            .output/run/process-compose
+            !.output/e2e/auth
+          retention-days: 7
 
   images:
     runs-on: ubuntu-24.04

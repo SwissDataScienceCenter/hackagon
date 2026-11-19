@@ -24,7 +24,7 @@ cnLib.build.buildNodePackage {
   ];
 
   target = "service";
-  vendorHash = "sha256-vAYKh4Ee5DymXbuNdvZPh+sne5IcP8LGJ0/NyihuTq4="; # Will be set by `just quitsh nix fix-hash`
+  vendorHash = "sha256-8I2XCdaW0uUYUpnTKQtbBKYV2ool0xj/RmtLCL3LkM0="; # Will be set by `just quitsh nix fix-hash`
 
   meta = {
     description = compName;

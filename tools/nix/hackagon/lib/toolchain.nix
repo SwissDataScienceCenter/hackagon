@@ -99,6 +99,22 @@ let
         }
       ];
 
+      # Browser tests (Playwright) against a running stack, see `just check::e2e`.
+      # The browsers come from nixpkgs, and Playwright refuses browsers built for
+      # another version: `@playwright/test` in components/frontend/package.json
+      # must stay pinned to exactly `playwright-driver.version`. The recipe
+      # compares the two through `HACKAGON_PLAYWRIGHT_VERSION` before running.
+      test-e2e = build-node-pnpm ++ [
+        {
+          quitsh.toolchains = [ "test-e2e" ];
+          env = {
+            HACKAGON_PLAYWRIGHT_VERSION = pkgs.playwright-driver.version;
+            PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers-chromium}";
+            PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+          };
+        }
+      ];
+
       createTestingHackagon =
         {
           isCI,
@@ -495,6 +511,7 @@ let
       # Testing:
       inherit
         test-services
+        test-e2e
         ;
 
       # Quitsh:

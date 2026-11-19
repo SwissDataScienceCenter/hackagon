@@ -51,6 +51,82 @@ test *args:
     rm -rf .output/*/coverage/data
     just quitsh test "$@"
 
+# Run the browser tests (Playwright) against the running stack on :8081.
+# Start it first with `just start`. Arguments go to `playwright test`,
+# e.g. `just check::e2e --headed` or `just check::e2e --ui`.
+[doc('Run the browser tests (Playwright) against the running stack')]
+[group('checks')]
+e2e *args:
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}"
+    # A run that stops before Playwright starts would otherwise leave the
+    # previous run's report in place, where it reads as this run's result.
+    rm -rf .output/e2e/report .output/e2e/results
+    # `deploy::up` returns once the backend is ready, which can be before the
+    # frontend answers. Give it a while, and tell a stack that is not running
+    # apart from a frontend that answers with an error.
+    for i in $(seq 1 60); do
+        status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:8081 || true)
+        case "$status" in 2??|3??) break ;; esac
+        if [ "$i" -eq 1 ]; then
+            echo "Waiting up to 2 minutes for http://localhost:8081 ..." >&2
+        fi
+        if [ "$i" -eq 60 ]; then
+            if [ "$status" = "000" ]; then
+                echo "Nothing answered on http://localhost:8081. Start the stack first: just start" >&2
+            else
+                echo "http://localhost:8081 answers with HTTP $status: the frontend runs, but fails behind it." >&2
+                echo "Is the backend on :3000 healthy? See .output/run/process-compose/frontend-log" >&2
+            fi
+            exit 1
+        fi
+        sleep 2
+    done
+    # Playwright refuses browsers built for another version, and the browsers
+    # come from Nix. Say so plainly instead of its "Executable doesn't exist".
+    just nix::develop test-e2e bash -c '
+        set -eu
+        cd components/frontend
+        pinned=$(node -p "require(\"./package.json\").devDependencies[\"@playwright/test\"]")
+        if [ "$pinned" != "$HACKAGON_PLAYWRIGHT_VERSION" ]; then
+            echo "@playwright/test is $pinned, but Nix ships browsers for $HACKAGON_PLAYWRIGHT_VERSION." >&2
+            echo "Pin it to exactly $HACKAGON_PLAYWRIGHT_VERSION in components/frontend/package.json." >&2
+            exit 1
+        fi
+        pnpm install --frozen-lockfile
+        pnpm exec playwright test "$@"
+    ' _ "$@" || {
+        rc=$?
+        # A report exists only if Playwright ran, as the old one is gone.
+        if [ -f .output/e2e/report/index.html ]; then
+            if [ -n "${CI:-}" ]; then
+                echo "See what failed: download this run's e2e-report artifact." >&2
+            else
+                echo "See what failed: just check::e2e-report" >&2
+            fi
+        fi
+        exit "$rc"
+    }
+
+# Open the report of the last browser test run: what failed, with a screenshot
+# and a trace of each failure. Arguments go to `playwright show-report`,
+# e.g. `just check::e2e-report --port 9400`.
+[doc('Open the last browser test report, with screenshots and traces')]
+[group('checks')]
+e2e-report *args:
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}"
+    if [ ! -f .output/e2e/report/index.html ]; then
+        echo "No report yet. Run the browser tests first: just check::e2e" >&2
+        exit 1
+    fi
+    just nix::develop test-e2e bash -c '
+        cd components/frontend
+        pnpm exec playwright show-report ../../.output/e2e/report "$@"
+    ' _ "$@"
+
 # Lint a component. Usage: just check::lint -c backend
 [group('checks')]
 lint *args:
