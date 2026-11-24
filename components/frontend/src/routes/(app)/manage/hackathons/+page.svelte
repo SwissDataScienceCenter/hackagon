@@ -2,16 +2,25 @@
     import { onMount } from 'svelte';
     import { Search } from 'lucide-svelte';
     import Lock from 'lucide-svelte/icons/lock';
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
+    import ConfirmDialog from '$lib/components/layout/ConfirmDialog.svelte';
     import { SvelteSet } from 'svelte/reactivity';
     import { formatDateRange } from '$lib/utils/hackathonDates';
     import { isPrivate, visibilityLabel } from '$lib/utils/hackathonStatus';
     import { relativeWhen, whenGroup, type WhenGroup } from '$lib/utils/hackathonWhen';
     import { usableImage } from '$lib/utils/imageUrl';
     import { matchesAny } from '$lib/utils/personSearch';
-    import type { PageData } from './$types';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    // Asked once more in the app's confirm dialog: there is no Restore yet, so
+    // from here a delete is final.
+    let confirmDialog: ReturnType<typeof ConfirmDialog>;
+
+    // The hackathon whose delete is in flight, so only its button says so.
+    let deleting = $state<string | undefined>(undefined);
 
     type Row = PageData['hackathons'][number];
     type Owner = Row['owners'][number];
@@ -130,6 +139,42 @@
     </span>
 {/snippet}
 
+<!-- Enhanced, so the page stays put: the load re-runs and the row is gone. -->
+{#snippet deleteForm(h: Row)}
+    <form
+        method="POST"
+        action="?/delete"
+        use:enhance={async ({ cancel }) => {
+            const ok = await confirmDialog.ask({
+                title: `Delete “${h.name}”?`,
+                message:
+                    'It disappears for everyone: owners, participants and you. ' +
+                    'Its data is kept, but it cannot be restored from the app.',
+                confirmLabel: 'Delete hackathon',
+                danger: true,
+                typeToConfirm: h.name,
+            });
+            if (!ok) return cancel();
+            deleting = h.id;
+            return async ({ update }) => {
+                await update();
+                deleting = undefined;
+            };
+        }}
+    >
+        <input type="hidden" name="hackathonId" value={h.id} />
+        <input type="hidden" name="hackathonName" value={h.name} />
+        <button
+            type="submit"
+            class="btn btn-sm btn-danger"
+            disabled={deleting !== undefined}
+            aria-label="Delete {h.name}"
+        >
+            {deleting === h.id ? 'Deleting…' : 'Delete'}
+        </button>
+    </form>
+{/snippet}
+
 {#snippet owners(h: Row)}
     <div class="flex flex-wrap gap-1">
         {#each h.owners as o (o.id)}
@@ -137,6 +182,8 @@
         {/each}
     </div>
 {/snippet}
+
+<ConfirmDialog bind:this={confirmDialog} />
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -173,6 +220,15 @@
         participants, projects and results.
     </p>
 
+    {#if form}
+        <p
+            class="m-0 text-xs {form.success ? 'text-success-ink' : 'text-danger-ink'}"
+            role={form.success ? 'status' : 'alert'}
+        >
+            {form.message}
+        </p>
+    {/if}
+
     {#if data.hackathons.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">There are no hackathons yet.</p>
     {:else if filtered.length === 0}
@@ -202,6 +258,9 @@
                         <span class="meta">Owners</span>
                         {@render owners(h)}
                     </div>
+                    <div class="mt-3 flex justify-end border-t border-line pt-3">
+                        {@render deleteForm(h)}
+                    </div>
                 </div>
             {/each}
         </div>
@@ -213,10 +272,11 @@
             <table class="w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
                 <colgroup>
                     <col class="w-[6%]" />
-                    <col class="w-[26%]" />
                     <col class="w-[24%]" />
+                    <col class="w-[22%]" />
                     <col class="w-[10%]" />
-                    <col class="w-[34%]" />
+                    <col class="w-[28%]" />
+                    <col class="w-[10%]" />
                 </colgroup>
                 <thead>
                     <tr class="border-b border-line bg-raised text-ink-3">
@@ -227,6 +287,9 @@
                         <th class="px-3 py-2 font-semibold">When</th>
                         <th class="px-3 py-2 text-right font-semibold">Participants</th>
                         <th class="px-3 py-2 font-semibold">Owners</th>
+                        <th class="px-3 py-2 font-semibold">
+                            <span class="sr-only">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -246,6 +309,7 @@
                                 {h.participantCount ?? '—'}
                             </td>
                             <td class="px-3 py-2">{@render owners(h)}</td>
+                            <td class="px-3 py-2 text-right">{@render deleteForm(h)}</td>
                         </tr>
                     {/each}
                 </tbody>
