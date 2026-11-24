@@ -61,18 +61,18 @@ func (s *VoteService) ListVoteCategories(
 
 		return nil, status.Error(codes.Internal, "authorization error")
 	}
-	// Checked again either way, so a deleted hackathon is NotFound.
-	object := m.VoteResult
 	if canReadCategories {
-		object = m.VoteCategory
+		err = m.RequireLiveHackathon(ctx, s.dbClient, hackathonID)
+	} else {
+		err = s.enforcer.RequireHackathonPermission(
+			ctx,
+			s.dbClient,
+			hackathonID,
+			m.VoteResult,
+			m.Read,
+		)
 	}
-	if err := s.enforcer.RequireHackathonPermission(
-		ctx,
-		s.dbClient,
-		hackathonID,
-		object,
-		m.Read,
-	); err != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -118,14 +118,13 @@ func (s *VoteService) GetVoteCategory(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteCategory,
 		m.Read,
 	); err != nil {
@@ -264,14 +263,13 @@ func (s *VoteService) EditVoteCategory(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteCategory,
 		m.Write,
 	); err != nil {
@@ -384,14 +382,13 @@ func (s *VoteService) DeleteVoteCategory(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteCategory,
 		m.Write,
 	); err != nil {
@@ -442,14 +439,13 @@ func (s *VoteService) SubmitVote(
 	}
 
 	// Check read permission on category
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteCategory,
 		m.Read,
 	); err != nil {
@@ -806,14 +802,13 @@ func (s *VoteService) GetVote(
 	}
 
 	// Check read permission on the category
-	h, err := vote.Edges.Category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(vote.Edges.Category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteCategory,
 		m.Read,
 	); err != nil {
@@ -927,14 +922,13 @@ func (s *VoteService) ExportVotes(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.Vote,
 		m.Read,
 	); err != nil {
@@ -1066,14 +1060,13 @@ func (s *VoteService) ListVoteResults(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Read,
 	); err != nil {
@@ -1132,14 +1125,13 @@ func (s *VoteService) CreateVoteResult(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Create,
 	); err != nil {
@@ -1199,14 +1191,13 @@ func (s *VoteService) EditVoteResult(
 		return nil, status.Error(codes.Internal, "couldn't query vote result")
 	}
 
-	h, err := result.Edges.VoteCategory.Edges.HackathonOrErr()
+	h, err := edgeHackathon(result.Edges.VoteCategory.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Write,
 	); err != nil {
@@ -1278,14 +1269,13 @@ func (s *VoteService) DeleteVoteResult(
 		return nil, status.Error(codes.Internal, "couldn't query vote result")
 	}
 
-	h, err := result.Edges.VoteCategory.Edges.HackathonOrErr()
+	h, err := edgeHackathon(result.Edges.VoteCategory.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Write,
 	); err != nil {
@@ -1330,14 +1320,13 @@ func (s *VoteService) SuggestResults(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Create,
 	); err != nil {
@@ -1525,14 +1514,13 @@ func (s *VoteService) ExportResults(
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
 	}
 
-	h, err := category.Edges.HackathonOrErr()
+	h, err := edgeHackathon(category.Edges.HackathonOrErr())
 	if err != nil {
-		return nil, edgeError(err, "hackathon not found")
+		return nil, err
 	}
-	if err := s.enforcer.RequireHackathonPermission(
+	if err := s.enforcer.RequirePermissionOn(
 		ctx,
-		s.dbClient,
-		h.ID,
+		h,
 		m.VoteResult,
 		m.Read,
 	); err != nil {

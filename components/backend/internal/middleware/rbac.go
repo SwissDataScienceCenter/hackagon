@@ -641,6 +641,20 @@ func (e *Enforcer) RequireHackathonPermission(
 	return RequireLiveHackathon(ctx, dbClient, hackathonID)
 }
 
+// RequirePermissionOn checks that the caller may do something in a hackathon
+// the handler has already loaded. Use it instead of RequireHackathonPermission
+// whenever a query returned h. Queries never return deleted hackathons, so h is
+// live and only the permission is checked, with no extra query.
+func (e *Enforcer) RequirePermissionOn(
+	ctx context.Context,
+	h *ent.Hackathon,
+	object ObjectType,
+	permission Permission,
+	opts ...EnforceOption,
+) error {
+	return e.requirePermission(ctx, h.ID.String(), object, permission, opts...)
+}
+
 // RequireLiveHackathon returns NotFound if the hackathon does not exist or was
 // deleted. It checks no permission.
 //
@@ -670,7 +684,8 @@ func RequireLiveHackathon(
 // caller doesn't have it.
 //
 // It is private on purpose. Code outside this package must use
-// RequireHackathonPermission instead, which also rejects deleted hackathons.
+// RequireHackathonPermission or RequirePermissionOn instead, which also reject
+// deleted hackathons.
 func (e *Enforcer) requirePermission(
 	ctx context.Context,
 	hackathonID string,
