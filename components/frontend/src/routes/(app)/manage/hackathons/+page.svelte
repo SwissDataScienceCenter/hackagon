@@ -152,6 +152,7 @@
                     'Its data is kept, but it cannot be restored from the app.',
                 confirmLabel: 'Delete hackathon',
                 danger: true,
+                typeToConfirm: h.name,
             });
             if (!ok) return cancel();
             deleting = h.id;
