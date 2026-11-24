@@ -20,6 +20,10 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Admins can delete a hackathon from the `Hackathons` page, after confirming. It
+  disappears for everyone. Its data is kept, but it can't be restored from the
+  app yet.
+
 ### Changed
 
 ### Fixed

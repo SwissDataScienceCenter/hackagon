@@ -1,6 +1,6 @@
-import type { PageServerLoad } from "./$types"
+import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
-import { error } from "@sveltejs/kit"
+import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 // Every hackathon on the platform, private ones included.
@@ -55,4 +55,52 @@ export const load: PageServerLoad = async (event) => {
       })),
     })),
   }
+}
+
+export const actions: Actions = {
+  // Soft delete: the backend sets `deleted_at` and keeps the data and roles,
+  // but there is no Restore RPC yet, so from the app's side it is final.
+  //
+  // No admin check of its own: the backend decides who may delete (owners and
+  // admins today). This page is where the button is offered, and the load above
+  // already turns non-admins away from it.
+  delete: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const hackathonId = form.get("hackathonId")
+    // Only for the message: once deleted, the name can't be looked up again.
+    const name = form.get("hackathonName")
+
+    if (typeof hackathonId !== "string" || hackathonId === "") {
+      return fail(400, { success: false, message: "No hackathon given" })
+    }
+
+    try {
+      await hackathon.delete({ hackathonId })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        return fail(403, {
+          success: false,
+          message: "You don't have permission to delete this hackathon",
+        })
+      }
+      // Also what a second delete gets, e.g. from another admin's open tab.
+      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+        return fail(404, {
+          success: false,
+          message: "That hackathon no longer exists",
+        })
+      }
+      throw e
+    }
+
+    // No redirect: the load re-runs and the row is simply gone.
+    return {
+      success: true,
+      message:
+        typeof name === "string" && name !== ""
+          ? `Deleted “${name}”`
+          : "Hackathon deleted",
+    }
+  },
 }
